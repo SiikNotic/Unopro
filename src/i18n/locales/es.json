@@ -1,0 +1,84 @@
+{
+  "app": {
+    "name": "Carta",
+    "tagline": "Un juego de cartas moderno"
+  },
+  "common": {
+    "back": "Volver",
+    "confirm": "Confirmar",
+    "cancel": "Cancelar",
+    "comingSoon": "Próximamente",
+    "comingSoonDescription": "Esta función estará disponible en una próxima actualización.",
+    "close": "Cerrar"
+  },
+  "nav": {
+    "home": "Inicio",
+    "play": "Jugar",
+    "gameModes": "Modos de juego",
+    "tutorial": "Tutorial",
+    "settings": "Ajustes"
+  },
+  "home": {
+    "title": "Carta",
+    "subtitle": "Un juego de cartas moderno",
+    "play": "Jugar",
+    "gameModes": "Modos de juego",
+    "tutorial": "Tutorial",
+    "settings": "Ajustes",
+    "language": "Idioma"
+  },
+  "gameModes": {
+    "title": "Modos de juego",
+    "subtitle": "Elige cómo quieres jugar",
+    "classic": {
+      "name": "Clásico",
+      "description": "La experiencia original. El primero en quedarse sin cartas gana la ronda."
+    },
+    "teams": {
+      "name": "Equipos",
+      "description": "Forma equipo y combina puntuaciones para superar a tus rivales."
+    },
+    "tournament": {
+      "name": "Torneo",
+      "description": "Competición por eliminatorias. El último jugador en pie gana la corona."
+    },
+    "custom": {
+      "name": "Personalizado",
+      "description": "Ajusta las reglas y crea tu propia variante desde cero."
+    },
+    "players": "{min}–{max} jugadores",
+    "selectMode": "Seleccionar"
+  },
+  "settings": {
+    "title": "Ajustes",
+    "subtitle": "Personaliza tu experiencia",
+    "language": "Idioma",
+    "languageDescription": "Elige tu idioma preferido",
+    "sound": "Sonido",
+    "soundDescription": "Efectos de sonido y música",
+    "haptics": "Vibración",
+    "hapticsDescription": "Respuesta de vibración en dispositivos compatibles",
+    "animations": "Animaciones",
+    "animationsDescription": "Movimiento y transiciones",
+    "about": "Acerca de",
+    "aboutDescription": "Versión y créditos",
+    "version": "Versión",
+    "resetData": "Restablecer todos los datos",
+    "resetDataConfirm": "Esto borrará todas las preferencias guardadas. ¿Continuar?",
+    "resetDone": "Todos los datos han sido restablecidos."
+  },
+  "tutorial": {
+    "title": "Tutorial",
+    "subtitle": "Aprende lo básico",
+    "comingSoon": "Tutorial próximamente",
+    "description": "Un recorrido interactivo te guiará por las reglas, tipos de cartas y estrategias en una próxima actualización.",
+    "learnMore": "Mientras tanto, esto es lo que aprenderás:",
+    "topics": {
+      "cards": "Comprender tipos y colores de cartas",
+      "turns": "Orden de turnos y dirección",
+      "specials": "Cartas especiales y sus efectos",
+      "uno": "Cantar UNO y penalizaciones",
+      "strategy": "Estrategias básicas y consejos"
+    }
+  }
+}

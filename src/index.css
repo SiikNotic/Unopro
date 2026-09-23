@@ -1,0 +1,77 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    @apply font-body bg-ink-950 text-white antialiased;
+    overscroll-behavior: none;
+  }
+
+  /* Prevent horizontal scroll on all viewports */
+  html, body {
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
+}
+
+@layer components {
+  .glass {
+    @apply bg-ink-800/60 backdrop-blur-xl border border-white/10;
+  }
+
+  .glass-strong {
+    @apply bg-ink-800/80 backdrop-blur-2xl border border-white/10;
+  }
+
+  .card-surface {
+    @apply bg-ink-800/50 border border-white/10 rounded-2xl shadow-card;
+  }
+
+  .text-gradient-brand {
+    @apply bg-gradient-to-r from-brand-300 via-brand-400 to-brand-500 bg-clip-text text-transparent;
+  }
+
+  .text-gradient-gold {
+    @apply bg-gradient-to-r from-gold-400 to-gold-500 bg-clip-text text-transparent;
+  }
+
+  .btn-glow {
+    box-shadow: 0 0 0 0 rgba(56, 200, 230, 0);
+    transition: box-shadow 0.3s ease, transform 0.2s ease;
+  }
+
+  .btn-glow:hover {
+    box-shadow: 0 0 28px -4px rgba(56, 200, 230, 0.45);
+  }
+
+  .btn-glow:active {
+    transform: scale(0.97);
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-ink-600 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-ink-500;
+  }
+}

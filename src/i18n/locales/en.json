@@ -1,0 +1,84 @@
+{
+  "app": {
+    "name": "Carta",
+    "tagline": "A modern card game"
+  },
+  "common": {
+    "back": "Back",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "comingSoon": "Coming soon",
+    "comingSoonDescription": "This feature will be available in a future update.",
+    "close": "Close"
+  },
+  "nav": {
+    "home": "Home",
+    "play": "Play",
+    "gameModes": "Game Modes",
+    "tutorial": "Tutorial",
+    "settings": "Settings"
+  },
+  "home": {
+    "title": "Carta",
+    "subtitle": "A modern card game",
+    "play": "Play",
+    "gameModes": "Game Modes",
+    "tutorial": "Tutorial",
+    "settings": "Settings",
+    "language": "Language"
+  },
+  "gameModes": {
+    "title": "Game Modes",
+    "subtitle": "Choose how you want to play",
+    "classic": {
+      "name": "Classic",
+      "description": "The original experience. First to empty their hand wins the round."
+    },
+    "teams": {
+      "name": "Teams",
+      "description": "Partner up and combine scores to outplay your opponents."
+    },
+    "tournament": {
+      "name": "Tournament",
+      "description": "Bracket-style competition. Last player standing takes the crown."
+    },
+    "custom": {
+      "name": "Custom",
+      "description": "Fine-tune rules and build your own variant from the ground up."
+    },
+    "players": "{min}–{max} players",
+    "selectMode": "Select"
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Customize your experience",
+    "language": "Language",
+    "languageDescription": "Choose your preferred language",
+    "sound": "Sound",
+    "soundDescription": "Sound effects and music",
+    "haptics": "Haptics",
+    "hapticsDescription": "Vibration feedback on supported devices",
+    "animations": "Animations",
+    "animationsDescription": "Motion and transitions",
+    "about": "About",
+    "aboutDescription": "Version and credits",
+    "version": "Version",
+    "resetData": "Reset all data",
+    "resetDataConfirm": "This will erase all saved preferences. Continue?",
+    "resetDone": "All data has been reset."
+  },
+  "tutorial": {
+    "title": "Tutorial",
+    "subtitle": "Learn the basics",
+    "comingSoon": "Tutorial coming soon",
+    "description": "An interactive walkthrough will guide you through the rules, card types, and strategies in a future update.",
+    "learnMore": "In the meantime, here's what you'll learn:",
+    "topics": {
+      "cards": "Understanding card types and colors",
+      "turns": "Turn order and direction",
+      "specials": "Special cards and their effects",
+      "uno": "Calling UNO and penalties",
+      "strategy": "Basic strategies and tips"
+    }
+  }
+}
