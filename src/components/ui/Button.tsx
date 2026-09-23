@@ -11,39 +11,29 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode;
 }
 
+/** Game-style buttons: lacquered surfaces with a physical bottom edge that presses down. */
 const variantClasses: Record<Variant, string> = {
-  primary:
-    'bg-gradient-to-b from-brand-400 to-brand-600 text-ink-950 font-bold hover:from-brand-300 hover:to-brand-500 btn-glow',
-  secondary:
-    'glass text-white font-semibold hover:bg-ink-700/60 border-white/10',
-  ghost:
-    'text-ink-400 hover:text-white hover:bg-white/5 font-medium',
-  danger:
-    'bg-danger-500/15 text-danger-400 border border-danger-500/30 hover:bg-danger-500/25 font-semibold',
+  primary: 'btn-game btn-primary',
+  secondary: 'btn-game btn-secondary',
+  ghost: 'btn-ghost',
+  danger: 'btn-game btn-danger',
 };
 
 const sizeClasses: Record<Size, string> = {
-  sm: 'px-4 py-2 text-sm rounded-xl',
-  md: 'px-6 py-3 text-base rounded-2xl',
-  lg: 'px-8 py-4 text-lg rounded-2xl',
+  sm: 'min-h-[40px] px-4 text-sm rounded-xl',
+  md: 'min-h-[48px] px-6 text-base rounded-2xl',
+  lg: 'min-h-[56px] px-7 text-lg rounded-2xl',
 };
 
-export function Button({
-  variant = 'primary',
-  size = 'md',
-  icon,
-  fullWidth = false,
-  className = '',
-  children,
-  ...props
-}: ButtonProps) {
+export function Button({ variant = 'primary', size = 'md', icon, fullWidth = false, className = '', children, ...props }: ButtonProps) {
   return (
     <button
-      className={`inline-flex items-center justify-center gap-2.5 transition-all duration-200 active:scale-[0.97] disabled:opacity-40 disabled:pointer-events-none select-none ${variantClasses[variant]} ${sizeClasses[size]} ${fullWidth ? 'w-full' : ''} ${className}`}
+      type="button"
+      className={`inline-flex items-center justify-center gap-2.5 font-display font-bold select-none max-w-full ${variantClasses[variant]} ${sizeClasses[size]} ${fullWidth ? 'w-full' : ''} ${className}`}
       {...props}
     >
       {icon && <span className="shrink-0">{icon}</span>}
-      {children}
+      <span className="truncate">{children}</span>
     </button>
   );
 }

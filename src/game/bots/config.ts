@@ -1,6 +1,7 @@
 // Development configuration for bots. A settings screen can replace this later.
 import type { GameModeId } from '@/game/rules/modes';
 import type { BotSetup } from './botController';
+import type { BotDifficulty } from './profiles';
 
 export interface BotTableConfig {
   bots: Record<string, BotSetup>;
@@ -33,4 +34,9 @@ export const BOT_TABLES: Record<'classic' | 'teams', BotTableConfig> = {
 
 export function getBotTable(mode: GameModeId | undefined): BotTableConfig {
   return mode === 'teams' ? BOT_TABLES.teams : BOT_TABLES.classic;
+}
+
+/** Applies the difficulty chosen in Settings to every bot, keeping each bot's personality. */
+export function withDifficulty(bots: Record<string, BotSetup>, difficulty: BotDifficulty): Record<string, BotSetup> {
+  return Object.fromEntries(Object.entries(bots).map(([id, setup]) => [id, { ...setup, difficulty }]));
 }

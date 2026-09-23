@@ -12,6 +12,7 @@ interface OpponentSeatProps {
   score: number | null;
   active: boolean;
   hasUno: boolean;
+  justPlayed?: boolean;
   compact: boolean;
   register: (key: string) => (el: HTMLElement | null) => void;
 }
@@ -25,7 +26,7 @@ const AVATAR_GRADIENTS = [
 ];
 
 /** A player sitting at the rim: avatar, name, count and face-down cards only — never the faces. */
-export function OpponentSeat({ player, seat, name, score, active, hasUno, compact, register }: OpponentSeatProps) {
+export function OpponentSeat({ player, seat, name, score, active, hasUno, justPlayed, compact, register }: OpponentSeatProps) {
   const { t } = useI18n();
   const vertical = seatOrientation(seat.position) === 'vertical';
   const count = player.cardsRemaining;
@@ -54,8 +55,8 @@ export function OpponentSeat({ player, seat, name, score, active, hasUno, compac
     <div
       ref={register(`seat:${player.id}`)}
       className={`seat-plate relative flex items-center rounded-2xl ${vertical ? `flex-col gap-1 px-1.5 py-1.5 ${compact ? 'w-[84px]' : 'w-[96px]'}` : 'flex-row gap-2 pl-1.5 pr-3 py-1.5'} ${
-        active ? 'seat-plate-active' : ''
-      } ${teammate ? 'seat-mate' : ''}`}
+        active ? 'seat-plate-active' : 'seat-plate-waiting'
+      } ${teammate ? 'seat-mate' : ''} ${justPlayed ? 'seat-played' : ''}`}
       aria-label={`${name}${teammate ? ` (${t('table.teammate')})` : ''}: ${t('table.cardsCount', { count })}${active ? `, ${t('table.theirTurn')}` : ''}`}
     >
       <div className="relative shrink-0">

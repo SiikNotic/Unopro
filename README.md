@@ -38,6 +38,14 @@ applyAction(state, action) // → { ok: true, state } | { ok: false, error, stat
 - Reglas oficiales por defecto; las reglas caseras (`stacking`, `jumpIn`, `drawUntilPlayable`, `forcePlay`) se activan en `GameSettings`.
 - **Modos de juego → Clásico / Equipos** abre la mesa de juego (`src/components/table/`). La mesa solo lee el `GameState` y envía `GameAction`s; los rivales los mueven los bots (`src/game/bots/`): reciben solo la vista de su jugador (`createPlayerView`), eligen entre acciones que `validateAction` acepta y se configuran en `src/game/bots/config.ts` (dificultad, personalidad y tiempo de pensamiento). Panel de debug solo en desarrollo.
 
+## Ajustes y escenarios
+
+- **Ajustes**: dificultad de los bots (Fácil / Normal / Difícil, usa las dificultades existentes), escenario
+  (Aleatorio o fijo), sonido, vibración y animaciones. Se guardan en el navegador (`src/settings/`).
+- **Escenarios** (`src/game/scenarios/` + `src/components/scene/`): Cielo, Volcán, Océano, Espacio, Bosque,
+  Ciudad y Salón, animados con CSS. Uno por partida; "Aleatorio" evita repetir el anterior.
+- **Sonido** (`src/audio/`): efectos originales sintetizados con Web Audio, sin archivos externos.
+
 ## Estructura
 
 - `src/game/engine` — motor del juego (mazo, turnos, reglas, efectos) y sus tests

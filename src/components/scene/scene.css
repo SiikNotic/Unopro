@@ -1,0 +1,78 @@
+/* Ambient scene animations: transform/opacity only. Disabled by Settings (data-motion=off) and reduced motion. */
+.scene-particle { position: absolute; border-radius: 9999px; animation-iteration-count: infinite; animation-timing-function: linear; will-change: transform, opacity; }
+.scene-rise { animation-name: scene-rise; }
+.scene-ember { background: #ffb347; box-shadow: 0 0 6px 2px rgba(255, 120, 30, 0.8); animation-name: scene-rise; }
+.scene-glint { background: #fff; box-shadow: 0 0 6px 2px rgba(200, 240, 255, 0.7); animation-name: scene-twinkle; animation-timing-function: ease-in-out; top: auto !important; bottom: calc(var(--drift) * 0.3 + 10%); }
+.scene-firefly { background: #e9ff8a; box-shadow: 0 0 8px 3px rgba(220, 255, 120, 0.7); animation-name: scene-firefly; animation-timing-function: ease-in-out; }
+.scene-soft { filter: blur(2px); }
+.scene-soft-lg { filter: blur(28px); }
+.scene-lite .scene-soft, .scene-lite .scene-soft-lg { filter: none; }
+
+.scene-drift { position: absolute; left: 0; width: 200%; display: flex; animation: scene-drift linear infinite; will-change: transform; }
+.scene-drift > * { flex: 0 0 50%; position: relative; }
+.scene-cloud-strip { height: 100%; }
+.scene-cloud {
+  position: absolute; top: 20%; width: 26%; height: 70%;
+  background:
+    radial-gradient(50% 50% at 30% 60%, #fff 0 60%, transparent 62%),
+    radial-gradient(45% 55% at 55% 45%, #fff 0 60%, transparent 62%),
+    radial-gradient(40% 45% at 75% 62%, #f7f3ee 0 60%, transparent 62%);
+}
+.scene-wave { width: 100%; height: 100%; }
+.scene-fog { height: 100%; background: radial-gradient(40% 60% at 30% 50%, rgba(220, 240, 225, 0.8), transparent 70%), radial-gradient(35% 55% at 75% 55%, rgba(220, 240, 225, 0.7), transparent 70%); }
+
+.scene-pulse { animation: scene-pulse 7s ease-in-out infinite; }
+.scene-bob { animation: scene-bob 14s ease-in-out infinite; will-change: transform; }
+.scene-spin { animation: scene-spin 180s linear infinite; will-change: transform; }
+.scene-sway { transform-origin: 50% 100%; animation: scene-sway 10s ease-in-out infinite; }
+.scene-lava { animation: scene-lava 3.2s ease-in-out infinite; }
+.scene-window { animation: scene-window 6s steps(2, jump-none) infinite; }
+
+.scene-smoke {
+  position: absolute; bottom: 40%; width: 18vmin; height: 18vmin; border-radius: 9999px;
+  background: radial-gradient(circle, rgba(60, 40, 36, 0.8), rgba(40, 28, 26, 0) 70%);
+  animation: scene-smoke 16s linear infinite; will-change: transform, opacity;
+}
+.scene-stars { position: absolute; left: 0; top: 0; border-radius: 9999px; background: transparent; }
+.scene-drift-slow { animation: scene-stars 240s linear infinite; }
+.scene-drift-slower { animation: scene-stars 160s linear infinite; }
+.scene-twinkle { animation: scene-stars 160s linear infinite, scene-twinkle-soft 5s ease-in-out infinite; }
+.scene { --horizon: 36%; }
+@media (max-width: 639px) { .scene { --horizon: 16%; } }
+.scene-band { position: absolute; left: 0; right: 0; top: 0; height: var(--horizon); }
+.scene-band-fill { position: absolute; left: 0; right: 0; width: 100%; top: calc(var(--horizon) * 0.18); height: calc(var(--horizon) * 0.84); }
+.scene-smoke-band { bottom: auto; top: calc(var(--horizon) * 0.02); }
+.scene-shooting {
+  position: absolute; top: 18%; left: 70%; width: 120px; height: 2px; border-radius: 2px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), transparent);
+  transform: rotate(200deg); opacity: 0; animation: scene-shoot 11s ease-in infinite;
+}
+.scene-ray {
+  position: absolute; top: -10%; width: 14%; height: 90%;
+  background: linear-gradient(180deg, rgba(255, 240, 180, 0.22), transparent 80%);
+  transform: skewX(-18deg); transform-origin: top; animation: scene-pulse 9s ease-in-out infinite;
+}
+.scene-car { position: absolute; left: -20%; top: 0; width: 18%; height: 2px; background: linear-gradient(90deg, transparent, #fff3c4); animation: scene-car 7s linear infinite; }
+
+@keyframes scene-rise { 0% { transform: translate(0, 0); opacity: 0; } 15% { opacity: 1; } 100% { transform: translate(var(--drift), -60vh); opacity: 0; } }
+@keyframes scene-twinkle { 0%, 100% { opacity: 0; transform: scale(0.6); } 50% { opacity: 1; transform: scale(1); } }
+@keyframes scene-twinkle-soft { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+@keyframes scene-firefly { 0%, 100% { transform: translate(0, 0); opacity: 0.2; } 30% { opacity: 1; } 50% { transform: translate(var(--drift), -24px); opacity: 0.4; } 75% { opacity: 1; } }
+@keyframes scene-drift { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@keyframes scene-pulse { 0%, 100% { opacity: 0.75; } 50% { opacity: 1; } }
+@keyframes scene-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+@keyframes scene-spin { to { transform: rotate(360deg); } }
+@keyframes scene-sway { 0%, 100% { transform: rotate(-0.6deg); } 50% { transform: rotate(0.6deg); } }
+@keyframes scene-lava { 0%, 100% { opacity: 0.75; } 50% { opacity: 1; } }
+@keyframes scene-window { 0%, 70% { opacity: 1; } 71%, 100% { opacity: 0.25; } }
+@keyframes scene-smoke { 0% { transform: translate(-50%, 0) scale(0.5); opacity: 0; } 15% { opacity: 0.9; } 100% { transform: translate(-30%, -18vh) scale(2.6); opacity: 0; } }
+@keyframes scene-stars { from { transform: translate(0, 0); } to { transform: translate(-400px, -120px); } }
+@keyframes scene-shoot { 0%, 88% { opacity: 0; transform: rotate(200deg) translateX(0); } 90% { opacity: 1; } 100% { opacity: 0; transform: rotate(200deg) translateX(-60vw); } }
+@keyframes scene-car { from { transform: translateX(0); } to { transform: translateX(700%); } }
+
+:root[data-motion='off'] .scene *, :root[data-motion='off'] .scene { animation: none !important; }
+:root[data-motion='off'] .scene-particle, :root[data-motion='off'] .scene-shooting, :root[data-motion='off'] .scene-smoke { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .scene *, .scene { animation: none !important; }
+  .scene-particle, .scene-shooting, .scene-smoke { display: none; }
+}

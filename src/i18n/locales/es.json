@@ -55,17 +55,35 @@
     "language": "Idioma",
     "languageDescription": "Elige tu idioma preferido",
     "sound": "Sonido",
-    "soundDescription": "Efectos de sonido y música",
+    "soundDescription": "Efectos de cartas, turnos y victorias",
     "haptics": "Vibración",
-    "hapticsDescription": "Respuesta de vibración en dispositivos compatibles",
+    "hapticsDescription": "Vibración al jugar una carta no válida y en los avisos de UNO",
     "animations": "Animaciones",
-    "animationsDescription": "Movimiento y transiciones",
+    "animationsDescription": "Escenarios animados, vuelos de cartas y efectos",
     "about": "Acerca de",
     "aboutDescription": "Versión y créditos",
     "version": "Versión",
     "resetData": "Restablecer todos los datos",
     "resetDataConfirm": "Esto borrará todas las preferencias guardadas. ¿Continuar?",
-    "resetDone": "Todos los datos han sido restablecidos."
+    "resetDone": "Todos los datos han sido restablecidos.",
+    "difficulty": "Dificultad",
+    "gameFeel": "Experiencia de juego",
+    "scenario": "Escenario",
+    "scenarioDescription": "\"Aleatorio\" elige un escenario distinto al empezar cada partida.",
+    "levels": {
+      "easy": {
+        "name": "Fácil",
+        "description": "Bots relajados que cometen errores"
+      },
+      "normal": {
+        "name": "Normal",
+        "description": "Juegan con cabeza y guardan comodines"
+      },
+      "hard": {
+        "name": "Difícil",
+        "description": "Casi nunca olvidan UNO ni perdonan"
+      }
+    }
   },
   "tutorial": {
     "title": "Tutorial",
@@ -168,5 +186,15 @@
     "teamLabel": "Equipo {team}",
     "yourScoreLabel": "Tus puntos",
     "mustDraw": "No tienes jugada: toca el mazo para robar"
+  },
+  "scenarios": {
+    "random": "Aleatorio",
+    "sky": "Cielo",
+    "volcano": "Volcán",
+    "ocean": "Océano",
+    "space": "Espacio",
+    "forest": "Bosque",
+    "city": "Ciudad",
+    "lounge": "Salón"
   }
 }

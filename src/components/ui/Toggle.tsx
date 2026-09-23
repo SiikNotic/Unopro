@@ -4,6 +4,7 @@ interface ToggleProps {
   label: string;
 }
 
+/** Game-style switch: recessed slot, bevelled knob and a lit track when ON. Fixed size, never overflows. */
 export function Toggle({ checked, onChange, label }: ToggleProps) {
   return (
     <button
@@ -12,15 +13,11 @@ export function Toggle({ checked, onChange, label }: ToggleProps) {
       aria-checked={checked}
       aria-label={label}
       onClick={() => onChange(!checked)}
-      className={`relative h-7 w-12 rounded-full transition-colors duration-200 ${
-        checked ? 'bg-brand-500' : 'bg-ink-600'
-      }`}
+      className="toggle-hit shrink-0 inline-flex items-center justify-center rounded-full"
     >
-      <span
-        className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow-md transition-transform duration-200 ${
-          checked ? 'translate-x-6' : 'translate-x-1'
-        }`}
-      />
+      <span className={`toggle-track ${checked ? 'toggle-on' : ''}`}>
+        <span className="toggle-knob" />
+      </span>
     </button>
   );
 }

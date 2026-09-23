@@ -21,6 +21,11 @@ import { useTableAnimations } from './useTableAnimations';
 import { displayName } from './names';
 import { eventText } from './eventText';
 import { FeltPrint } from './FeltPrint';
+import { SceneBackground } from '@/components/scene/SceneBackground';
+import type { ScenarioId } from '@/game/scenarios/scenarios';
+import { scenarioStyle } from '@/game/scenarios/scenarios';
+import { playSfx } from '@/audio/sfx';
+import { usePreferences, vibrate } from '@/settings/usePreferences';
 
 interface GameTableProps {
   state: GameState;
@@ -28,6 +33,7 @@ interface GameTableProps {
   dispatch: (action: GameAction) => ActionResult;
   onExit: () => void;
   engineError?: string | null;
+  scenario: ScenarioId;
 }
 
 interface Burst {
@@ -37,6 +43,23 @@ interface Burst {
   y: number;
   tone: 'good' | 'bad';
 }
+
+/** Short-lived table effects around the discard pile (sparks, color wave). */
+interface Effect {
+  id: number;
+  kind: 'sparks' | 'wave';
+  x: number;
+  y: number;
+  color: string;
+}
+
+const EFFECT_COLOR: Record<string, string> = {
+  RED: 'var(--pc-red)',
+  YELLOW: 'var(--pc-yellow)',
+  GREEN: 'var(--pc-green)',
+  BLUE: 'var(--pc-blue)',
+  WILD: '#f3ecdc',
+};
 
 const clamp = (min: number, value: number, max: number) => Math.max(min, Math.min(max, value));
 
@@ -58,7 +81,8 @@ const NARROW_ORDER: SeatPosition[] = ['left', 'top-left', 'top', 'top-right', 'r
  * The visual table. Renders GameState and turns taps into GameActions — every rule
  * (legality, turns, effects, UNO, scoring) is answered by the engine.
  */
-export function GameTable({ state, localPlayerId, dispatch, onExit, engineError }: GameTableProps) {
+export function GameTable({ state, localPlayerId, dispatch, onExit, engineError, scenario }: GameTableProps) {
+  const { preferences } = usePreferences();
   const { t } = useI18n();
   const cardName = useCardName();
   const { width: vw, height: vh } = useViewport();
@@ -69,6 +93,8 @@ export function GameTable({ state, localPlayerId, dispatch, onExit, engineError 
   const [toast, setToast] = useState<{ id: number; text: string } | null>(null);
   const [bursts, setBursts] = useState<Burst[]>([]);
   const [showDebug, setShowDebug] = useState(false);
+  const [effects, setEffects] = useState<Effect[]>([]);
+  const [justPlayed, setJustPlayed] = useState<string | null>(null);
 
   const local = state.players.find((p) => p.id === localPlayerId)!;
   const current = state.players[state.currentPlayerIndex];
@@ -116,8 +142,29 @@ export function GameTable({ state, localPlayerId, dispatch, onExit, engineError 
     window.setTimeout(() => setBursts((b) => b.filter((x) => x.id !== id)), 1050);
   }, []);
 
+  const addEffect = useCallback((kind: Effect['kind'], rect: DOMRect | undefined, color: string) => {
+    if (!rect) return;
+    const id = Date.now() + Math.random();
+    setEffects((e) => [...e, { id, kind, x: rect.left + rect.width / 2, y: rect.top + rect.height / 2, color }]);
+    window.setTimeout(() => setEffects((e) => e.filter((x) => x.id !== id)), 900);
+  }, []);
+
   const onEvents = useCallback(
     (events: TableEvents, rects: Map<string, DOMRect>) => {
+      const discard = rects.get('discard-top');
+      if (events.played) {
+        const { card, playerId } = events.played;
+        setJustPlayed(playerId);
+        window.setTimeout(() => setJustPlayed((p) => (p === playerId ? null : p)), 650);
+        if (card.type !== 'NUMBER') addEffect('sparks', discard, EFFECT_COLOR[card.color]);
+      }
+      if (events.colorChanged && !events.dealt) addEffect('wave', discard, EFFECT_COLOR[events.colorChanged]);
+      for (const e of events.newLog) {
+        if (e.type === 'DRAW_PENALTY' && e.playerId && (e.amount ?? 0) >= 2) {
+          addBurst(`+${e.amount}`, rects.get(`seat:${e.playerId}`), 'bad');
+        }
+      }
+      if (events.unoCalls.some((c) => c.valid) || events.unoPenalties.length > 0) vibrate(preferences.haptics, [20, 40, 20]);
       for (const call of events.unoCalls) {
         addBurst(call.valid ? t('table.uno') : t('table.unoInvalid'), rects.get(`seat:${call.playerId}`), call.valid ? 'good' : 'bad');
       }
@@ -125,7 +172,7 @@ export function GameTable({ state, localPlayerId, dispatch, onExit, engineError 
         addBurst(t('table.unoPenaltyBurst', { amount: penalty.amount }), rects.get(`seat:${penalty.playerId}`), 'bad');
       }
     },
-    [addBurst, t]
+    [addBurst, addEffect, t, preferences.haptics]
   );
 
   const { register, ghostLayer } = useTableAnimations(state, localPlayerId, onEvents);
@@ -140,11 +187,8 @@ export function GameTable({ state, localPlayerId, dispatch, onExit, engineError 
     el.classList.remove('animate-shake');
     void el.offsetWidth;
     el.classList.add('animate-shake');
-    try {
-      navigator.vibrate?.(35);
-    } catch {
-      // vibration is optional
-    }
+    playSfx('error');
+    vibrate(preferences.haptics, 35);
     setToast({ id: Date.now(), text: isMyTurn ? t('table.cannotPlay') : t('table.notYourTurn') });
   };
 
@@ -177,6 +221,7 @@ export function GameTable({ state, localPlayerId, dispatch, onExit, engineError 
         score={state.settings.teamMode ? null : state.scores[player.id] ?? 0}
         active={playing && (pending?.playerId ?? current.id) === player.id}
         hasUno={state.unoState.playersWithOneCard.includes(player.id)}
+        justPlayed={justPlayed === player.id}
         compact={narrow}
         register={register}
       />
@@ -185,12 +230,13 @@ export function GameTable({ state, localPlayerId, dispatch, onExit, engineError 
 
   const narrowSeats = [...opponents].sort((a, b) => NARROW_ORDER.indexOf(a.position) - NARROW_ORDER.indexOf(b.position));
   const hasSides = !narrow && opponents.some((s) => s.position === 'left' || s.position === 'right');
-  const pad = narrow ? 'inset-x-1 top-[58px] bottom-1' : `${hasSides ? 'inset-x-[64px] lg:inset-x-[84px]' : 'inset-x-2'} top-[40px] bottom-2`;
+  const pad = narrow ? 'inset-x-2.5 top-[60px] bottom-3' : `${hasSides ? 'inset-x-[64px] lg:inset-x-[84px]' : 'inset-x-2'} top-[40px] bottom-2`;
 
   return (
-    <div className="game-room relative h-[100dvh] w-full flex flex-col overflow-hidden select-none">
+    <div className="game-room relative h-[100dvh] w-full flex flex-col overflow-hidden select-none" style={scenarioStyle(scenario) as React.CSSProperties}>
+      <SceneBackground scenario={scenario} />
       {/* Header */}
-      <header className="w-full max-w-6xl mx-auto grid grid-cols-[auto_1fr_auto] items-center gap-1.5 px-2 sm:px-4 pt-2 pb-1 shrink-0">
+      <header className="relative z-10 w-full max-w-6xl mx-auto grid grid-cols-[auto_1fr_auto] items-center gap-1.5 px-2 sm:px-4 pt-2 pb-1 shrink-0">
         <button
           type="button"
           onClick={onExit}
@@ -214,7 +260,7 @@ export function GameTable({ state, localPlayerId, dispatch, onExit, engineError 
       </header>
 
       {/* Table */}
-      <div className="relative flex-1 min-h-0 w-full max-w-6xl mx-auto px-2 sm:px-4">
+      <div className="relative z-[1] flex-1 min-h-0 w-full max-w-6xl mx-auto px-2 sm:px-4">
         <div className="relative h-full table-stage">
           <div className={`table-top ${pad}`}>
             <div className="table-felt flex items-center justify-center overflow-hidden">
@@ -255,7 +301,7 @@ export function GameTable({ state, localPlayerId, dispatch, onExit, engineError 
       {/* Local player */}
       <section
         ref={register(`seat:${localPlayerId}`)}
-        className="relative w-full max-w-6xl mx-auto shrink-0 pb-[max(6px,env(safe-area-inset-bottom))]"
+        className="relative z-[2] w-full max-w-6xl mx-auto shrink-0 pb-[max(6px,env(safe-area-inset-bottom))]"
         aria-label={nameOf(localPlayerId)}
       >
         <div className="flex items-center justify-between gap-2 px-3 min-h-[52px]">
@@ -336,6 +382,21 @@ export function GameTable({ state, localPlayerId, dispatch, onExit, engineError 
           onExit={onExit}
         />
       )}
+
+      {/* Table effects: sparks for action cards, a color wave when the color changes */}
+      <div className="pointer-events-none fixed inset-0 z-[25]" aria-hidden>
+        {effects.map((fx) =>
+          fx.kind === 'wave' ? (
+            <span key={fx.id} className="fx-wave" style={{ left: fx.x, top: fx.y, '--fx': fx.color } as React.CSSProperties} />
+          ) : (
+            <span key={fx.id} className="fx-sparks" style={{ left: fx.x, top: fx.y, '--fx': fx.color } as React.CSSProperties}>
+              {Array.from({ length: 10 }, (_, i) => (
+                <i key={i} style={{ '--a': `${i * 36}deg` } as React.CSSProperties} />
+              ))}
+            </span>
+          )
+        )}
+      </div>
 
       {/* Flying cards and UNO feedback */}
       <div ref={ghostLayer} className="pointer-events-none fixed inset-0 z-30" aria-hidden />

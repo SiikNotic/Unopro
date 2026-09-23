@@ -55,17 +55,35 @@
     "language": "Language",
     "languageDescription": "Choose your preferred language",
     "sound": "Sound",
-    "soundDescription": "Sound effects and music",
+    "soundDescription": "Card, turn and victory sound effects",
     "haptics": "Haptics",
-    "hapticsDescription": "Vibration feedback on supported devices",
+    "hapticsDescription": "Vibrate on illegal plays and UNO alerts",
     "animations": "Animations",
-    "animationsDescription": "Motion and transitions",
+    "animationsDescription": "Animated scenarios, flying cards and effects",
     "about": "About",
     "aboutDescription": "Version and credits",
     "version": "Version",
     "resetData": "Reset all data",
     "resetDataConfirm": "This will erase all saved preferences. Continue?",
-    "resetDone": "All data has been reset."
+    "resetDone": "All data has been reset.",
+    "difficulty": "Difficulty",
+    "gameFeel": "Game feel",
+    "scenario": "Scenario",
+    "scenarioDescription": "\"Random\" picks a different scenario at the start of every game.",
+    "levels": {
+      "easy": {
+        "name": "Easy",
+        "description": "Relaxed bots that make mistakes"
+      },
+      "normal": {
+        "name": "Normal",
+        "description": "Play smart and save their wilds"
+      },
+      "hard": {
+        "name": "Hard",
+        "description": "Rarely forget UNO, never forgive"
+      }
+    }
   },
   "tutorial": {
     "title": "Tutorial",
@@ -168,5 +186,15 @@
     "teamLabel": "Team {team}",
     "yourScoreLabel": "Your points",
     "mustDraw": "No playable card: tap the deck to draw"
+  },
+  "scenarios": {
+    "random": "Random",
+    "sky": "Sky",
+    "volcano": "Volcano",
+    "ocean": "Ocean",
+    "space": "Space",
+    "forest": "Forest",
+    "city": "City",
+    "lounge": "Lounge"
   }
 }

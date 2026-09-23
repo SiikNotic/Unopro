@@ -1,6 +1,7 @@
 import { NavigationProvider, useNavigation } from '@/components/Navigation';
 import { Background } from '@/components/ui/Background';
 import { I18nProvider } from '@/i18n';
+import { PreferencesProvider } from '@/settings/PreferencesProvider';
 import { HomeScreen } from '@/screens/HomeScreen';
 import { GameModesScreen } from '@/screens/GameModesScreen';
 import { SettingsScreen } from '@/screens/SettingsScreen';
@@ -30,9 +31,11 @@ function ScreenRouter() {
 function App() {
   return (
     <I18nProvider>
-      <NavigationProvider>
-        <ScreenRouter />
-      </NavigationProvider>
+      <PreferencesProvider>
+        <NavigationProvider>
+          <ScreenRouter />
+        </NavigationProvider>
+      </PreferencesProvider>
     </I18nProvider>
   );
 }
