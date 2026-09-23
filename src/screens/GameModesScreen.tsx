@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { useNavigation } from '@/components/Navigation';
 import { useI18n } from '@/i18n';
 import { GAME_MODES } from '@/game/rules/modes';
-import type { GameMode } from '@/game/engine/types';
+import type { GameMode } from '@/game/rules/modes';
 import type { LucideIcon } from 'lucide-react';
 
 const iconMap: Record<string, LucideIcon> = {
@@ -54,7 +54,7 @@ export function GameModesScreen() {
                   size="sm"
                   fullWidth
                   disabled={!mode.enabled}
-                  onClick={() => mode.enabled && navigate('home')}
+                  onClick={() => mode.enabled && navigate('play')}
                 >
                   {mode.enabled ? t('gameModes.selectMode') : t('common.comingSoon')}
                 </Button>

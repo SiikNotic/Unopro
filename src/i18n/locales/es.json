@@ -80,5 +80,36 @@
       "uno": "Cantar UNO y penalizaciones",
       "strategy": "Estrategias básicas y consejos"
     }
+  },
+  "play": {
+    "title": "Mesa de prueba",
+    "players": "Jugadores",
+    "cards": "{count} cartas",
+    "turn": "Turno",
+    "topCard": "Carta superior",
+    "color": "Color actual",
+    "direction": "Dirección",
+    "deck": "Mazo",
+    "yourHand": "Mano de {name}",
+    "draw": "Robar",
+    "endTurn": "Pasar",
+    "callUno": "¡UNO!",
+    "challenge": "Penalizar a {name} (no dijo UNO)",
+    "chooseColor": "Elige un color",
+    "roundOver": "Fin de la ronda {round}",
+    "gameOver": "Fin de la partida",
+    "winner": "Ganador: {name} (+{points})",
+    "scores": "Puntuación",
+    "nextRound": "Siguiente ronda",
+    "restart": "Reiniciar partida",
+    "newGame": "Nueva partida",
+    "drawStack": "Robo acumulado: {count}",
+    "hotSeat": "Modo de prueba: controlas a todos los jugadores por turnos.",
+    "colors": {
+      "RED": "Rojo",
+      "YELLOW": "Amarillo",
+      "GREEN": "Verde",
+      "BLUE": "Azul"
+    }
   }
 }

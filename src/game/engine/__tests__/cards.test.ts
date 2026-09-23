@@ -1,304 +1,162 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { createGame, playCard, drawCards, resetGameIdCounter } from '../game';
-import { resetCardIdCounter, makeCard } from '../deck';
+import { describe, expect, it } from 'vitest';
+import { chooseColor, drawCards, playCard } from '../game';
 import { canPlayCard } from '../validation';
-import type { Card, GameState } from '../types';
+import { currentId, drawTwo, num, ok, scenario, skip, wild, wildFour } from './helpers';
 
-function createTestGame(numPlayers = 4): GameState {
-  const players = [];
-  for (let i = 0; i < numPlayers; i++) {
-    players.push({
-      id: `p${i}`,
-      name: `Player ${i}`,
-      type: i === 0 ? 'human' as const : 'bot' as const,
+const fillers = () => [num('BLUE', 1), num('BLUE', 2), num('BLUE', 3)];
+
+describe('Number cards', () => {
+  it('match by color', () => {
+    const card = num('RED', 2);
+    const s = scenario({ hands: [[card, ...fillers()], fillers()], top: num('RED', 5) });
+    expect(canPlayCard(card, s)).toBe(true);
+  });
+
+  it('match by number across colors and change the current color', () => {
+    const card = num('GREEN', 5);
+    const s = scenario({ hands: [[card, ...fillers()], fillers(), fillers()], top: num('RED', 5) });
+    const next = ok(playCard(s, 'p0', card.id));
+    expect(next.currentColor).toBe('GREEN');
+    expect(next.discardPile.at(-1)).toEqual(card);
+    expect(next.players[0].hand).toHaveLength(3);
+    expect(next.players[0].cardsRemaining).toBe(3);
+  });
+
+  it('do not match a different number and color', () => {
+    const s = scenario({ hands: [[num('GREEN', 4)], fillers()], top: num('RED', 5) });
+    expect(canPlayCard(s.players[0].hand[0], s)).toBe(false);
+  });
+
+  it('action cards match by symbol', () => {
+    const card = skip('GREEN');
+    const s = scenario({ hands: [[card], fillers()], top: skip('RED') });
+    expect(canPlayCard(card, s)).toBe(true);
+    expect(canPlayCard(skip('YELLOW'), scenario({ hands: [[], []], top: num('RED', 1) }))).toBe(false);
+  });
+
+  it('uses the chosen color after a wild, not the wild itself', () => {
+    const s = scenario({ hands: [[num('BLUE', 8)], fillers()], top: wild(), color: 'BLUE' });
+    expect(canPlayCard(s.players[0].hand[0], s)).toBe(true);
+    expect(canPlayCard(num('RED', 8), s)).toBe(false);
+  });
+});
+
+describe('Wild', () => {
+  it('can always be played', () => {
+    const card = wild();
+    const s = scenario({ hands: [[card, ...fillers()], fillers()], top: num('RED', 5) });
+    expect(canPlayCard(card, s)).toBe(true);
+  });
+
+  it('sets the chosen color in one action', () => {
+    const card = wild();
+    const s = scenario({ hands: [[card, ...fillers()], fillers(), fillers()], top: num('RED', 5) });
+    const next = ok(playCard(s, 'p0', card.id, 'YELLOW'));
+    expect(next.currentColor).toBe('YELLOW');
+    expect(next.discardPile.at(-1)).toEqual(card);
+    expect(currentId(next)).toBe('p1');
+  });
+
+  it('waits for CHOOSE_COLOR when no color is given', () => {
+    const card = wild();
+    const s = scenario({ hands: [[card, ...fillers()], fillers(), fillers()], top: num('RED', 5) });
+    const waiting = ok(playCard(s, 'p0', card.id));
+    expect(waiting.pendingAction).toMatchObject({ type: 'CHOOSE_COLOR', playerId: 'p0' });
+    expect(waiting.discardPile.at(-1)).toEqual(card);
+    expect(currentId(waiting)).toBe('p0');
+
+    expect(drawCards(waiting, 'p0').ok).toBe(false);
+    expect(chooseColor(waiting, 'p1', 'BLUE').ok).toBe(false);
+
+    const next = ok(chooseColor(waiting, 'p0', 'GREEN'));
+    expect(next.currentColor).toBe('GREEN');
+    expect(next.pendingAction).toBeNull();
+    expect(currentId(next)).toBe('p1');
+    expect(next.log.some((e) => e.type === 'COLOR_CHANGED' && e.color === 'GREEN')).toBe(true);
+  });
+});
+
+describe('Wild Draw Four', () => {
+  it('next player draws 4 and loses the turn; color changes', () => {
+    const card = wildFour();
+    const s = scenario({ hands: [[card, ...fillers()], fillers(), fillers()], top: num('RED', 5), color: 'RED' });
+    const next = ok(playCard(s, 'p0', card.id, 'BLUE'));
+    expect(next.players[1].hand).toHaveLength(7);
+    expect(next.currentColor).toBe('BLUE');
+    expect(currentId(next)).toBe('p2');
+  });
+
+  it('applies the penalty after the color is chosen in a separate step', () => {
+    const card = wildFour();
+    const s = scenario({ hands: [[card, ...fillers()], fillers(), fillers()], top: num('RED', 5) });
+    const waiting = ok(playCard(s, 'p0', card.id));
+    expect(waiting.players[1].hand).toHaveLength(3);
+    const next = ok(chooseColor(waiting, 'p0', 'YELLOW'));
+    expect(next.players[1].hand).toHaveLength(7);
+    expect(currentId(next)).toBe('p2');
+  });
+
+  it('is illegal while holding a card of the current color (official rule)', () => {
+    const card = wildFour();
+    const s = scenario({ hands: [[card, num('RED', 1)], fillers()], top: num('RED', 5), color: 'RED' });
+    expect(canPlayCard(card, s)).toBe(false);
+    expect(playCard(s, 'p0', card.id, 'BLUE').ok).toBe(false);
+  });
+
+  it('is legal when holding only a matching number of another color', () => {
+    const card = wildFour();
+    const s = scenario({ hands: [[card, num('BLUE', 5)], fillers()], top: num('RED', 5), color: 'RED' });
+    expect(canPlayCard(card, s)).toBe(true);
+  });
+
+  it('the restriction can be turned off', () => {
+    const card = wildFour();
+    const s = scenario({
+      hands: [[card, num('RED', 1)], fillers()],
+      top: num('RED', 5),
+      settings: { strictWildDrawFour: false },
     });
-  }
-  return createGame({ players, startingCards: 7 });
-}
-
-function findPlayableCard(state: GameState, playerId: string): Card | undefined {
-  const player = state.players.find((p) => p.id === playerId)!;
-  return player.hand.find((c) => canPlayCard(c, state));
-}
-
-function forcePlayableCard(state: GameState, playerId: string, color: string, type: string): Card {
-  const player = state.players.find((p) => p.id === playerId)!;
-  const card = player.hand.find((c) => c.color === color && c.type === type);
-  if (card) return card;
-  // If no matching card, make one by modifying a card in hand
-  const anyCard = player.hand[0];
-  anyCard.color = color as Card['color'];
-  anyCard.type = type as Card['type'];
-  anyCard.value = type === 'number' ? 5 : type;
-  return anyCard;
-}
-
-describe('Card Validation', () => {
-  beforeEach(() => {
-    resetCardIdCounter();
-    resetGameIdCounter();
-  });
-
-  it('should allow playing a card matching the active color', () => {
-    const state = createTestGame();
-    const activeColor = state.activeColor!;
-    const player = state.players[0];
-    const matchingCard = player.hand.find((c) => c.color === activeColor);
-    if (matchingCard) {
-      expect(canPlayCard(matchingCard, state)).toBe(true);
-    }
-  });
-
-  it('should not allow playing a card that does not match color or type', () => {
-    const state = createTestGame();
-    const activeColor = state.activeColor!;
-    const activeCard = state.activeCard!;
-    const player = state.players[0];
-    const nonMatching = player.hand.find(
-      (c) => c.color !== activeColor && c.type !== activeCard.type
-    );
-    if (nonMatching) {
-      expect(canPlayCard(nonMatching, state)).toBe(false);
-    }
-  });
-
-  it('should allow playing a number card matching the active number', () => {
-    const state = createTestGame();
-    const activeCard = state.activeCard!;
-    if (activeCard.type === 'number') {
-      const player = state.players[0];
-      const matchingNumber = player.hand.find(
-        (c) => c.type === 'number' && c.value === activeCard.value
-      );
-      if (matchingNumber) {
-        expect(canPlayCard(matchingNumber, state)).toBe(true);
-      }
-    }
-  });
-
-  it('should allow playing a Wild card anytime', () => {
-    const state = createTestGame();
-    const wildCard = makeCard('wild', 'wild', 'wild');
-    expect(canPlayCard(wildCard, state)).toBe(true);
-  });
-
-  it('should allow playing a Wild Draw Four card', () => {
-    const state = createTestGame();
-    const wildDrawFour = makeCard('wild', 'wild_draw_four', 'wild_draw_four');
-    expect(canPlayCard(wildDrawFour, state)).toBe(true);
-  });
-
-  it('should allow matching by type (Skip on Skip)', () => {
-    const state = createTestGame();
-    state.activeCard = makeCard('red', 'skip', 'skip');
-    state.activeColor = 'red';
-    const blueSkip = makeCard('blue', 'skip', 'skip');
-    expect(canPlayCard(blueSkip, state)).toBe(true);
-  });
-
-  it('should allow matching by type (Reverse on Reverse)', () => {
-    const state = createTestGame();
-    state.activeCard = makeCard('red', 'reverse', 'reverse');
-    state.activeColor = 'red';
-    const greenReverse = makeCard('green', 'reverse', 'reverse');
-    expect(canPlayCard(greenReverse, state)).toBe(true);
-  });
-
-  it('should allow matching by type (Draw Two on Draw Two)', () => {
-    const state = createTestGame();
-    state.activeCard = makeCard('red', 'draw_two', 'draw_two');
-    state.activeColor = 'red';
-    const blueDrawTwo = makeCard('blue', 'draw_two', 'draw_two');
-    expect(canPlayCard(blueDrawTwo, state)).toBe(true);
-  });
-
-  it('should not allow playing out of turn', () => {
-    const state = createTestGame();
-    const player1Card = state.players[1].hand[0];
-    const result = playCard(state, 'p1', player1Card.id);
-    expect(result.log.some((e) => e.type === 'ERROR')).toBe(true);
-  });
-
-  it('should not allow playing a card not in hand', () => {
-    const state = createTestGame();
-    const fakeCard = makeCard('red', 'number', 5);
-    const result = playCard(state, 'p0', fakeCard.id);
-    expect(result.log.some((e) => e.type === 'ERROR')).toBe(true);
-  });
-
-  it('should remove card from hand after playing', () => {
-    let state = createTestGame();
-    const player = state.players[0];
-    const initialHandSize = player.hand.length;
-    const playable = findPlayableCard(state, 'p0');
-    if (playable) {
-      state = playCard(state, 'p0', playable.id, playable.color === 'wild' ? 'red' : undefined);
-      expect(state.players[0].hand).toHaveLength(initialHandSize - 1);
-    }
-  });
-
-  it('should place played card on discard pile', () => {
-    let state = createTestGame();
-    const playable = findPlayableCard(state, 'p0');
-    if (playable) {
-      const initialDiscardSize = state.discardPile.length;
-      state = playCard(state, 'p0', playable.id, playable.color === 'wild' ? 'red' : undefined);
-      expect(state.discardPile.length).toBe(initialDiscardSize + 1);
-      expect(state.discardPile[state.discardPile.length - 1].id).toBe(playable.id);
-    }
+    expect(canPlayCard(card, s)).toBe(true);
   });
 });
 
-describe('Special Cards', () => {
-  beforeEach(() => {
-    resetCardIdCounter();
-    resetGameIdCounter();
+describe('Draw Two', () => {
+  it('next player draws 2 and loses the turn', () => {
+    const card = drawTwo('RED');
+    const s = scenario({ hands: [[card, ...fillers()], fillers(), fillers()], top: num('RED', 5) });
+    const next = ok(playCard(s, 'p0', card.id));
+    expect(next.players[1].hand).toHaveLength(5);
+    expect(currentId(next)).toBe('p2');
+    expect(next.pendingDraw).toBe(0);
+    expect(next.log.some((e) => e.type === 'DRAW_PENALTY' && e.playerId === 'p1' && e.amount === 2)).toBe(true);
   });
 
-  it('Skip should skip the next player', () => {
-    let state = createTestGame(4);
-    // Force a skip card into player 0's hand and make it playable
-    const player = state.players[0];
-    const skipCard = player.hand.find((c) => c.type === 'skip') ?? makeCard(state.activeColor!, 'skip', 'skip');
-    skipCard.color = state.activeColor!;
-    skipCard.type = 'skip';
-    skipCard.value = 'skip';
-
-    state = playCard(state, 'p0', skipCard.id);
-    // After skip, should jump from 0 to 2
-    expect(state.currentPlayerIndex).toBe(2);
+  it('cannot be stacked with official rules', () => {
+    const card = drawTwo('RED');
+    const answer = drawTwo('BLUE');
+    let s = scenario({ hands: [[card, ...fillers()], [answer, ...fillers()], fillers()], top: num('RED', 5) });
+    s = ok(playCard(s, 'p0', card.id));
+    expect(currentId(s)).toBe('p2');
   });
 
-  it('Reverse should change direction', () => {
-    let state = createTestGame(4);
-    const player = state.players[0];
-    const reverseCard = player.hand.find((c) => c.type === 'reverse') ?? makeCard(state.activeColor!, 'reverse', 'reverse');
-    reverseCard.color = state.activeColor!;
-    reverseCard.type = 'reverse';
-    reverseCard.value = 'reverse';
-
-    state = playCard(state, 'p0', reverseCard.id);
-    expect(state.direction).toBe('counterclockwise');
-    // Next player should be 3 (counter-clockwise from 0)
-    expect(state.currentPlayerIndex).toBe(3);
-  });
-
-  it('Draw Two should add 2 to pendingDraw and skip next player', () => {
-    let state = createTestGame(4);
-    const player = state.players[0];
-    const drawTwoCard = player.hand.find((c) => c.type === 'draw_two') ?? makeCard(state.activeColor!, 'draw_two', 'draw_two');
-    drawTwoCard.color = state.activeColor!;
-    drawTwoCard.type = 'draw_two';
-    drawTwoCard.value = 'draw_two';
-
-    state = playCard(state, 'p0', drawTwoCard.id);
-    expect(state.pendingDraw).toBe(2);
-    expect(state.pendingSkip).toBe(true);
-    // Turn should advance to player 2 (skipping player 1)
-    expect(state.currentPlayerIndex).toBe(2);
-  });
-
-  it('Wild should require color choice and change status', () => {
-    let state = createTestGame(4);
-    const player = state.players[0];
-    const wildCard = player.hand.find((c) => c.type === 'wild') ?? makeCard('wild', 'wild', 'wild');
-    if (!player.hand.includes(wildCard)) {
-      player.hand[0] = wildCard;
-    }
-
-    state = playCard(state, 'p0', wildCard.id);
-    expect(state.status).toBe('CHOOSING_COLOR');
-  });
-
-  it('Wild Draw Four should require color choice and set pendingDraw to 4', () => {
-    let state = createTestGame(4);
-    const player = state.players[0];
-    const wdfCard = makeCard('wild', 'wild_draw_four', 'wild_draw_four');
-    player.hand[0] = wdfCard;
-
-    state = playCard(state, 'p0', wdfCard.id);
-    expect(state.status).toBe('CHOOSING_COLOR');
-  });
-
-  it('chooseColor should set active color and resume play', () => {
-    let state = createTestGame(4);
-    const player = state.players[0];
-    const wildCard = makeCard('wild', 'wild', 'wild');
-    player.hand[0] = wildCard;
-
-    state = playCard(state, 'p0', wildCard.id);
-    expect(state.status).toBe('CHOOSING_COLOR');
-
-    const { chooseColor } = require('../game');
-    state = chooseColor(state, 'p0', 'red');
-    expect(state.activeColor).toBe('red');
-    expect(state.status).toBe('PLAYING');
-  });
-
-  it('Wild Draw Four should set pendingDraw to 4 after color choice', () => {
-    let state = createTestGame(4);
-    const player = state.players[0];
-    const wdfCard = makeCard('wild', 'wild_draw_four', 'wild_draw_four');
-    player.hand[0] = wdfCard;
-
-    state = playCard(state, 'p0', wdfCard.id);
-    const { chooseColor } = require('../game');
-    state = chooseColor(state, 'p0', 'blue');
-    expect(state.pendingDraw).toBe(4);
-    expect(state.pendingSkip).toBe(true);
-  });
-});
-
-describe('Draw', () => {
-  beforeEach(() => {
-    resetCardIdCounter();
-    resetGameIdCounter();
-  });
-
-  it('should add drawn cards to player hand', () => {
-    let state = createTestGame(4);
-    const initialHandSize = state.players[0].hand.length;
-    state = drawCards(state, 'p0', 1);
-    expect(state.players[0].hand.length).toBe(initialHandSize + 1);
-    expect(state.players[0].cardsRemaining).toBe(initialHandSize + 1);
-  });
-
-  it('should reduce deck size', () => {
-    let state = createTestGame(4);
-    const initialDeckSize = state.deck.length;
-    state = drawCards(state, 'p0', 3);
-    expect(state.deck.length).toBe(initialDeckSize - 3);
-  });
-
-  it('should not allow drawing out of turn', () => {
-    const state = createTestGame(4);
-    const result = drawCards(state, 'p1', 1);
-    expect(result.log.some((e) => e.type === 'ERROR')).toBe(true);
-  });
-
-  it('should clear pendingDraw when drawing', () => {
-    let state = createTestGame(4);
-    state.pendingDraw = 2;
-    state.pendingSkip = true;
-    state = drawCards(state, 'p0', 1);
-    expect(state.pendingDraw).toBe(0);
-    // Should have drawn 2 (the pending amount), not 1
-    expect(state.players[0].hand.length).toBeGreaterThanOrEqual(7 + 2);
-  });
-
-  it('should recycle discard pile when deck runs out', () => {
-    let state = createTestGame(4);
-    // Move all deck cards to discard except a few
-    const allDeck = [...state.deck];
-    state.discardPile = [...state.discardPile, ...allDeck.slice(0, allDeck.length - 2)];
-    state.deck = allDeck.slice(allDeck.length - 2);
-
-    const discardBeforeRecycle = state.discardPile.length;
-    state = drawCards(state, 'p0', 5);
-
-    // Should have recycled the discard pile
-    expect(state.log.some((e) => e.type === 'DECK_RECYCLED')).toBe(true);
-    // Should still have cards in deck after drawing
-    expect(state.deck.length).toBeGreaterThan(0);
+  it('stacking (house rule) passes the growing penalty on', () => {
+    const settings = { stacking: true };
+    let s = scenario({
+      hands: [[drawTwo('RED'), ...fillers()], [drawTwo('BLUE'), ...fillers()], [num('GREEN', 1), ...fillers()]],
+      top: num('RED', 5),
+      settings,
+    });
+    s = ok(playCard(s, 'p0', s.players[0].hand[0].id));
+    expect(s.pendingDraw).toBe(2);
+    expect(currentId(s)).toBe('p1');
+    s = ok(playCard(s, 'p1', s.players[1].hand[0].id));
+    expect(s.pendingDraw).toBe(4);
+    expect(currentId(s)).toBe('p2');
+    // p2 has no +2: a normal card is not allowed, drawing takes the whole stack and ends the turn.
+    expect(playCard(s, 'p2', s.players[2].hand[0].id).ok).toBe(false);
+    s = ok(drawCards(s, 'p2'));
+    expect(s.players[2].hand).toHaveLength(8);
+    expect(s.pendingDraw).toBe(0);
+    expect(currentId(s)).toBe('p0');
   });
 });

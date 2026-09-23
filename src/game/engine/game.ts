@@ -1,572 +1,388 @@
+// Game lifecycle and the action reducer: GameState + GameAction → new GameState.
+// Every public function is pure: the input state is never modified.
 import type {
+  ActionResult,
   Card,
   CardColor,
+  GameAction,
   GameSettings,
   GameState,
-  GameStatus,
   Player,
   PlayerType,
   Team,
-  TurnDirection,
 } from './types';
-import { createDeck, drawFromDeck, getHandScore, recycleDiscardPile, shuffleDeck } from './deck';
-import { applyCardEffect, getNextPlayerIndex, reverseDirection } from './effects';
-import { canPlayCard } from './validation';
-import { createLogEntry } from './log';
+import { DEFAULT_SETTINGS, MAX_PLAYERS, MIN_PLAYERS } from './settings';
+import { createRng, randomSeed } from './rng';
+import { DECK_SIZE, cardLabel, isWild, resetDeck, shuffleDeck } from './deck';
+import type { EngineContext } from './log';
+import { addLog } from './log';
+import { advanceTurn, applyCardEffect, getNextPlayerIndex, giveCards } from './effects';
+import { canPlayCard, getPlayer, validateAction } from './validation';
+import { closeUnoWindowOnAction, createUnoState, registerUnoCall, syncUnoAfterHandChange } from './uno';
 
-let gameIdCounter = 0;
+// ── Creating a game ──────────────────────────────────────────────────────────
 
-export function nextGameId(): string {
-  gameIdCounter += 1;
-  return `g${gameIdCounter}`;
+export interface PlayerConfig {
+  id: string;
+  name: string;
+  type: PlayerType;
+  teamId?: string;
 }
-
-export function resetGameIdCounter(): void {
-  gameIdCounter = 0;
-}
-
-export const DEFAULT_SETTINGS: GameSettings = {
-  mode: 'classic',
-  startingCards: 7,
-  targetScore: 500,
-  drawUntilPlayable: false,
-  stackingEnabled: false,
-  jumpInEnabled: false,
-  forcePlayEnabled: false,
-  unoPenalty: 2,
-  turnTimer: 0,
-  teamMode: false,
-};
 
 export interface CreateGameConfig {
-  players: Array<{ id: string; name: string; type: PlayerType; teamId?: string }>;
+  players: PlayerConfig[];
   startingCards?: number;
   settings?: Partial<GameSettings>;
   teams?: Team[];
+  /** Fixes the shuffle so the whole game is reproducible. Random when omitted. */
   seed?: number;
+  /** Seat index of the dealer; the player after the dealer starts. Defaults to the last seat. */
+  dealerIndex?: number;
+  /** When false the game is returned in WAITING status and START_GAME deals the first round. */
+  autoStart?: boolean;
 }
 
-function makePlayer(
-  id: string,
-  name: string,
-  type: PlayerType,
-  teamId?: string
-): Player {
-  return {
-    id,
-    name,
-    type,
-    status: 'active',
-    hand: [],
-    teamId,
-    isHuman: type === 'human',
-    cardsRemaining: 0,
-  };
-}
+export class GameConfigError extends Error {}
 
-function pickInitialCard(deck: Card[]): { card: Card; remaining: Card[] } {
-  // Keep drawing until we find a non-wild card for the initial discard
-  let idx = 0;
-  while (idx < deck.length) {
-    const card = deck[idx];
-    if (card.type !== 'wild' && card.type !== 'wild_draw_four') {
-      const remaining = [...deck.slice(0, idx), ...deck.slice(idx + 1)];
-      return { card, remaining };
-    }
-    idx++;
+function validateConfig(config: CreateGameConfig, settings: GameSettings): void {
+  const { players } = config;
+  if (players.length < MIN_PLAYERS || players.length > MAX_PLAYERS) {
+    throw new GameConfigError(`A game needs ${MIN_PLAYERS}-${MAX_PLAYERS} players (got ${players.length})`);
   }
-  // Fallback: use first card
-  return { card: deck[0], remaining: deck.slice(1) };
+  if (new Set(players.map((p) => p.id)).size !== players.length) {
+    throw new GameConfigError('Player ids must be unique');
+  }
+  if (settings.startingCards < 1 || settings.startingCards * players.length >= DECK_SIZE - 4) {
+    throw new GameConfigError(`Cannot deal ${settings.startingCards} cards to ${players.length} players`);
+  }
+  if (settings.teamMode) {
+    const teamIds = new Set((config.teams ?? []).map((t) => t.id));
+    if (teamIds.size < 2) throw new GameConfigError('Team mode needs at least two teams');
+    for (const p of players) {
+      if (!p.teamId || !teamIds.has(p.teamId)) {
+        throw new GameConfigError(`Player ${p.id} must belong to one of the configured teams`);
+      }
+    }
+  }
 }
 
 export function createGame(config: CreateGameConfig): GameState {
-  const settings: GameSettings = { ...DEFAULT_SETTINGS, ...config.settings };
-  const startingCards = config.startingCards ?? settings.startingCards;
+  const settings: GameSettings = {
+    ...DEFAULT_SETTINGS,
+    ...config.settings,
+    ...(config.startingCards !== undefined ? { startingCards: config.startingCards } : {}),
+  };
+  validateConfig(config, settings);
 
-  const players: Player[] = config.players.map((p) =>
-    makePlayer(p.id, p.name, p.type, p.teamId)
-  );
-
-  let deck = shuffleDeck(createDeck());
-
-  // Deal cards
-  for (let i = 0; i < startingCards; i++) {
-    for (const player of players) {
-      const { drawn, remaining } = drawFromDeck(deck, 1);
-      player.hand.push(...drawn);
-      deck = remaining;
-    }
-  }
-
-  // Update cardsRemaining
-  for (const player of players) {
-    player.cardsRemaining = player.hand.length;
-  }
-
-  // Create discard pile with initial card
-  const { card: initialCard, remaining } = pickInitialCard(deck);
-  deck = remaining;
-
-  const now = Date.now();
+  const seed = (config.seed ?? randomSeed()) >>> 0;
+  const players: Player[] = config.players.map((p) => ({
+    id: p.id,
+    name: p.name,
+    type: p.type,
+    hand: [],
+    teamId: p.teamId,
+    isHuman: p.type !== 'BOT',
+    cardsRemaining: 0,
+  }));
+  const teams = config.teams ?? [];
+  const dealerIndex = config.dealerIndex ?? players.length - 1;
 
   const state: GameState = {
-    id: nextGameId(),
-    status: 'PLAYING',
     players,
-    teams: config.teams ?? [],
-    deck,
-    discardPile: [initialCard],
-    activeCard: initialCard,
-    activeColor: initialCard.color,
-    currentPlayerIndex: 0,
-    direction: 'clockwise',
-    pendingDraw: 0,
-    pendingSkip: false,
-    roundNumber: 1,
-    turnNumber: 1,
-    unoState: {
-      calledByPlayerId: null,
-      timestamp: null,
-      status: 'pending',
-      vulnerablePlayerIds: [],
-    },
+    teams,
     settings,
+    status: 'WAITING',
+    roundNumber: 0,
+    turnNumber: 0,
+    currentPlayerIndex: 0,
+    // startRound rotates the dealer, so start one seat before the requested dealer.
+    dealerIndex: (dealerIndex - 1 + players.length) % players.length,
+    direction: 'CLOCKWISE',
+    deck: [],
+    discardPile: [],
+    currentColor: null,
+    pendingDraw: 0,
+    pendingAction: null,
+    unoState: createUnoState(),
+    winnerId: null,
+    scores: Object.fromEntries(players.map((p) => [p.id, 0])),
+    teamScores: Object.fromEntries(teams.map((t) => [t.id, 0])),
     rounds: [],
-    log: [
-      createLogEntry('ROUND_STARTED', `Round 1 started`, {}),
-    ],
-    createdAt: now,
-    updatedAt: now,
+    gameWinnerId: null,
+    gameWinnerTeamId: null,
+    seed,
+    rngState: seed,
+    log: [],
   };
 
-  // Apply initial card effect if it's a special card
-  if (initialCard.type === 'skip') {
-    state.currentPlayerIndex = getNextPlayerIndex(state, false);
-    state.log.push(createLogEntry('PLAYER_SKIPPED', `Player skipped by initial Skip`, {}));
-  } else if (initialCard.type === 'reverse') {
-    state.direction = reverseDirection(state.direction);
-    // In 2-player, reverse acts like skip
-    if (players.length === 2) {
-      state.currentPlayerIndex = getNextPlayerIndex(state, false);
-    }
-    state.log.push(createLogEntry('DIRECTION_CHANGED', `Direction reversed by initial Reverse`, {}));
-  } else if (initialCard.type === 'draw_two') {
-    state.pendingDraw = 2;
-    state.pendingSkip = true;
-    state.log.push(createLogEntry('DREW_TWO', `Initial Draw Two: pending 2 cards`, {}));
-  }
-
-  state.updatedAt = Date.now();
-  return state;
+  if (config.autoStart === false) return state;
+  return applyAction(state, { type: 'START_GAME' }).state;
 }
 
-export function playCard(
-  state: GameState,
-  playerId: string,
-  cardId: string,
-  chosenColor?: CardColor
-): GameState {
-  const s = cloneState(state);
-  const player = s.players.find((p) => p.id === playerId);
-  if (!player) return logError(s, `Player ${playerId} not found`);
+// ── Rounds ───────────────────────────────────────────────────────────────────
 
-  if (s.players[s.currentPlayerIndex].id !== playerId) {
-    return logError(s, `Not ${playerId}'s turn`);
+/** Deals a new round: fresh shuffled deck, hands, starting card and first player. */
+function startRound(state: GameState, ctx: EngineContext): void {
+  const n = state.players.length;
+  state.status = 'DEALING';
+  state.roundNumber += 1;
+  state.turnNumber = 1;
+  state.dealerIndex = (state.dealerIndex + 1) % n;
+  state.direction = 'CLOCKWISE';
+  state.pendingDraw = 0;
+  state.pendingAction = null;
+  state.winnerId = null;
+  state.unoState = createUnoState();
+
+  let deck = resetDeck(ctx.rng);
+  for (const player of state.players) player.hand = [];
+  for (let i = 0; i < state.settings.startingCards; i++) {
+    for (let k = 1; k <= n; k++) {
+      state.players[(state.dealerIndex + k) % n].hand.push(deck.shift()!);
+    }
+  }
+  for (const player of state.players) player.cardsRemaining = player.hand.length;
+
+  // A Wild Draw Four can't start the pile: return it to the deck, reshuffle and turn up another card.
+  let starter = deck.shift()!;
+  while (starter.type === 'WILD_DRAW_FOUR') {
+    deck = shuffleDeck([...deck, starter], ctx.rng);
+    starter = deck.shift()!;
+  }
+  state.deck = deck;
+  state.discardPile = [starter];
+  state.currentColor = isWild(starter) ? null : (starter.color as CardColor);
+  state.currentPlayerIndex = getNextPlayerIndex(state, state.dealerIndex);
+  state.status = 'PLAYING';
+
+  addLog(state, ctx, 'ROUND_STARTED', `Round ${state.roundNumber} started, dealer ${state.players[state.dealerIndex].name}`);
+  addLog(state, ctx, 'STARTING_CARD', `Starting card: ${cardLabel(starter)}`, { card: starter });
+
+  const first = state.players[state.currentPlayerIndex];
+  switch (starter.type) {
+    case 'SKIP':
+      addLog(state, ctx, 'PLAYER_SKIPPED', `${first.name} is skipped by the starting card`, { playerId: first.id });
+      state.currentPlayerIndex = getNextPlayerIndex(state, state.currentPlayerIndex);
+      break;
+    case 'REVERSE':
+      // The dealer plays first and play continues in the reversed direction.
+      state.direction = 'COUNTER_CLOCKWISE';
+      state.currentPlayerIndex = state.dealerIndex;
+      addLog(state, ctx, 'DIRECTION_CHANGED', `Direction is now ${state.direction}`);
+      break;
+    case 'DRAW_TWO': {
+      const drawn = giveCards(state, ctx, state.currentPlayerIndex, 2);
+      addLog(state, ctx, 'DRAW_PENALTY', `${first.name} draws ${drawn.length} and loses the turn`, {
+        playerId: first.id,
+        amount: drawn.length,
+      });
+      state.currentPlayerIndex = getNextPlayerIndex(state, state.currentPlayerIndex);
+      break;
+    }
+    case 'WILD':
+      // The first player names the color, then plays normally.
+      state.pendingAction = { type: 'CHOOSE_COLOR', playerId: first.id, cardId: starter.id, reason: 'STARTING_CARD' };
+      break;
+    default:
+      break;
+  }
+}
+
+// ── Action reducers (operate on a private draft) ─────────────────────────────
+
+function reducePlayCard(s: GameState, ctx: EngineContext, playerId: string, cardId: string, chosenColor?: CardColor) {
+  const playerIndex = s.players.findIndex((p) => p.id === playerId);
+  const player = s.players[playerIndex];
+  const card = player.hand.find((c) => c.id === cardId)!;
+
+  closeUnoWindowOnAction(s, playerId);
+  if (playerIndex !== s.currentPlayerIndex) {
+    addLog(s, ctx, 'PLAYER_JUMPED_IN', `${player.name} jumps in with ${cardLabel(card)}`, { playerId, card });
+    s.currentPlayerIndex = playerIndex;
   }
 
-  if (s.status !== 'PLAYING') {
-    return logError(s, `Game is not in PLAYING status`);
-  }
-
-  const cardIndex = player.hand.findIndex((c) => c.id === cardId);
-  if (cardIndex === -1) {
-    return logError(s, `Card ${cardId} not in player's hand`);
-  }
-
-  const card = player.hand[cardIndex];
-  if (!canPlayCard(card, s)) {
-    return logError(s, `Card ${cardId} cannot be played`);
-  }
-
-  // Wild cards require a color choice
-  if ((card.type === 'wild' || card.type === 'wild_draw_four') && !chosenColor) {
-    s.status = 'CHOOSING_COLOR';
-    s.activeCard = card;
-    // Remove from hand now, commit after color is chosen
-    player.hand.splice(cardIndex, 1);
-    player.cardsRemaining = player.hand.length;
-    s.log.push(createLogEntry('PLAYER_PLAYED_CARD', `${player.name} played ${card.type}`, { playerId, cardId }));
-    s.updatedAt = Date.now();
-    return s;
-  }
-
-  // Remove card from hand
-  player.hand.splice(cardIndex, 1);
+  player.hand = player.hand.filter((c) => c.id !== cardId);
   player.cardsRemaining = player.hand.length;
-
-  // Place on discard pile
   s.discardPile.push(card);
-  s.activeCard = card;
+  s.pendingAction = null;
+  addLog(s, ctx, 'PLAYER_PLAYED_CARD', `${player.name} played ${cardLabel(card)}`, { playerId, card });
+  syncUnoAfterHandChange(s, player, 'PLAYED');
 
-  // Set active color
-  if (card.type === 'wild' || card.type === 'wild_draw_four') {
-    s.activeColor = chosenColor!;
-    s.log.push(createLogEntry('COLOR_CHANGED', `Color changed to ${chosenColor}`, { color: chosenColor }));
+  if (!isWild(card)) {
+    s.currentColor = card.color as CardColor;
+    applyCardEffect(s, ctx, card, playerIndex);
+  } else if (chosenColor) {
+    setColor(s, ctx, player, chosenColor);
+    applyCardEffect(s, ctx, card, playerIndex);
   } else {
-    s.activeColor = card.color;
+    s.pendingAction = { type: 'CHOOSE_COLOR', playerId, cardId, reason: 'PLAYED' };
   }
-
-  s.log.push(createLogEntry('PLAYER_PLAYED_CARD', `${player.name} played ${card.type}`, { playerId, cardId }));
-
-  // Apply effect
-  const effect = applyCardEffect(card);
-
-  if (effect.directionChanged) {
-    s.direction = reverseDirection(s.direction);
-    s.log.push(createLogEntry('DIRECTION_CHANGED', `Direction reversed`, { playerId }));
-  }
-
-  if (effect.drawAmount > 0) {
-    s.pendingDraw += effect.drawAmount;
-    s.pendingSkip = true;
-    if (effect.drawAmount === 2) {
-      s.log.push(createLogEntry('DREW_TWO', `Next player must draw 2`, { playerId }));
-    } else if (effect.drawAmount === 4) {
-      s.log.push(createLogEntry('DREW_FOUR', `Next player must draw 4`, { playerId }));
-    }
-  }
-
-  // Check for round end (player has 0 cards)
-  if (player.hand.length === 0) {
-    return endRound(s, playerId);
-  }
-
-  // Check UNO state
-  if (player.hand.length === 1) {
-    s.unoState = {
-      calledByPlayerId: null,
-      timestamp: null,
-      status: 'pending',
-      vulnerablePlayerIds: [playerId],
-    };
-  } else {
-    s.unoState = {
-      calledByPlayerId: null,
-      timestamp: null,
-      status: 'pending',
-      vulnerablePlayerIds: [],
-    };
-  }
-
-  // Advance turn
-  s.currentPlayerIndex = getNextPlayerIndex(s, effect.skipNext);
-
-  if (effect.skipNext && effect.drawAmount === 0) {
-    s.log.push(createLogEntry('PLAYER_SKIPPED', `Next player skipped`, { playerId }));
-  }
-
-  s.turnNumber += 1;
-  s.updatedAt = Date.now();
-  return s;
 }
 
-export function chooseColor(
-  state: GameState,
-  playerId: string,
-  color: CardColor
-): GameState {
-  const s = cloneState(state);
-  if (s.status !== 'CHOOSING_COLOR') {
-    return logError(s, `Not in choosing color state`);
-  }
-
-  s.activeColor = color;
-  s.status = 'PLAYING';
-  s.log.push(createLogEntry('COLOR_CHANGED', `${playerId} chose ${color}`, { color }));
-
-  // The card was already removed from hand and placed on discard in playCard
-  // Now apply the effect (wild or wild_draw_four)
-  const card = s.activeCard!;
-  const effect = applyCardEffect(card);
-
-  if (effect.drawAmount > 0) {
-    s.pendingDraw += effect.drawAmount;
-    s.pendingSkip = true;
-    s.log.push(createLogEntry('DREW_FOUR', `Next player must draw 4`, { playerId }));
-  }
-
-  // Check round end
-  const player = s.players.find((p) => p.id === playerId);
-  if (player && player.hand.length === 0) {
-    return endRound(s, playerId);
-  }
-
-  // Check UNO
-  if (player && player.hand.length === 1) {
-    s.unoState = {
-      calledByPlayerId: null,
-      timestamp: null,
-      status: 'pending',
-      vulnerablePlayerIds: [playerId],
-    };
-  }
-
-  // Advance turn
-  s.currentPlayerIndex = getNextPlayerIndex(s, effect.skipNext);
-  s.turnNumber += 1;
-  s.updatedAt = Date.now();
-  return s;
+function setColor(s: GameState, ctx: EngineContext, player: Player, color: CardColor) {
+  s.currentColor = color;
+  addLog(s, ctx, 'COLOR_CHANGED', `${player.name} chose ${color}`, { playerId: player.id, color });
 }
 
-export function drawCards(
-  state: GameState,
-  playerId: string,
-  amount: number
-): GameState {
-  const s = cloneState(state);
-  const player = s.players.find((p) => p.id === playerId);
-  if (!player) return logError(s, `Player ${playerId} not found`);
-
-  if (s.players[s.currentPlayerIndex].id !== playerId) {
-    return logError(s, `Not ${playerId}'s turn`);
+function reduceChooseColor(s: GameState, ctx: EngineContext, playerId: string, color: CardColor) {
+  const pending = s.pendingAction;
+  if (pending?.type !== 'CHOOSE_COLOR') return;
+  const playerIndex = s.players.findIndex((p) => p.id === playerId);
+  s.pendingAction = null;
+  setColor(s, ctx, s.players[playerIndex], color);
+  if (pending.reason === 'PLAYED') {
+    const card = s.discardPile[s.discardPile.length - 1];
+    applyCardEffect(s, ctx, card, playerIndex);
   }
+}
 
-  // Determine actual draw amount (use pendingDraw if set)
-  let drawAmount = amount;
+function reduceDrawCard(s: GameState, ctx: EngineContext, playerId: string) {
+  const playerIndex = s.currentPlayerIndex;
+  const player = s.players[playerIndex];
+  closeUnoWindowOnAction(s, playerId);
+
+  // Answering a draw stack (stacking rule): take the whole stack and lose the turn.
   if (s.pendingDraw > 0) {
-    drawAmount = s.pendingDraw;
+    const drawn = giveCards(s, ctx, playerIndex, s.pendingDraw);
     s.pendingDraw = 0;
-    s.pendingSkip = false;
+    addLog(s, ctx, 'DRAW_PENALTY', `${player.name} draws ${drawn.length} and loses the turn`, {
+      playerId,
+      amount: drawn.length,
+    });
+    advanceTurn(s, playerIndex);
+    return;
   }
 
-  // Draw cards, recycling deck if needed
   const drawn: Card[] = [];
-  let remainingDeck = s.deck;
+  let last: Card | undefined;
+  do {
+    const [card] = giveCards(s, ctx, playerIndex, 1);
+    if (!card) break;
+    drawn.push(card);
+    last = card;
+  } while (s.settings.drawUntilPlayable && !canPlayCard(last!, s));
 
-  for (let i = 0; i < drawAmount; i++) {
-    if (remainingDeck.length === 0) {
-      // Recycle discard pile
-      const { newDeck, topCard } = recycleDiscardPile(s.discardPile);
-      remainingDeck = newDeck;
-      s.discardPile = [topCard];
-      s.log.push(createLogEntry('DECK_RECYCLED', `Deck recycled from discard pile`, {}));
-    }
-    const { drawn: cards, remaining } = drawFromDeck(remainingDeck, 1);
-    drawn.push(...cards);
-    remainingDeck = remaining;
+  addLog(s, ctx, 'PLAYER_DREW_CARD', `${player.name} drew ${drawn.length} card(s)`, { playerId, amount: drawn.length });
+
+  if (last && canPlayCard(last, s)) {
+    s.pendingAction = { type: 'PLAY_DRAWN_CARD', playerId, cardId: last.id };
+    return;
   }
-
-  player.hand.push(...drawn);
-  player.cardsRemaining = player.hand.length;
-  s.deck = remainingDeck;
-
-  s.log.push(createLogEntry('PLAYER_DREW_CARD', `${player.name} drew ${drawAmount} cards`, { playerId, amount: drawAmount }));
-
-  // If there was a pending skip (from draw two / draw four), the turn passes
-  if (s.pendingSkip) {
-    s.pendingSkip = false;
-    s.currentPlayerIndex = getNextPlayerIndex(s, false);
-    s.turnNumber += 1;
-  }
-
-  s.updatedAt = Date.now();
-  return s;
+  addLog(s, ctx, 'PLAYER_PASSED', `${player.name} passes`, { playerId });
+  advanceTurn(s, playerIndex);
 }
 
-export function endTurn(state: GameState, playerId: string): GameState {
-  const s = cloneState(state);
-  if (s.players[s.currentPlayerIndex].id !== playerId) {
-    return logError(s, `Not ${playerId}'s turn`);
-  }
-
-  s.currentPlayerIndex = getNextPlayerIndex(s, false);
-  s.turnNumber += 1;
-  s.log.push(createLogEntry('TURN_PASSED', `${playerId} passed turn`, { playerId }));
-  s.updatedAt = Date.now();
-  return s;
+function reduceEndTurn(s: GameState, ctx: EngineContext, playerId: string) {
+  const player = getPlayer(s, playerId)!;
+  addLog(s, ctx, 'PLAYER_PASSED', `${player.name} keeps the drawn card and passes`, { playerId });
+  advanceTurn(s, s.currentPlayerIndex);
 }
 
-export function callUno(state: GameState, playerId: string): GameState {
-  const s = cloneState(state);
-  const player = s.players.find((p) => p.id === playerId);
-  if (!player) return logError(s, `Player ${playerId} not found`);
-
-  if (player.hand.length === 1) {
-    s.unoState = {
-      calledByPlayerId: playerId,
-      timestamp: Date.now(),
-      status: 'valid',
-      vulnerablePlayerIds: [],
-    };
-    s.log.push(createLogEntry('PLAYER_CALLED_UNO', `${player.name} called UNO!`, { playerId }));
-  } else {
-    s.unoState = {
-      calledByPlayerId: playerId,
-      timestamp: Date.now(),
-      status: 'invalid',
-      vulnerablePlayerIds: [playerId],
-    };
-    s.log.push(createLogEntry('PLAYER_CALLED_UNO', `${player.name} called UNO (invalid)`, { playerId }));
-  }
-
-  s.updatedAt = Date.now();
-  return s;
+function reduceChallengeUno(s: GameState, ctx: EngineContext, playerId: string, targetId: string) {
+  const targetIndex = s.players.findIndex((p) => p.id === targetId);
+  const target = s.players[targetIndex];
+  const challenger = getPlayer(s, playerId)!;
+  s.unoState.penaltyWindowPlayerId = null;
+  const drawn = giveCards(s, ctx, targetIndex, s.settings.unoPenalty);
+  addLog(s, ctx, 'UNO_PENALTY', `${challenger.name} caught ${target.name} without UNO: +${drawn.length} cards`, {
+    playerId: targetId,
+    amount: drawn.length,
+  });
 }
 
-function endRound(state: GameState, winnerId: string): GameState {
-  const s = state;
-  const winner = s.players.find((p) => p.id === winnerId);
-  if (!winner) return s;
-
-  // Calculate scores from remaining hands
-  const scores: Record<string, number> = {};
-  for (const player of s.players) {
-    if (player.id === winnerId) {
-      scores[player.id] = 0;
-    } else {
-      scores[player.id] = getHandScore(player.hand);
-    }
-  }
-
-  // Update team scores
-  if (s.settings.teamMode) {
-    for (const team of s.teams) {
-      let teamRoundScore = 0;
-      for (const player of s.players) {
-        if (player.teamId === team.id) {
-          teamRoundScore += scores[player.id] ?? 0;
-        }
-      }
-      // Winner's team gets the points
-      if (winner.teamId === team.id) {
-        team.score += teamRoundScore;
-      }
-    }
-  }
-
-  const round = {
-    number: s.roundNumber,
-    startingPlayerId: s.players[0].id,
-    winnerId,
-    scores,
-  };
-  s.rounds.push(round);
-  s.winnerId = winnerId;
-  s.status = 'ROUND_OVER' as GameStatus;
-  s.log.push(createLogEntry('ROUND_ENDED', `Round ${s.roundNumber} ended. Winner: ${winner.name}`, { playerId: winnerId }));
-
-  // Check if game is over (target score reached)
-  if (s.settings.teamMode) {
-    for (const team of s.teams) {
-      if (team.score >= s.settings.targetScore) {
-        s.status = 'GAME_OVER';
-        s.log.push(createLogEntry('ROUND_ENDED', `Game over. Team ${team.name} wins!`, {}));
-        break;
-      }
-    }
-  } else {
-    // For non-team mode, accumulate player scores across rounds
-    // (stored in rounds array; game over when someone reaches target)
-    const totalScores: Record<string, number> = {};
-    for (const r of s.rounds) {
-      for (const [pid, sc] of Object.entries(r.scores)) {
-        totalScores[pid] = (totalScores[pid] ?? 0) + sc;
-      }
-    }
-    for (const player of s.players) {
-      if ((totalScores[player.id] ?? 0) >= s.settings.targetScore) {
-        s.status = 'GAME_OVER';
-        s.log.push(createLogEntry('ROUND_ENDED', `Game over. ${player.name} wins!`, {}));
-        break;
-      }
-    }
-  }
-
-  s.updatedAt = Date.now();
-  return s;
+function resetForNewGame(s: GameState) {
+  s.scores = Object.fromEntries(s.players.map((p) => [p.id, 0]));
+  s.teamScores = Object.fromEntries(s.teams.map((t) => [t.id, 0]));
+  s.rounds = [];
+  s.roundNumber = 0;
+  s.gameWinnerId = null;
+  s.gameWinnerTeamId = null;
 }
 
-export function startNewRound(state: GameState): GameState {
-  const s = cloneState(state);
-  if (s.status !== 'ROUND_OVER') {
-    return logError(s, `Cannot start new round when not in ROUND_OVER status`);
+// ── Public API ───────────────────────────────────────────────────────────────
+
+/**
+ * The engine's single entry point. Validates the action first; an invalid action returns the
+ * original state untouched together with the reason.
+ */
+export function applyAction(state: GameState, action: GameAction): ActionResult {
+  const validation = validateAction(state, action);
+  if (!validation.valid) return { ok: false, error: validation.error, state };
+
+  const s: GameState = structuredClone(state);
+  const ctx: EngineContext = { rng: createRng(s.rngState), timestamp: action.timestamp ?? 0 };
+
+  switch (action.type) {
+    case 'PLAY_CARD':
+      reducePlayCard(s, ctx, action.playerId, action.cardId, action.chosenColor);
+      break;
+    case 'DRAW_CARD':
+      reduceDrawCard(s, ctx, action.playerId);
+      break;
+    case 'CHOOSE_COLOR':
+      reduceChooseColor(s, ctx, action.playerId, action.color);
+      break;
+    case 'END_TURN':
+      reduceEndTurn(s, ctx, action.playerId);
+      break;
+    case 'CALL_UNO':
+      registerUnoCall(s, ctx, getPlayer(s, action.playerId)!);
+      break;
+    case 'CHALLENGE_UNO':
+      reduceChallengeUno(s, ctx, action.playerId, action.targetId);
+      break;
+    case 'START_GAME':
+      startRound(s, ctx);
+      break;
+    case 'RESTART_GAME':
+      resetForNewGame(s);
+      startRound(s, ctx);
+      break;
   }
 
-  // Reset hands and deck
-  let deck = shuffleDeck(createDeck());
-
-  for (let i = 0; i < s.settings.startingCards; i++) {
-    for (const player of s.players) {
-      const { drawn, remaining } = drawFromDeck(deck, 1);
-      player.hand.push(...drawn);
-      deck = remaining;
-    }
-  }
-
-  for (const player of s.players) {
-    player.cardsRemaining = player.hand.length;
-  }
-
-  const { card: initialCard, remaining } = pickInitialCard(deck);
-  deck = remaining;
-
-  s.deck = deck;
-  s.discardPile = [initialCard];
-  s.activeCard = initialCard;
-  s.activeColor = initialCard.color;
-  s.currentPlayerIndex = 0;
-  s.direction = 'clockwise';
-  s.pendingDraw = 0;
-  s.pendingSkip = false;
-  s.roundNumber += 1;
-  s.turnNumber = 1;
-  s.winnerId = undefined;
-  s.status = 'PLAYING';
-  s.unoState = {
-    calledByPlayerId: null,
-    timestamp: null,
-    status: 'pending',
-    vulnerablePlayerIds: [],
-  };
-
-  s.log.push(createLogEntry('ROUND_STARTED', `Round ${s.roundNumber} started`, {}));
-  s.updatedAt = Date.now();
-  return s;
+  s.rngState = ctx.rng.state();
+  return { ok: true, state: s };
 }
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-function cloneState(state: GameState): GameState {
-  return {
-    ...state,
-    players: state.players.map((p) => ({
-      ...p,
-      hand: [...p.hand],
-    })),
-    teams: state.teams.map((t) => ({ ...t })),
-    deck: [...state.deck],
-    discardPile: [...state.discardPile],
-    unoState: { ...state.unoState },
-    settings: { ...state.settings },
-    rounds: state.rounds.map((r) => ({ ...r, scores: { ...r.scores } })),
-    log: [...state.log],
-  };
+/** Replays a list of actions from an initial state (useful for replays, debugging and sync). */
+export function replay(initial: GameState, actions: GameAction[]): GameState {
+  return actions.reduce((state, action) => applyAction(state, action).state, initial);
 }
 
-function logError(state: GameState, message: string): GameState {
-  state.log.push(createLogEntry('ERROR', message, {}));
-  state.updatedAt = Date.now();
-  return state;
+export function playCard(state: GameState, playerId: string, cardId: string, chosenColor?: CardColor): ActionResult {
+  return applyAction(state, { type: 'PLAY_CARD', playerId, cardId, chosenColor });
 }
 
-export function getTeamWinner(state: GameState): Team | null {
-  if (!state.settings.teamMode) return null;
-  for (const team of state.teams) {
-    if (team.score >= state.settings.targetScore) return team;
-  }
-  return null;
+/**
+ * Draws for the current player: one card on a normal turn (or until playable with drawUntilPlayable),
+ * or the whole pending stack when stacking. The amount is decided by the rules, not the caller.
+ */
+export function drawCards(state: GameState, playerId: string): ActionResult {
+  return applyAction(state, { type: 'DRAW_CARD', playerId });
 }
 
-export function getCurrentPlayer(state: GameState): Player | undefined {
-  return state.players[state.currentPlayerIndex];
+export function chooseColor(state: GameState, playerId: string, color: CardColor): ActionResult {
+  return applyAction(state, { type: 'CHOOSE_COLOR', playerId, color });
+}
+
+export function callUno(state: GameState, playerId: string): ActionResult {
+  return applyAction(state, { type: 'CALL_UNO', playerId });
+}
+
+export function challengeUno(state: GameState, playerId: string, targetId: string): ActionResult {
+  return applyAction(state, { type: 'CHALLENGE_UNO', playerId, targetId });
+}
+
+export function endTurn(state: GameState, playerId: string): ActionResult {
+  return applyAction(state, { type: 'END_TURN', playerId });
+}
+
+/** Deals the next round after ROUND_OVER (or the first one from WAITING). */
+export function startNextRound(state: GameState): ActionResult {
+  return applyAction(state, { type: 'START_GAME' });
+}
+
+/** New game with the same players and settings: scores reset, round 1 dealt. */
+export function restartGame(state: GameState): ActionResult {
+  return applyAction(state, { type: 'RESTART_GAME' });
 }

@@ -1,95 +1,128 @@
-import type { Card, CardColor, CardDeck, CardType, CardValue } from './types';
+import type { Card, CardColor, CardType, CardValue } from './types';
+import { COLORS } from './types';
+import type { Rng } from './rng';
 
-let cardIdCounter = 0;
+export const DECK_SIZE = 108;
 
-function nextCardId(): string {
-  cardIdCounter += 1;
-  return `c${cardIdCounter}`;
-}
-
-const COLORS: CardColor[] = ['red', 'yellow', 'green', 'blue'];
-
-export function createDeck(): CardDeck {
-  const deck: CardDeck = [];
+/** Standard 108-card deck. Ids are stable (e.g. "RED-5-1", "WILD_DRAW_FOUR-2") so games can be replayed. */
+export function createDeck(): Card[] {
+  const deck: Card[] = [];
+  const add = (color: Card['color'], type: CardType, value: CardValue, copy: number) => {
+    const symbol = type === 'NUMBER' ? String(value) : type;
+    const id = color === 'WILD' ? `${type}-${copy}` : `${color}-${symbol}-${copy}`;
+    deck.push({ id, color, type, value });
+  };
 
   for (const color of COLORS) {
-    // One 0 per color
-    deck.push({ id: nextCardId(), color, type: 'number', value: 0 });
-
-    // Two of each 1-9 per color
+    add(color, 'NUMBER', 0, 0);
     for (let n = 1; n <= 9; n++) {
-      deck.push({ id: nextCardId(), color, type: 'number', value: n });
-      deck.push({ id: nextCardId(), color, type: 'number', value: n });
+      add(color, 'NUMBER', n as CardValue, 0);
+      add(color, 'NUMBER', n as CardValue, 1);
     }
-
-    // Two Skip per color
-    deck.push({ id: nextCardId(), color, type: 'skip', value: 'skip' });
-    deck.push({ id: nextCardId(), color, type: 'skip', value: 'skip' });
-
-    // Two Reverse per color
-    deck.push({ id: nextCardId(), color, type: 'reverse', value: 'reverse' });
-    deck.push({ id: nextCardId(), color, type: 'reverse', value: 'reverse' });
-
-    // Two Draw Two per color
-    deck.push({ id: nextCardId(), color, type: 'draw_two', value: 'draw_two' });
-    deck.push({ id: nextCardId(), color, type: 'draw_two', value: 'draw_two' });
+    for (const type of ['SKIP', 'REVERSE', 'DRAW_TWO'] as const) {
+      add(color, type, null, 0);
+      add(color, type, null, 1);
+    }
   }
-
-  // Four Wild
-  for (let i = 0; i < 4; i++) {
-    deck.push({ id: nextCardId(), color: 'wild', type: 'wild', value: 'wild' });
-  }
-
-  // Four Wild Draw Four
-  for (let i = 0; i < 4; i++) {
-    deck.push({ id: nextCardId(), color: 'wild', type: 'wild_draw_four', value: 'wild_draw_four' });
-  }
+  for (let i = 0; i < 4; i++) add('WILD', 'WILD', null, i);
+  for (let i = 0; i < 4; i++) add('WILD', 'WILD_DRAW_FOUR', null, i);
 
   return deck;
 }
 
-export function shuffleDeck(deck: CardDeck): CardDeck {
+/** Fisher-Yates shuffle. Returns a new array; the input is not modified. */
+export function shuffleDeck(deck: Card[], rng: Rng): Card[] {
   const result = [...deck];
   for (let i = result.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(rng.next() * (i + 1));
     [result[i], result[j]] = [result[j], result[i]];
   }
   return result;
 }
 
-export function drawFromDeck(deck: CardDeck, count: number): { drawn: CardDeck; remaining: CardDeck } {
-  return {
-    drawn: deck.slice(0, count),
-    remaining: deck.slice(count),
-  };
+/** A fresh, shuffled 108-card draw pile. */
+export function resetDeck(rng: Rng): Card[] {
+  return shuffleDeck(createDeck(), rng);
 }
 
-export function recycleDiscardPile(discardPile: CardDeck): { newDeck: CardDeck; topCard: Card } {
-  if (discardPile.length === 0) {
-    throw new Error('Cannot recycle an empty discard pile');
+export interface Piles {
+  deck: Card[];
+  discardPile: Card[];
+}
+
+/**
+ * Keeps the top discard card and shuffles the rest of the discard pile into a new draw pile.
+ * Wild cards lose any chosen color automatically because color is stored in GameState, not on the card.
+ */
+export function recycleDiscardPile(piles: Piles, rng: Rng): Piles {
+  if (piles.discardPile.length <= 1) return { deck: [...piles.deck], discardPile: [...piles.discardPile] };
+  const top = piles.discardPile[piles.discardPile.length - 1];
+  const rest = piles.discardPile.slice(0, -1);
+  return { deck: [...piles.deck, ...shuffleDeck(rest, rng)], discardPile: [top] };
+}
+
+export interface DrawResult extends Piles {
+  cards: Card[];
+  recycled: number;
+}
+
+/**
+ * Draws from the top (index 0) of the draw pile, recycling the discard pile when it runs out.
+ * If there is genuinely nothing left to draw, returns fewer cards than requested instead of failing.
+ */
+export function drawCards(piles: Piles, count: number, rng: Rng): DrawResult {
+  let deck = [...piles.deck];
+  let discardPile = [...piles.discardPile];
+  const cards: Card[] = [];
+  let recycled = 0;
+
+  while (cards.length < count) {
+    if (deck.length === 0) {
+      if (discardPile.length <= 1) break;
+      ({ deck, discardPile } = recycleDiscardPile({ deck, discardPile }, rng));
+      recycled++;
+    }
+    cards.push(deck.shift()!);
   }
-  const topCard = discardPile[discardPile.length - 1];
-  const rest = discardPile.slice(0, -1);
-  return {
-    newDeck: shuffleDeck(rest),
-    topCard,
-  };
+
+  return { cards, deck, discardPile, recycled };
 }
 
+export function drawCard(piles: Piles, rng: Rng): DrawResult {
+  return drawCards(piles, 1, rng);
+}
+
+export function isWild(card: Card): boolean {
+  return card.type === 'WILD' || card.type === 'WILD_DRAW_FOUR';
+}
+
+/** Official scoring: face value for numbers, 20 for Skip/Reverse/Draw Two, 50 for wilds. */
 export function getCardScore(card: Card): number {
-  if (card.type === 'number') return card.value as number;
-  if (card.type === 'wild' || card.type === 'wild_draw_four') return 50;
-  return 20; // skip, reverse, draw_two
+  if (card.type === 'NUMBER') return card.value ?? 0;
+  if (isWild(card)) return 50;
+  return 20;
 }
 
 export function getHandScore(hand: Card[]): number {
   return hand.reduce((sum, card) => sum + getCardScore(card), 0);
 }
 
-export function makeCard(color: CardColor, type: CardType, value: CardValue): Card {
-  return { id: nextCardId(), color, type, value };
+const TYPE_LABELS: Record<CardType, string> = {
+  NUMBER: '',
+  SKIP: 'Skip',
+  REVERSE: 'Reverse',
+  DRAW_TWO: '+2',
+  WILD: 'Wild',
+  WILD_DRAW_FOUR: 'Wild +4',
+};
+
+export function cardLabel(card: Card): string {
+  if (card.type === 'NUMBER') return `${card.color} ${card.value}`;
+  if (isWild(card)) return TYPE_LABELS[card.type];
+  return `${card.color} ${TYPE_LABELS[card.type]}`;
 }
 
-export function resetCardIdCounter(): void {
-  cardIdCounter = 0;
+/** Builds a card with an explicit id — handy for tests and fixtures. */
+export function makeCard(id: string, color: CardColor | 'WILD', type: CardType, value: CardValue = null): Card {
+  return { id, color, type, value };
 }

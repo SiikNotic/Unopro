@@ -80,5 +80,36 @@
       "uno": "Calling UNO and penalties",
       "strategy": "Basic strategies and tips"
     }
+  },
+  "play": {
+    "title": "Test table",
+    "players": "Players",
+    "cards": "{count} cards",
+    "turn": "Turn",
+    "topCard": "Top card",
+    "color": "Current color",
+    "direction": "Direction",
+    "deck": "Deck",
+    "yourHand": "{name}'s hand",
+    "draw": "Draw",
+    "endTurn": "Pass",
+    "callUno": "UNO!",
+    "challenge": "Penalise {name} (didn't call UNO)",
+    "chooseColor": "Choose a color",
+    "roundOver": "Round {round} over",
+    "gameOver": "Game over",
+    "winner": "Winner: {name} (+{points})",
+    "scores": "Scores",
+    "nextRound": "Next round",
+    "restart": "Restart game",
+    "newGame": "New game",
+    "drawStack": "Draw stack: {count}",
+    "hotSeat": "Test mode: you control every player in turn.",
+    "colors": {
+      "RED": "Red",
+      "YELLOW": "Yellow",
+      "GREEN": "Green",
+      "BLUE": "Blue"
+    }
   }
 }

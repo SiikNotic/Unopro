@@ -1,285 +1,216 @@
 // ── Cards ──────────────────────────────────────────────────────────────────
 
-export type CardColor = 'red' | 'yellow' | 'green' | 'blue' | 'wild';
+export const COLORS = ['RED', 'YELLOW', 'GREEN', 'BLUE'] as const;
 
-export type CardType =
-  | 'number'
-  | 'skip'
-  | 'reverse'
-  | 'draw_two'
-  | 'wild'
-  | 'wild_draw_four';
+export type CardColor = (typeof COLORS)[number];
 
-export type CardValue = number | 'skip' | 'reverse' | 'draw_two' | 'wild' | 'wild_draw_four';
+/** Wild cards carry no color until one is chosen (stored in GameState.currentColor). */
+export type CardColorOrWild = CardColor | 'WILD';
+
+export type CardType = 'NUMBER' | 'SKIP' | 'REVERSE' | 'DRAW_TWO' | 'WILD' | 'WILD_DRAW_FOUR';
+
+/** 0-9 for NUMBER cards, null for every other type. */
+export type CardValue = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | null;
 
 export interface Card {
   id: string;
-  color: CardColor;
+  color: CardColorOrWild;
   type: CardType;
   value: CardValue;
 }
 
-export type CardDeck = Card[];
+// ── Players / Teams ──────────────────────────────────────────────────────────
 
-// ── Players ────────────────────────────────────────────────────────────────
-
-export type PlayerType = 'human' | 'bot' | 'remote';
-
-export type PlayerStatus = 'active' | 'idle' | 'disconnected' | 'eliminated';
+/**
+ * HUMAN is a human playing on this device (alias of LOCAL_HUMAN).
+ * REMOTE_HUMAN is reserved for online multiplayer and is not driven by anything yet.
+ */
+export type PlayerType = 'HUMAN' | 'LOCAL_HUMAN' | 'REMOTE_HUMAN' | 'BOT';
 
 export interface Player {
   id: string;
   name: string;
   type: PlayerType;
-  status: PlayerStatus;
   hand: Card[];
   teamId?: string;
-  avatar?: string;
-  isHost?: boolean;
   isHuman: boolean;
   cardsRemaining: number;
 }
 
-// ── Teams ───────────────────────────────────────────────────────────────────
-
 export interface Team {
   id: string;
   name: string;
-  playerIds: string[];
-  score: number;
 }
 
-// ── Turn / Round ─────────────────────────────────────────────────────────────
+// ── Game status ──────────────────────────────────────────────────────────────
 
-export type TurnDirection = 'clockwise' | 'counterclockwise';
+export type GameStatus = 'WAITING' | 'DEALING' | 'PLAYING' | 'ROUND_OVER' | 'GAME_OVER';
 
-export interface Turn {
-  playerId: string;
-  direction: TurnDirection;
-  number: number;
-}
+export type Direction = 'CLOCKWISE' | 'COUNTER_CLOCKWISE';
 
-export interface Round {
-  number: number;
-  startingPlayerId: string;
-  winnerId?: string;
-  scores: Record<string, number>;
-}
+/**
+ * Something the current player must resolve before the turn can move on.
+ * - CHOOSE_COLOR: a Wild was played (or turned up as the starting card) and needs a color.
+ * - PLAY_DRAWN_CARD: the player drew a playable card and may play it or end the turn.
+ */
+export type PendingAction =
+  | { type: 'CHOOSE_COLOR'; playerId: string; cardId: string; reason: 'PLAYED' | 'STARTING_CARD' }
+  | { type: 'PLAY_DRAWN_CARD'; playerId: string; cardId: string };
 
 // ── UNO ──────────────────────────────────────────────────────────────────────
 
-export type UnoCallStatus = 'valid' | 'invalid' | 'pending';
-
-export interface UnoState {
-  calledByPlayerId: string | null;
-  timestamp: number | null;
-  status: UnoCallStatus;
-  vulnerablePlayerIds: string[];
+export interface UnoCall {
+  playerId: string;
+  turnNumber: number;
+  timestamp: number;
+  valid: boolean;
+  reason: string;
 }
 
-// ── Game Status / Phase ─────────────────────────────────────────────────────
-
-export type GameStatus =
-  | 'WAITING'
-  | 'DEALING'
-  | 'PLAYING'
-  | 'CHOOSING_COLOR'
-  | 'ROUND_OVER'
-  | 'GAME_OVER';
+export interface UnoState {
+  /** Players currently holding exactly one card. */
+  playersWithOneCard: string[];
+  /** Players that are protected: they called UNO for their current one-card hand. */
+  declaredPlayerIds: string[];
+  /** Player who may still be penalised for not calling UNO (penalty window). */
+  penaltyWindowPlayerId: string | null;
+  /** Every UNO call ever made this round, valid or not. */
+  calls: UnoCall[];
+}
 
 // ── Settings ─────────────────────────────────────────────────────────────────
 
-export type GameModeId = 'classic' | 'teams' | 'tournament' | 'custom';
-
 export interface GameSettings {
-  mode: GameModeId;
   startingCards: number;
+  /** Points needed to win the whole game (multi-round). */
   targetScore: number;
+  /** House rule: a +2 may be answered with a +2 (and +4 with +4) to pass the penalty on. */
+  stacking: boolean;
+  /** House rule: a player holding an identical card (color + symbol) may play it out of turn. */
+  jumpIn: boolean;
+  /** House rule: keep drawing until a playable card appears (instead of drawing one). */
   drawUntilPlayable: boolean;
-  stackingEnabled: boolean;
-  jumpInEnabled: boolean;
-  forcePlayEnabled: boolean;
+  /** House rule: you may not draw while holding a playable card, and must play a playable drawn card. */
+  forcePlay: boolean;
+  /** Cards drawn by a player caught not calling UNO. 0 disables the penalty. */
   unoPenalty: number;
+  /** Seconds per turn. 0 = no timer. Stored only; enforced by the UI layer in a later phase. */
   turnTimer: number;
+  /** Score by team instead of by player. */
   teamMode: boolean;
-  customRules?: Record<string, unknown>;
+  /**
+   * Official rule: Wild Draw Four is only legal when the player has no card matching the current color.
+   * The engine enforces it instead of using the challenge mechanic.
+   */
+  strictWildDrawFour: boolean;
 }
 
-// ── Game State ───────────────────────────────────────────────────────────────
+// ── Scoring / rounds ─────────────────────────────────────────────────────────
+
+export interface RoundResult {
+  roundNumber: number;
+  winnerId: string;
+  winningTeamId: string | null;
+  /** Points awarded to the winner (or the winner's team). */
+  points: number;
+  /** Point value of the cards left in each player's hand. */
+  handPoints: Record<string, number>;
+}
+
+// ── Game state ───────────────────────────────────────────────────────────────
 
 export interface GameState {
-  id: string;
-  status: GameStatus;
   players: Player[];
   teams: Team[];
-  deck: CardDeck;
-  discardPile: CardDeck;
-  activeCard?: Card;
-  activeColor?: CardColor;
-  currentPlayerIndex: number;
-  direction: TurnDirection;
-  pendingDraw: number;
-  pendingSkip: boolean;
-  roundNumber: number;
-  winnerId?: string;
-  turnNumber: number;
-  unoState: UnoState;
   settings: GameSettings;
-  rounds: Round[];
+
+  status: GameStatus;
+  roundNumber: number;
+  turnNumber: number;
+  currentPlayerIndex: number;
+  dealerIndex: number;
+  direction: Direction;
+
+  deck: Card[];
+  discardPile: Card[];
+  currentColor: CardColor | null;
+
+  /** Cards the next player will have to draw (only accumulates while stacking is enabled). */
+  pendingDraw: number;
+  pendingAction: PendingAction | null;
+
+  unoState: UnoState;
+
+  winnerId: string | null;
+  /** Cumulative score per player across rounds. */
+  scores: Record<string, number>;
+  /** Cumulative score per team across rounds (team mode). */
+  teamScores: Record<string, number>;
+  rounds: RoundResult[];
+  gameWinnerId: string | null;
+  gameWinnerTeamId: string | null;
+
+  /** Seed the game was created with and the current PRNG state — keeps the engine deterministic. */
+  seed: number;
+  rngState: number;
+
   log: GameLogEntry[];
-  createdAt: number;
-  updatedAt: number;
 }
 
-// ── Game Mode metadata (for UI) ─────────────────────────────────────────────
-
-export interface GameMode {
-  id: GameModeId;
-  nameKey: string;
-  descriptionKey: string;
-  minPlayers: number;
-  maxPlayers: number;
-  enabled: boolean;
-  icon: string;
-}
-
-// ── Game Log ─────────────────────────────────────────────────────────────────
+// ── Game log ─────────────────────────────────────────────────────────────────
 
 export type GameLogType =
   | 'ROUND_STARTED'
   | 'ROUND_ENDED'
+  | 'GAME_ENDED'
+  | 'STARTING_CARD'
   | 'PLAYER_PLAYED_CARD'
+  | 'PLAYER_JUMPED_IN'
   | 'PLAYER_DREW_CARD'
+  | 'PLAYER_PASSED'
   | 'COLOR_CHANGED'
   | 'PLAYER_CALLED_UNO'
+  | 'UNO_PENALTY'
   | 'PLAYER_SKIPPED'
   | 'DIRECTION_CHANGED'
-  | 'DREW_TWO'
-  | 'DREW_FOUR'
-  | 'WILD_CHOSEN'
-  | 'TURN_PASSED'
-  | 'ERROR'
-  | 'DECK_RECYCLED';
+  | 'DRAW_PENALTY'
+  | 'DECK_RECYCLED'
+  | 'DECK_EXHAUSTED';
 
 export interface GameLogEntry {
+  seq: number;
   type: GameLogType;
+  roundNumber: number;
+  turnNumber: number;
   timestamp: number;
+  message: string;
   playerId?: string;
-  cardId?: string;
+  card?: Card;
   color?: CardColor;
   amount?: number;
-  message: string;
 }
 
-// ── Game Actions ─────────────────────────────────────────────────────────────
+// ── Game actions ─────────────────────────────────────────────────────────────
 
-export type GameActionType =
-  | 'PLAY_CARD'
-  | 'DRAW_CARD'
-  | 'CHOOSE_COLOR'
-  | 'CALL_UNO'
-  | 'END_TURN'
-  | 'PASS_TURN'
-  | 'START_GAME'
-  | 'RESTART_GAME';
-
-export interface BaseGameAction {
-  type: GameActionType;
-  playerId: string;
-  timestamp: number;
-}
-
-export interface PlayCardAction extends BaseGameAction {
-  type: 'PLAY_CARD';
-  cardId: string;
-  chosenColor?: CardColor;
-}
-
-export interface DrawCardAction extends BaseGameAction {
-  type: 'DRAW_CARD';
-  count?: number;
-}
-
-export interface ChooseColorAction extends BaseGameAction {
-  type: 'CHOOSE_COLOR';
-  color: CardColor;
-}
-
-export interface CallUnoAction extends BaseGameAction {
-  type: 'CALL_UNO';
-}
-
-export interface EndTurnAction extends BaseGameAction {
-  type: 'END_TURN';
-}
-
-export interface PassTurnAction extends BaseGameAction {
-  type: 'PASS_TURN';
-}
-
-export interface StartGameAction extends BaseGameAction {
-  type: 'START_GAME';
-  settings: GameSettings;
-}
-
-export interface RestartGameAction extends BaseGameAction {
-  type: 'RESTART_GAME';
+interface BaseAction {
+  /** Optional wall-clock time supplied by the caller; the engine never reads the clock itself. */
+  timestamp?: number;
 }
 
 export type GameAction =
-  | PlayCardAction
-  | DrawCardAction
-  | ChooseColorAction
-  | CallUnoAction
-  | EndTurnAction
-  | PassTurnAction
-  | StartGameAction
-  | RestartGameAction;
+  | (BaseAction & { type: 'PLAY_CARD'; playerId: string; cardId: string; chosenColor?: CardColor })
+  | (BaseAction & { type: 'DRAW_CARD'; playerId: string })
+  | (BaseAction & { type: 'CHOOSE_COLOR'; playerId: string; color: CardColor })
+  | (BaseAction & { type: 'CALL_UNO'; playerId: string })
+  | (BaseAction & { type: 'CHALLENGE_UNO'; playerId: string; targetId: string })
+  | (BaseAction & { type: 'END_TURN'; playerId: string })
+  | (BaseAction & { type: 'START_GAME' })
+  | (BaseAction & { type: 'RESTART_GAME' });
 
-// ── Multiplayer (conceptual, for future phases) ──────────────────────────────
+export type GameActionType = GameAction['type'];
 
-export interface GameActionPayload {
-  action: GameAction;
-  gameId: string;
-}
+export type ValidationResult = { valid: true } | { valid: false; error: string };
 
-export type GameEvent =
-  | 'CARD_PLAYED'
-  | 'CARD_DRAWN'
-  | 'COLOR_CHOSEN'
-  | 'UNO_CALLED'
-  | 'TURN_ENDED'
-  | 'ROUND_ENDED'
-  | 'GAME_ENDED'
-  | 'PLAYER_JOINED'
-  | 'PLAYER_LEFT'
-  | 'ERROR';
-
-export interface GameEventListener {
-  (event: GameEvent, payload: unknown): void;
-}
-
-export interface MultiplayerTransport {
-  connect(gameId: string): Promise<void>;
-  disconnect(): Promise<void>;
-  sendAction(payload: GameActionPayload): Promise<void>;
-  onAction(handler: (payload: GameActionPayload) => void): void;
-  onEvent(listener: GameEventListener): void;
-  isConnected(): boolean;
-}
-
-export interface MultiplayerRoom {
-  id: string;
-  code: string;
-  players: Player[];
-  maxPlayers: number;
-  isPrivate: boolean;
-  hostId: string;
-}
-
-export interface CardPlayResult {
-  success: boolean;
-  card?: Card;
-  error?: string;
-  nextPlayerId?: string;
-}
+export type ActionResult =
+  | { ok: true; state: GameState }
+  | { ok: false; error: string; state: GameState };

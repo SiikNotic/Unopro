@@ -5,6 +5,7 @@ import { HomeScreen } from '@/screens/HomeScreen';
 import { GameModesScreen } from '@/screens/GameModesScreen';
 import { SettingsScreen } from '@/screens/SettingsScreen';
 import { TutorialScreen } from '@/screens/TutorialScreen';
+import { PlayScreen } from '@/screens/PlayScreen';
 import type { Screen } from '@/types/navigation';
 
 function ScreenRouter() {
@@ -15,6 +16,7 @@ function ScreenRouter() {
     gameModes: <GameModesScreen />,
     settings: <SettingsScreen />,
     tutorial: <TutorialScreen />,
+    play: <PlayScreen />,
   };
 
   return (

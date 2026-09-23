@@ -1,106 +1,95 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { createGame, callUno, playCard, resetGameIdCounter } from '../game';
-import { resetCardIdCounter, makeCard } from '../deck';
-import { canPlayCard } from '../validation';
-import type { GameState } from '../types';
+import { describe, expect, it } from 'vitest';
+import { callUno, challengeUno, drawCards, playCard } from '../game';
+import { getLastUnoCall } from '../uno';
+import { num, ok, scenario } from './helpers';
 
-function createTestGame(numPlayers = 4): GameState {
-  const players = [];
-  for (let i = 0; i < numPlayers; i++) {
-    players.push({
-      id: `p${i}`,
-      name: `Player ${i}`,
-      type: i === 0 ? 'human' as const : 'bot' as const,
-    });
-  }
-  return createGame({ players, startingCards: 7 });
+const fillers = () => [num('BLUE', 1), num('BLUE', 2), num('BLUE', 3)];
+
+function twoCardScenario() {
+  const a = num('RED', 1);
+  const b = num('GREEN', 8);
+  const s = scenario({
+    hands: [[a, b], [num('RED', 2), ...fillers()], fillers()],
+    top: num('RED', 5),
+    deck: [num('YELLOW', 4), num('YELLOW', 6)],
+  });
+  return { s, a, b };
 }
 
 describe('UNO', () => {
-  beforeEach(() => {
-    resetCardIdCounter();
-    resetGameIdCounter();
+  it('a player with 2 cards is not in UNO state', () => {
+    const { s } = twoCardScenario();
+    expect(s.unoState.playersWithOneCard).toEqual([]);
+    expect(s.unoState.penaltyWindowPlayerId).toBeNull();
   });
 
-  it('should detect player with 1 card as vulnerable', () => {
-    let state = createTestGame(4);
-    // Give player 0 exactly 1 card by playing down to 1
-    const player = state.players[0];
-    while (player.hand.length > 1) {
-      const playable = player.hand.find((c) => canPlayCard(c, state));
-      if (playable) {
-        state = playCard(state, 'p0', playable.id, playable.color === 'wild' ? 'red' : undefined);
-        break; // just play one card
-      }
-      break;
-    }
-    // If player has 1 card, unoState should track them
-    if (state.players[0].hand.length === 1) {
-      expect(state.unoState.vulnerablePlayerIds).toContain('p0');
-    }
+  it('playing down to 1 card without calling UNO opens the penalty window', () => {
+    const { s, a } = twoCardScenario();
+    const next = ok(playCard(s, 'p0', a.id));
+    expect(next.players[0].cardsRemaining).toBe(1);
+    expect(next.unoState.playersWithOneCard).toEqual(['p0']);
+    expect(next.unoState.penaltyWindowPlayerId).toBe('p0');
   });
 
-  it('should allow valid UNO call when player has 1 card', () => {
-    let state = createTestGame(4);
-    const player = state.players[0];
-    // Force player to have 1 card
-    player.hand = [player.hand[0]];
-    player.cardsRemaining = 1;
-    state.unoState.vulnerablePlayerIds = ['p0'];
-
-    state = callUno(state, 'p0');
-    expect(state.unoState.status).toBe('valid');
-    expect(state.unoState.calledByPlayerId).toBe('p0');
-    expect(state.unoState.timestamp).not.toBeNull();
+  it('a valid call with 1 card protects the player and is recorded', () => {
+    const { s, a } = twoCardScenario();
+    const one = ok(playCard(s, 'p0', a.id));
+    const called = ok(callUno({ ...one }, 'p0'));
+    expect(called.unoState.declaredPlayerIds).toEqual(['p0']);
+    expect(called.unoState.penaltyWindowPlayerId).toBeNull();
+    expect(getLastUnoCall(called)).toMatchObject({ playerId: 'p0', valid: true, turnNumber: one.turnNumber });
+    expect(called.log.at(-1)?.type).toBe('PLAYER_CALLED_UNO');
+    expect(challengeUno(called, 'p1', 'p0').ok).toBe(false);
   });
 
-  it('should mark UNO call as invalid when player does not have 1 card', () => {
-    let state = createTestGame(4);
-    // Player has 7 cards, not 1
-    state = callUno(state, 'p0');
-    expect(state.unoState.status).toBe('invalid');
+  it('calling UNO with 2 cards on your own turn counts as announcing it before playing', () => {
+    const { s, a } = twoCardScenario();
+    const called = ok(callUno(s, 'p0'));
+    expect(getLastUnoCall(called)?.valid).toBe(true);
+    const next = ok(playCard(called, 'p0', a.id));
+    expect(next.unoState.penaltyWindowPlayerId).toBeNull();
+    expect(next.unoState.declaredPlayerIds).toEqual(['p0']);
   });
 
-  it('should log UNO call', () => {
-    let state = createTestGame(4);
-    const player = state.players[0];
-    player.hand = [player.hand[0]];
-    player.cardsRemaining = 1;
-    state.unoState.vulnerablePlayerIds = ['p0'];
-
-    state = callUno(state, 'p0');
-    const unoLog = state.log.find((e) => e.type === 'PLAYER_CALLED_UNO');
-    expect(unoLog).toBeDefined();
-    expect(unoLog!.playerId).toBe('p0');
+  it('an invalid call is recorded as invalid', () => {
+    const s = scenario({ hands: [fillers(), fillers()], top: num('RED', 5) });
+    const called = ok(callUno(s, 'p1'));
+    expect(getLastUnoCall(called)).toMatchObject({ playerId: 'p1', valid: false });
+    expect(called.unoState.declaredPlayerIds).toEqual([]);
+    expect(called.players[1].hand).toHaveLength(3);
   });
 
-  it('should clear vulnerable state after valid UNO call', () => {
-    let state = createTestGame(4);
-    const player = state.players[0];
-    player.hand = [player.hand[0]];
-    player.cardsRemaining = 1;
-    state.unoState.vulnerablePlayerIds = ['p0'];
-
-    state = callUno(state, 'p0');
-    expect(state.unoState.vulnerablePlayerIds).toHaveLength(0);
+  it('a player caught without calling UNO draws the penalty', () => {
+    const { s, a } = twoCardScenario();
+    const one = ok(playCard(s, 'p0', a.id));
+    const caught = ok(challengeUno(one, 'p2', 'p0'));
+    expect(caught.players[0].hand).toHaveLength(3);
+    expect(caught.unoState.playersWithOneCard).toEqual([]);
+    expect(caught.unoState.penaltyWindowPlayerId).toBeNull();
+    expect(caught.log.at(-1)).toMatchObject({ type: 'UNO_PENALTY', playerId: 'p0', amount: 2 });
   });
 
-  it('should set unoState when player reaches 1 card after playing', () => {
-    let state = createTestGame(4);
-    const player = state.players[0];
-    // Set up: give player 2 cards, make one playable
-    const playableCard = player.hand.find((c) => canPlayCard(c, state));
-    if (playableCard) {
-      // Remove all but playable and one other
-      player.hand = [playableCard, player.hand.find((c) => c.id !== playableCard.id)!];
-      player.cardsRemaining = 2;
+  it('the penalty window closes once the next player acts', () => {
+    const { s, a } = twoCardScenario();
+    const one = ok(playCard(s, 'p0', a.id));
+    const after = ok(playCard(one, 'p1', one.players[1].hand[0].id));
+    expect(after.unoState.penaltyWindowPlayerId).toBeNull();
+    expect(challengeUno(after, 'p2', 'p0').ok).toBe(false);
+  });
 
-      state = playCard(state, 'p0', playableCard.id, playableCard.color === 'wild' ? 'red' : undefined);
-      // After playing, player has 1 card
-      if (state.players[0].hand.length === 1) {
-        expect(state.unoState.vulnerablePlayerIds).toContain('p0');
-        expect(state.unoState.status).toBe('pending');
-      }
-    }
+  it('drawing cards clears the UNO state', () => {
+    const lone = num('GREEN', 8);
+    const s = scenario({ hands: [[lone], fillers()], top: num('RED', 5), deck: [num('YELLOW', 4)] });
+    s.unoState.playersWithOneCard = ['p0'];
+    s.unoState.declaredPlayerIds = ['p0'];
+    const next = ok(drawCards(s, 'p0'));
+    expect(next.unoState.playersWithOneCard).toEqual([]);
+    expect(next.unoState.declaredPlayerIds).toEqual([]);
+  });
+
+  it('the penalty can be disabled', () => {
+    const { s, a } = twoCardScenario();
+    const one = ok(playCard({ ...s, settings: { ...s.settings, unoPenalty: 0 } }, 'p0', a.id));
+    expect(challengeUno(one, 'p1', 'p0').ok).toBe(false);
   });
 });

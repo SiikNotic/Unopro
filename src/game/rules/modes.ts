@@ -1,4 +1,14 @@
-import type { GameMode } from '@/game/engine/types';
+export type GameModeId = 'classic' | 'teams' | 'tournament' | 'custom';
+
+export interface GameMode {
+  id: GameModeId;
+  nameKey: string;
+  descriptionKey: string;
+  minPlayers: number;
+  maxPlayers: number;
+  enabled: boolean;
+  icon: string;
+}
 
 export const GAME_MODES: GameMode[] = [
   {
