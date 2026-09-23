@@ -75,3 +75,240 @@
     @apply bg-ink-500;
   }
 }
+
+/* ───────────────────────── Card table ───────────────────────── */
+:root {
+  --cw: 72px;
+}
+@layer components {
+  /* Cards read their size from --cw (card width); height keeps a 2:3 ratio. */
+  .pc-card {
+    position: relative;
+    width: var(--cw);
+    height: calc(var(--cw) * 1.5);
+    border-radius: calc(var(--cw) * 0.11);
+    padding: calc(var(--cw) * 0.045);
+    background: linear-gradient(160deg, #fffaf0, #efe6d4 70%, #ddd0b6);
+    box-shadow:
+      0 1px 0 #cfc3aa,
+      0 2px 0 #b9ab8f,
+      0 calc(var(--cw) * 0.08) calc(var(--cw) * 0.18) rgba(0, 0, 0, 0.45);
+    user-select: none;
+    flex-shrink: 0;
+  }
+  .pc-card::after {
+    /* glossy light from the top-left */
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.38), rgba(255, 255, 255, 0) 38%);
+    pointer-events: none;
+  }
+
+  .pc-face {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    border-radius: calc(var(--cw) * 0.075);
+    overflow: hidden;
+    color: #fff;
+    box-shadow: inset 0 0 0 calc(var(--cw) * 0.018) rgba(255, 236, 190, 0.55);
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    font-weight: 800;
+  }
+  .pc-face::before {
+    /* fine diagonal weave texture */
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.07) 0 2px, transparent 2px 7px);
+  }
+  .pc-red { background: radial-gradient(circle at 30% 20%, #ff6b6b, #d7263d 50%, #7d0c22); }
+  .pc-yellow { background: radial-gradient(circle at 30% 20%, #ffe27a, #f4a814 50%, #a55f02); }
+  .pc-green { background: radial-gradient(circle at 30% 20%, #5ef0b0, #0fa46a 50%, #05553a); }
+  .pc-blue { background: radial-gradient(circle at 30% 20%, #6cb8ff, #1f5fe0 50%, #0d2a80); }
+  .pc-wild { background: radial-gradient(circle at 50% 30%, #2e2a4f, #151329 60%, #07060f); }
+
+  .pc-corner {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1;
+    font-size: calc(var(--cw) * 0.2);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+    z-index: 1;
+  }
+  .pc-corner-tl { top: 5%; left: 7%; }
+  .pc-corner-br { bottom: 5%; right: 7%; transform: rotate(180deg); }
+  .pc-suit { width: calc(var(--cw) * 0.14); height: calc(var(--cw) * 0.14); margin-top: 2px; opacity: 0.9; }
+  .pc-icon-small { width: calc(var(--cw) * 0.2); height: calc(var(--cw) * 0.2); }
+  .pc-icon-big { width: calc(var(--cw) * 0.38); height: calc(var(--cw) * 0.38); }
+
+  /* Central gem: a rounded diamond carrying the main symbol */
+  .pc-gem {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: calc(var(--cw) * 0.58);
+    height: calc(var(--cw) * 0.58);
+    transform: translate(-50%, -50%) rotate(45deg);
+    border-radius: calc(var(--cw) * 0.12);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(255, 244, 222, 0.9));
+    box-shadow:
+      0 calc(var(--cw) * 0.03) calc(var(--cw) * 0.08) rgba(0, 0, 0, 0.35),
+      inset 0 0 0 calc(var(--cw) * 0.02) rgba(0, 0, 0, 0.08);
+    z-index: 1;
+  }
+  .pc-gem-inner {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform: rotate(-45deg);
+    font-size: calc(var(--cw) * 0.42);
+    line-height: 1;
+    color: #1c1b2b;
+  }
+  .pc-red .pc-gem-inner { color: #b3122f; }
+  .pc-yellow .pc-gem-inner { color: #a35a00; }
+  .pc-green .pc-gem-inner { color: #067a4c; }
+  .pc-blue .pc-gem-inner { color: #1848b8; }
+  .pc-wild .pc-gem { background: conic-gradient(from 45deg, #d7263d 0 25%, #f4a814 0 50%, #0fa46a 0 75%, #1f5fe0 0); }
+  .pc-wild .pc-gem-inner { color: #fff; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6); font-size: calc(var(--cw) * 0.34); }
+  .pc-wheel {
+    display: block;
+    width: calc(var(--cw) * 0.24);
+    height: calc(var(--cw) * 0.24);
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  }
+  .pc-wheel-small {
+    width: calc(var(--cw) * 0.16);
+    height: calc(var(--cw) * 0.16);
+    background: conic-gradient(#d7263d 0 25%, #f4a814 0 50%, #0fa46a 0 75%, #1f5fe0 0);
+  }
+
+  /* Back: deep indigo with a gold lattice and a four-point star emblem */
+  .pc-back {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    border-radius: calc(var(--cw) * 0.075);
+    background:
+      repeating-linear-gradient(60deg, rgba(245, 196, 81, 0.16) 0 1px, transparent 1px 9px),
+      repeating-linear-gradient(-60deg, rgba(245, 196, 81, 0.16) 0 1px, transparent 1px 9px),
+      radial-gradient(circle at 50% 40%, #33287a, #1a1446 55%, #0a0820);
+    box-shadow: inset 0 0 0 calc(var(--cw) * 0.03) rgba(245, 196, 81, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .pc-back-emblem {
+    width: calc(var(--cw) * 0.46);
+    height: calc(var(--cw) * 0.46);
+    background: linear-gradient(135deg, #ffe7a3, #e6a817 60%, #9b6a06);
+    clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+  }
+
+  /* Table */
+  .table-stage {
+    perspective: 1100px;
+    perspective-origin: 50% 30%;
+  }
+  .table-surface {
+    position: relative;
+    transform: rotateX(22deg);
+    transform-style: preserve-3d;
+    border-radius: 44% / 50%;
+    background:
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.09 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"),
+      radial-gradient(ellipse at 50% 38%, #1d6a70 0%, #0f4046 52%, #06232a 100%);
+    box-shadow:
+      0 0 0 3px rgba(245, 196, 81, 0.35),
+      0 0 0 clamp(8px, 1.6vw, 16px) #3a2417,
+      0 0 0 calc(clamp(8px, 1.6vw, 16px) + 2px) #1b0f08,
+      inset 0 0 60px rgba(0, 0, 0, 0.55),
+      0 40px 60px -10px rgba(0, 0, 0, 0.7);
+  }
+  .draw-stack {
+    box-shadow:
+      2px 2px 0 #d9ceb6, 3px 3px 0 #1a1446,
+      4px 4px 0 #d9ceb6, 5px 5px 0 #1a1446,
+      0 18px 26px rgba(0, 0, 0, 0.5);
+  }
+
+  .seat-active {
+    box-shadow: 0 0 0 2px rgba(56, 200, 230, 0.9), 0 0 24px -2px rgba(56, 200, 230, 0.55);
+  }
+  .seat-teammate {
+    box-shadow: 0 0 0 2px rgba(245, 196, 81, 0.75);
+  }
+
+  .hand-card {
+    transition: transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1), filter 200ms ease;
+    will-change: transform;
+  }
+  @media (hover: hover) {
+    .hand-card-interactive:hover {
+      transform: var(--fan) translateY(-9%);
+    }
+  }
+  .hand-card-selected .pc-card {
+    box-shadow:
+      0 0 0 3px rgba(255, 255, 255, 0.9),
+      0 0 26px 4px rgba(56, 200, 230, 0.75),
+      0 20px 28px rgba(0, 0, 0, 0.5);
+  }
+  .hand-card-disabled {
+    filter: brightness(0.55) saturate(0.65);
+  }
+}
+
+@layer utilities {
+  .animate-pop {
+    animation: pop 320ms cubic-bezier(0.2, 0.9, 0.3, 1.3);
+  }
+  .animate-banner {
+    animation: banner 450ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .animate-shake {
+    animation: shake 300ms ease-in-out;
+  }
+  .animate-burst {
+    animation: burst 900ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+}
+
+@keyframes pop {
+  0% { transform: scale(0.85); opacity: 0.4; }
+  60% { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); }
+}
+@keyframes banner {
+  0% { transform: translateY(8px) scale(0.92); opacity: 0; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+@keyframes shake {
+  0%, 100% { translate: 0; }
+  25% { translate: -5px; }
+  75% { translate: 5px; }
+}
+@keyframes burst {
+  0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+  25% { transform: translate(-50%, -50%) scale(1.12); opacity: 1; }
+  70% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  100% { transform: translate(-50%, -70%) scale(1); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+}

@@ -26,7 +26,7 @@ export const GAME_MODES: GameMode[] = [
     descriptionKey: 'gameModes.teams.description',
     minPlayers: 4,
     maxPlayers: 10,
-    enabled: false,
+    enabled: true,
     icon: 'users',
   },
   {

@@ -1,4 +1,10 @@
+import type { GameModeId } from '@/game/rules/modes';
+
 export type Screen = 'home' | 'gameModes' | 'settings' | 'tutorial' | 'play';
+
+export interface ScreenParams {
+  mode?: GameModeId;
+}
 
 export type ScreenChangeEvent = { from: Screen | null; to: Screen };
 

@@ -54,7 +54,7 @@ export function GameModesScreen() {
                   size="sm"
                   fullWidth
                   disabled={!mode.enabled}
-                  onClick={() => mode.enabled && navigate('play')}
+                  onClick={() => mode.enabled && navigate('play', { mode: mode.id })}
                 >
                   {mode.enabled ? t('gameModes.selectMode') : t('common.comingSoon')}
                 </Button>
