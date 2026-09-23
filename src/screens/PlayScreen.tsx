@@ -1,12 +1,12 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useNavigation } from '@/components/Navigation';
 import { GameTable } from '@/components/table/GameTable';
 import { useGameEngine } from '@/hooks/useGameEngine';
 import { useAutoPlayers } from '@/hooks/useAutoPlayers';
-import { placeholderBot } from '@/game/controllers/placeholderBot';
+import { createBotController, getBotTable } from '@/game/bots';
 import type { PlayerController } from '@/game/controllers/types';
 import { getLocalPlayerId } from '@/game/table/seating';
-import type { CreateGameConfig, PlayerType } from '@/game/engine';
+import type { CreateGameConfig, GameState, PlayerType } from '@/game/engine';
 import type { GameModeId } from '@/game/rules/modes';
 
 // Names are language-neutral ids; the table shows localised names ("You", "Bot 1"…).
@@ -36,15 +36,27 @@ const TEAMS: CreateGameConfig = {
 
 const CONFIGS: Partial<Record<GameModeId, CreateGameConfig>> = { classic: CLASSIC, teams: TEAMS };
 
-// Bots are driven by a temporary placeholder until the bots phase replaces it.
-const CONTROLLERS: Partial<Record<PlayerType, PlayerController>> = { BOT: placeholderBot };
-
 export function PlayScreen() {
   const { goHome, params } = useNavigation();
   const config = CONFIGS[params.mode ?? 'classic'] ?? CLASSIC;
   const { state, dispatch, error } = useGameEngine(config);
   const localPlayerId = useMemo(() => getLocalPlayerId(state), [state]);
-  useAutoPlayers(state, dispatch, CONTROLLERS);
+
+  // Bot strategy lives entirely in the controller; the table only ever sees the actions it produces.
+  const botTable = getBotTable(params.mode);
+  const controllers = useMemo<Partial<Record<PlayerType, PlayerController>>>(
+    () => ({ BOT: createBotController({ bots: botTable.bots, seed: state.seed }) }),
+    [botTable, state.seed]
+  );
+  const thinkDelay = useCallback(
+    (s: GameState) => {
+      const unoWindow = s.unoState.penaltyWindowPlayerId;
+      const actor = s.pendingAction?.playerId ?? s.players[s.currentPlayerIndex].id;
+      return unoWindow && unoWindow !== actor ? botTable.penaltyWindowDelayMs : botTable.thinkDelayMs;
+    },
+    [botTable]
+  );
+  useAutoPlayers(state, dispatch, controllers, thinkDelay);
 
   return <GameTable state={state} localPlayerId={localPlayerId} dispatch={dispatch} onExit={goHome} engineError={error} />;
 }
