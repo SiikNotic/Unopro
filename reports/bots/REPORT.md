@@ -161,7 +161,27 @@ Simulaciones por combinación (32 combinaciones × 5000 rondas):
 | Acciones ilegales | 0 |
 | Violaciones de invariantes | 0 |
 
-_Partidas largas: en ejecución; se añaden en el siguiente commit._
+Partidas largas completas (hasta 500 puntos, varias rondas), 60 partidas por variante, alineaciones rotando entre las 15 combinaciones dificultad × personalidad; oráculo de invariantes en cada acción:
+
+| Variante | Partidas terminadas | Rondas | Acciones | Fallos | Tiempo |
+|---|---:|---:|---:|---:|---:|
+| 2 players | 60/60 | 1040 | 50944 | 0 | 75 s |
+| 3 players | 60/60 | 837 | 47572 | 0 | 66 s |
+| 4 players | 60/60 | 583 | 34675 | 0 | 37 s |
+| 6 players | 60/60 | 431 | 32328 | 0 | 32 s |
+| 10 players | 60/60 | 253 | 25441 | 0 | 22 s |
+| 2v2 | 60/60 | 606 | 33996 | 0 | 34 s |
+| 3v3 | 60/60 | 416 | 31945 | 0 | 31 s |
+| 4p stacking | 60/60 | 592 | 37053 | 0 | 41 s |
+| 4p jump-in | 60/60 | 583 | 34675 | 0 | 37 s |
+| 4p draw-until-playable + force play | 60/60 | 391 | 43197 | 0 | 53 s |
+| 2v2 all house rules | 60/60 | 429 | 48463 | 0 | 63 s |
+| 2p all house rules | 60/60 | 819 | 72011 | 0 | 133 s |
+| **Total** | **720/720** | **6980** | **492300** | **0** | |
+
+Ningún bucle, bloqueo, acción ilegal ni violación de invariantes en +2/+4, Reverse, Skip, Wild, UNO ni equipos (2v2 y 3v3).
+
+**Hallazgo:** la variante “4p jump-in” produce exactamente las mismas cifras que “4 players” (583 rondas, 34 675 acciones). Los bots nunca se cuelan fuera de turno (`useAutoPlayers` y el simulador solo consultan al jugador que debe actuar), así que con esa regla activada la partida es idéntica. **La regla jump-in no queda ejercitada por los bots**; solo la cubren los tests del motor.
 
 ## 8. Rendimiento
 
@@ -182,11 +202,12 @@ Hallazgos de diseño (no son bugs, pero son relevantes):
 3. Aggressive y Risky pierden frente a Balanced (46–47 %): sus modificadores empeoran el juego.
 4. Team Player (contiguos) roba teniendo jugadas legales en el 19–25 % de sus robos para no saltar al compañero.
 5. Balanced ataca al compañero contiguo 27–45 veces por 1000 decisiones.
+6. Los bots nunca usan jump-in: con esa regla activada juegan igual que sin ella.
 
 ## 10. Conclusión
 
 - **Demostrado:** Fácil es más débil (35–41 % contra Normal/Difícil) y más aleatorio (72 % consistencia). Difícil es más consistente (91 %) y mucho más fiable con UNO y penalizaciones. Risky, Aggressive y Defensive cambian de forma medible el uso de Wilds.
 - **Pequeño:** Difícil vs Normal = 52,3 %. Defensive vs Balanced (Difícil) = 51,5 %. Team Player contiguos en Difícil = 51,7 %.
 - **Personalidades con comportamiento realmente distinto:** Risky (hasta 9,3 % de decisiones distintas), Aggressive (5–6 %), Defensive (3–4 %). Team Player solo con compañeros contiguos (4–6 %); con compañeros enfrentados, <1,5 %.
-- **No funciona bien todavía:** Team Player en la disposición de la UI; Difícil apenas juega mejor que Normal; Aggressive/Risky son peores que Balanced; ninguna dificultad mejora la elección de color para el compañero.
+- **No funciona bien todavía:** Team Player en la disposición de la UI; los bots no usan jump-in; Difícil apenas juega mejor que Normal; Aggressive/Risky son peores que Balanced; ninguna dificultad mejora la elección de color para el compañero.
 - **Para la siguiente fase (propuesta, no aplicada):** dar a Team Player comportamientos que importen con compañeros enfrentados (p. ej. preferir Skip/+2 que entregan el turno al compañero cuando tiene pocas cartas, no penalizar/atacar cuando ayuda al rival siguiente); separar mejor Normal y Difícil en decisiones de juego (no solo UNO); revisar los modificadores de Aggressive/Risky; y medir de nuevo con este mismo simulador.

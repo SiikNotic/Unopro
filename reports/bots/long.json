@@ -1,0 +1,98 @@
+{
+ "2 players": {
+  "games": 60,
+  "finished": 60,
+  "rounds": 1040,
+  "actions": 50944,
+  "failures": [],
+  "ms": 74623
+ },
+ "3 players": {
+  "games": 60,
+  "finished": 60,
+  "rounds": 837,
+  "actions": 47572,
+  "failures": [],
+  "ms": 65529
+ },
+ "4 players": {
+  "games": 60,
+  "finished": 60,
+  "rounds": 583,
+  "actions": 34675,
+  "failures": [],
+  "ms": 37409
+ },
+ "6 players": {
+  "games": 60,
+  "finished": 60,
+  "rounds": 431,
+  "actions": 32328,
+  "failures": [],
+  "ms": 32205
+ },
+ "10 players": {
+  "games": 60,
+  "finished": 60,
+  "rounds": 253,
+  "actions": 25441,
+  "failures": [],
+  "ms": 22448
+ },
+ "2v2": {
+  "games": 60,
+  "finished": 60,
+  "rounds": 606,
+  "actions": 33996,
+  "failures": [],
+  "ms": 33964
+ },
+ "3v3": {
+  "games": 60,
+  "finished": 60,
+  "rounds": 416,
+  "actions": 31945,
+  "failures": [],
+  "ms": 31296
+ },
+ "4p stacking": {
+  "games": 60,
+  "finished": 60,
+  "rounds": 592,
+  "actions": 37053,
+  "failures": [],
+  "ms": 41149
+ },
+ "4p jump-in": {
+  "games": 60,
+  "finished": 60,
+  "rounds": 583,
+  "actions": 34675,
+  "failures": [],
+  "ms": 37288
+ },
+ "4p draw-until-playable + force play": {
+  "games": 60,
+  "finished": 60,
+  "rounds": 391,
+  "actions": 43197,
+  "failures": [],
+  "ms": 52607
+ },
+ "2v2 all house rules": {
+  "games": 60,
+  "finished": 60,
+  "rounds": 429,
+  "actions": 48463,
+  "failures": [],
+  "ms": 63350
+ },
+ "2p all house rules": {
+  "games": 60,
+  "finished": 60,
+  "rounds": 819,
+  "actions": 72011,
+  "failures": [],
+  "ms": 132760
+ }
+}
