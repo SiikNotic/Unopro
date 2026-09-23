@@ -101,8 +101,6 @@
     "you": "Tú",
     "botName": "Bot {n}",
     "exit": "Salir",
-    "round": "Ronda {round}",
-    "yourScore": "Tus puntos: {score}",
     "currentColor": "Color actual",
     "yourTurn": "TU TURNO",
     "turnOf": "Turno de {name}",
@@ -118,7 +116,6 @@
     "draw": "Robar",
     "drawCount": "Robar {count}",
     "pass": "Pasar",
-    "play": "Jugar",
     "uno": "¡UNO!",
     "unoInvalid": "UNO no válido",
     "unoPenaltyBurst": "+{amount} ¡Atrapado!",
@@ -129,8 +126,7 @@
     "choosingColor": "{name} está eligiendo color",
     "drawnPlayable": "Puedes jugar la carta robada o pasar",
     "mustAnswerStack": "Responde con otra carta de robo o roba {count}",
-    "pickCard": "Elige una carta o roba del mazo",
-    "tapAgain": "Toca otra vez la carta o pulsa Jugar",
+    "pickCard": "Toca una carta para jugarla",
     "roundOver": "Fin de la ronda {round}",
     "gameOver": "¡Fin de la partida!",
     "winsRound": "{name} gana la ronda",
@@ -154,9 +150,23 @@
       "calledUno": "{name}: ¡UNO!",
       "unoPenalty": "{name} roba {amount} por no decir UNO",
       "recycled": "Se baraja el descarte",
-      "roundStarted": "Empieza la ronda {round}"
+      "roundStarted": "Empieza la ronda {round}",
+      "playedYou": "Juegas {card}",
+      "jumpedInYou": "¡Te cuelas!",
+      "drewYou": "Robas {amount}",
+      "passedYou": "Pasas",
+      "skippedYou": "Pierdes el turno",
+      "drawPenaltyYou": "Robas {amount} y pierdes el turno",
+      "colorChangedYou": "Eliges {color}",
+      "calledUnoYou": "¡Dices UNO!",
+      "unoPenaltyYou": "Robas {amount} por no decir UNO"
     },
-    "teamScore": "Equipo {team}: {score}",
-    "youWinRound": "¡Ganas la ronda!"
+    "youWinRound": "¡Ganas la ronda!",
+    "pointsShort": "{points} pts",
+    "scoreboard": "Marcador",
+    "roundShort": "Ronda {round}",
+    "teamLabel": "Equipo {team}",
+    "yourScoreLabel": "Tus puntos",
+    "mustDraw": "No tienes jugada: toca el mazo para robar"
   }
 }

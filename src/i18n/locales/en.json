@@ -101,8 +101,6 @@
     "you": "You",
     "botName": "Bot {n}",
     "exit": "Leave",
-    "round": "Round {round}",
-    "yourScore": "Your points: {score}",
     "currentColor": "Current color",
     "yourTurn": "YOUR TURN",
     "turnOf": "{name}'s turn",
@@ -118,7 +116,6 @@
     "draw": "Draw",
     "drawCount": "Draw {count}",
     "pass": "Pass",
-    "play": "Play",
     "uno": "UNO!",
     "unoInvalid": "Invalid UNO",
     "unoPenaltyBurst": "+{amount} Caught!",
@@ -129,8 +126,7 @@
     "choosingColor": "{name} is choosing a color",
     "drawnPlayable": "You can play the drawn card or pass",
     "mustAnswerStack": "Answer with another draw card or draw {count}",
-    "pickCard": "Pick a card or draw from the deck",
-    "tapAgain": "Tap the card again or press Play",
+    "pickCard": "Tap a card to play it",
     "roundOver": "Round {round} over",
     "gameOver": "Game over!",
     "winsRound": "{name} wins the round",
@@ -154,9 +150,23 @@
       "calledUno": "{name}: UNO!",
       "unoPenalty": "{name} draws {amount} for not calling UNO",
       "recycled": "Discard pile reshuffled",
-      "roundStarted": "Round {round} begins"
+      "roundStarted": "Round {round} begins",
+      "playedYou": "You play {card}",
+      "jumpedInYou": "You jump in!",
+      "drewYou": "You draw {amount}",
+      "passedYou": "You pass",
+      "skippedYou": "You lose your turn",
+      "drawPenaltyYou": "You draw {amount} and lose your turn",
+      "colorChangedYou": "You pick {color}",
+      "calledUnoYou": "You call UNO!",
+      "unoPenaltyYou": "You draw {amount} for not calling UNO"
     },
-    "teamScore": "Team {team}: {score}",
-    "youWinRound": "You win the round!"
+    "youWinRound": "You win the round!",
+    "pointsShort": "{points} pts",
+    "scoreboard": "Scoreboard",
+    "roundShort": "Round {round}",
+    "teamLabel": "Team {team}",
+    "yourScoreLabel": "Your points",
+    "mustDraw": "No playable card: tap the deck to draw"
   }
 }

@@ -1,8 +1,9 @@
 import { memo } from 'react';
-import { Ban, Repeat2 } from 'lucide-react';
 import type { Card, CardColor } from '@/game/engine';
+import { COLORS } from '@/game/engine';
 import { useI18n } from '@/i18n';
-import { COLOR_THEME } from './cardTheme';
+import { COLOR_THEME, suitPattern } from './cardTheme';
+import { ReverseGlyph, SkipGlyph, SuitIcon, WildWheel } from './cardArt';
 import { useCardName } from './useCardName';
 
 interface GameCardProps {
@@ -13,24 +14,76 @@ interface GameCardProps {
   style?: React.CSSProperties;
 }
 
-function Glyph({ card, size }: { card: Card; size: 'big' | 'small' }) {
+/** Big central symbol. */
+function Center({ card }: { card: Card }) {
   switch (card.type) {
     case 'NUMBER':
-      return <span className={card.value === 6 || card.value === 9 ? 'underline decoration-2 underline-offset-2' : ''}>{card.value}</span>;
+      return <span className={`pc-numeral ${card.value === 6 || card.value === 9 ? 'pc-underline' : ''}`}>{card.value}</span>;
     case 'SKIP':
-      return <Ban className={size === 'big' ? 'pc-icon-big' : 'pc-icon-small'} strokeWidth={2.75} />;
+      return <SkipGlyph className="pc-glyph" />;
     case 'REVERSE':
-      return <Repeat2 className={size === 'big' ? 'pc-icon-big' : 'pc-icon-small'} strokeWidth={2.75} />;
+      return <ReverseGlyph className="pc-glyph" />;
     case 'DRAW_TWO':
-      return <span>+2</span>;
+      return <span className="pc-numeral pc-numeral-plus">+2</span>;
     case 'WILD':
-      return size === 'big' ? <span className="pc-wheel" /> : <span className="pc-wheel pc-wheel-small" />;
+      return <WildWheel className="pc-wheel" />;
     case 'WILD_DRAW_FOUR':
-      return <span>+4</span>;
+      return (
+        <span className="pc-wild4">
+          <WildWheel className="pc-wheel pc-wheel-back" withSuits={false} />
+          <span className="pc-numeral pc-numeral-plus">+4</span>
+        </span>
+      );
   }
 }
 
-/** Original card design: cream card stock, jewel-tone face, central gem and corner indices. */
+/** Corner index: symbol + suit, readable when cards overlap in a fanned hand. */
+function Index({ card, color }: { card: Card; color: CardColor | null }) {
+  let symbol: React.ReactNode;
+  switch (card.type) {
+    case 'NUMBER':
+      symbol = <span className={card.value === 6 || card.value === 9 ? 'pc-underline' : ''}>{card.value}</span>;
+      break;
+    case 'SKIP':
+      symbol = <SkipGlyph className="pc-index-glyph" />;
+      break;
+    case 'REVERSE':
+      symbol = <ReverseGlyph className="pc-index-glyph" />;
+      break;
+    case 'DRAW_TWO':
+      symbol = <span>+2</span>;
+      break;
+    case 'WILD':
+      symbol = <WildWheel className="pc-index-glyph" withSuits={false} />;
+      break;
+    case 'WILD_DRAW_FOUR':
+      symbol = <span>+4</span>;
+      break;
+  }
+  return (
+    <>
+      {symbol}
+      {color && <SuitIcon color={color} className="pc-index-suit" />}
+    </>
+  );
+}
+
+function CardBack() {
+  return (
+    <div className="pc-back">
+      <span className="pc-back-emblem">
+        {COLORS.map((color) => (
+          <SuitIcon key={color} color={color} className={`pc-back-suit pc-back-suit-${color.toLowerCase()}`} />
+        ))}
+      </span>
+    </div>
+  );
+}
+
+/**
+ * Original card: cream card stock, lacquered color panel with a faint suit weave,
+ * embossed central symbol, corner indices and a light sheen. Size comes from --cw.
+ */
 export const GameCard = memo(function GameCard({ card, faceDown, className = '', style }: GameCardProps) {
   const cardName = useCardName();
   const { t } = useI18n();
@@ -38,33 +91,29 @@ export const GameCard = memo(function GameCard({ card, faceDown, className = '',
   if (!card || faceDown) {
     return (
       <div className={`pc-card ${className}`} style={style} role="img" aria-label={t('cards.back')}>
-        <div className="pc-back">
-          <span className="pc-back-emblem" />
-        </div>
+        <CardBack />
       </div>
     );
   }
 
-  const isWildCard = card.color === 'WILD';
-  const theme = isWildCard ? null : COLOR_THEME[card.color as CardColor];
-  const Suit = theme?.Icon;
-
+  const color = card.color === 'WILD' ? null : (card.color as CardColor);
   return (
     <div className={`pc-card ${className}`} style={style} role="img" aria-label={cardName(card)}>
-      <div className={`pc-face ${theme?.className ?? 'pc-wild'}`}>
-        <div className="pc-corner pc-corner-tl">
-          <Glyph card={card} size="small" />
-          {Suit && <Suit className="pc-suit" strokeWidth={2.5} />}
-        </div>
-        <div className={`pc-gem ${card.type === 'WILD_DRAW_FOUR' ? 'pc-gem-wild4' : ''}`}>
-          <div className="pc-gem-inner">
-            <Glyph card={card} size="big" />
-          </div>
-        </div>
-        <div className="pc-corner pc-corner-br">
-          <Glyph card={card} size="small" />
-          {Suit && <Suit className="pc-suit" strokeWidth={2.5} />}
-        </div>
+      <div
+        className={`pc-face ${color ? COLOR_THEME[color].className : 'pc-wild'}`}
+        style={color ? { backgroundImage: `${suitPattern(color)}, var(--pc-face-light)` } : undefined}
+      >
+        <span className="pc-frame" />
+        <span className="pc-index pc-index-tl">
+          <Index card={card} color={color} />
+        </span>
+        <span className="pc-center">
+          <span className="pc-lens" />
+          <Center card={card} />
+        </span>
+        <span className="pc-index pc-index-br">
+          <Index card={card} color={color} />
+        </span>
       </div>
     </div>
   );

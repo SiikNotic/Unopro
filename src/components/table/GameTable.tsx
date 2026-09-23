@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Bug, Hand, Play, SkipForward } from 'lucide-react';
+import { ArrowLeft, Bug, Hand, SkipForward } from 'lucide-react';
 import type { ActionResult, Card, GameAction, GameState } from '@/game/engine';
 import { Actions, validateAction } from '@/game/engine';
 import { getSeats } from '@/game/table/seating';
-import type { SeatPosition } from '@/game/table/seating';
+import type { Seat, SeatPosition } from '@/game/table/seating';
 import type { TableEvents } from '@/game/table/events';
 import { useI18n } from '@/i18n';
 import { useViewport } from '@/hooks/useViewport';
@@ -16,9 +16,11 @@ import { TableCenter } from './TableCenter';
 import { CurrentColorBadge } from './CurrentColorBadge';
 import { ColorPicker } from './ColorPicker';
 import { RoundResult } from './RoundResult';
+import { Scoreboard } from './Scoreboard';
 import { useTableAnimations } from './useTableAnimations';
 import { displayName } from './names';
 import { eventText } from './eventText';
+import { FeltPrint } from './FeltPrint';
 
 interface GameTableProps {
   state: GameState;
@@ -39,6 +41,20 @@ interface Burst {
 const clamp = (min: number, value: number, max: number) => Math.max(min, Math.min(max, value));
 
 /**
+ * Where each seat position sits around the table. Wide screens use all four sides;
+ * narrow screens bring the side seats up to the top rim so the centre stays free.
+ */
+const SLOT_WIDE: Record<SeatPosition, string> = {
+  bottom: '',
+  top: 'top-0 left-1/2 -translate-x-1/2',
+  'top-left': 'top-0 left-[22%] -translate-x-1/2',
+  'top-right': 'top-0 left-[78%] -translate-x-1/2',
+  left: 'left-0 top-1/2 -translate-y-1/2',
+  right: 'right-0 top-1/2 -translate-y-1/2',
+};
+const NARROW_ORDER: SeatPosition[] = ['left', 'top-left', 'top', 'top-right', 'right'];
+
+/**
  * The visual table. Renders GameState and turns taps into GameActions — every rule
  * (legality, turns, effects, UNO, scoring) is answered by the engine.
  */
@@ -46,12 +62,11 @@ export function GameTable({ state, localPlayerId, dispatch, onExit, engineError 
   const { t } = useI18n();
   const cardName = useCardName();
   const { width: vw, height: vh } = useViewport();
-  const compact = vw < 640;
-  const handCardWidth = Math.round(clamp(58, Math.min(vw * 0.17, vh * 0.125), 108));
-  const pileWidth = Math.round(clamp(50, Math.min(vw * 0.15, vh * 0.11), 100));
+  const narrow = vw < 640;
+  const handCardWidth = Math.round(clamp(62, Math.min(vw * (narrow ? 0.215 : 0.2), vh * 0.125), vw >= 700 && vh >= 900 ? 132 : 116));
+  const pileWidth = Math.round(clamp(58, Math.min(vw * (narrow ? 0.27 : 0.2), vh * 0.145), vw >= 700 && vh >= 900 ? 152 : 128));
 
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [hint, setHint] = useState<{ id: number; text: string } | null>(null);
+  const [toast, setToast] = useState<{ id: number; text: string } | null>(null);
   const [bursts, setBursts] = useState<Burst[]>([]);
   const [showDebug, setShowDebug] = useState(false);
 
@@ -70,38 +85,35 @@ export function GameTable({ state, localPlayerId, dispatch, onExit, engineError 
   );
 
   const seats = useMemo(() => getSeats(state, localPlayerId), [state, localPlayerId]);
-  const seatAt = (positions: SeatPosition[]) => seats.filter((s) => positions.includes(s.position));
+  const opponents = seats.filter((s) => s.position !== 'bottom');
 
-  // Legal plays come straight from the engine's validator (covers turn, jump-in, draw stacks…).
+  // Legal plays come straight from the engine's validator (turn, pending draw, drawn-card rule…).
   const playableIds = useMemo(
     () => new Set(local.hand.filter((c) => validateAction(state, Actions.playCard(localPlayerId, c.id)).valid).map((c) => c.id)),
     [state, local.hand, localPlayerId]
   );
-  const selected = selectedId && playableIds.has(selectedId) ? selectedId : null;
   const canDraw = validateAction(state, Actions.drawCard(localPlayerId)).valid;
   const canPass = validateAction(state, Actions.endTurn(localPlayerId)).valid;
   const unoTarget = state.unoState.penaltyWindowPlayerId;
   const canCatch = !!unoTarget && unoTarget !== localPlayerId && validateAction(state, Actions.challengeUno(localPlayerId, unoTarget)).valid;
   const declared = state.unoState.declaredPlayerIds.includes(localPlayerId);
   const showUno =
-    playing &&
-    !declared &&
-    ((local.hand.length === 2 && isMyTurn && playableIds.size > 0) || (local.hand.length === 1 && unoTarget === localPlayerId));
+    playing && !declared && ((local.hand.length === 2 && isMyTurn && playableIds.size > 0) || (local.hand.length === 1 && unoTarget === localPlayerId));
   const choosingColor = pending?.type === 'CHOOSE_COLOR' && pending.playerId === localPlayerId;
+  const myMove = isMyTurn && !choosingColor;
 
-  const showHint = (text: string) => setHint({ id: Date.now(), text });
   useEffect(() => {
-    if (!hint) return;
-    const timer = window.setTimeout(() => setHint(null), 1800);
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(null), 1600);
     return () => window.clearTimeout(timer);
-  }, [hint]);
+  }, [toast]);
 
   const addBurst = useCallback((text: string, rect: DOMRect | undefined, tone: Burst['tone']) => {
     const id = Date.now() + Math.random();
     const x = rect ? rect.left + rect.width / 2 : window.innerWidth / 2;
     const y = rect ? rect.top + rect.height / 2 : window.innerHeight / 2;
     setBursts((b) => [...b, { id, text, x, y, tone }]);
-    window.setTimeout(() => setBursts((b) => b.filter((x) => x.id !== id)), 950);
+    window.setTimeout(() => setBursts((b) => b.filter((x) => x.id !== id)), 1050);
   }, []);
 
   const onEvents = useCallback(
@@ -118,76 +130,80 @@ export function GameTable({ state, localPlayerId, dispatch, onExit, engineError 
 
   const { register, ghostLayer } = useTableAnimations(state, localPlayerId, onEvents);
 
-  const play = (card: Card) => {
-    setSelectedId(null);
-    dispatch(Actions.playCard(localPlayerId, card.id));
-  };
-
-  const onCardClick = (card: Card, el: HTMLElement) => {
-    if (!playing) return;
-    if (!playableIds.has(card.id)) {
-      el.classList.remove('animate-shake');
-      void el.offsetWidth;
-      el.classList.add('animate-shake');
-      showHint(isMyTurn ? t('table.cannotPlay') : t('table.notYourTurn'));
+  /** One tap plays a legal card. A Wild goes to the discard pile and the engine then asks for a color. */
+  const onCardTap = (card: Card, el: HTMLElement) => {
+    if (!playing || choosingColor) return;
+    if (playableIds.has(card.id)) {
+      dispatch(Actions.playCard(localPlayerId, card.id));
       return;
     }
-    if (selected === card.id) play(card);
-    else setSelectedId(card.id);
+    el.classList.remove('animate-shake');
+    void el.offsetWidth;
+    el.classList.add('animate-shake');
+    try {
+      navigator.vibrate?.(35);
+    } catch {
+      // vibration is optional
+    }
+    setToast({ id: Date.now(), text: isMyTurn ? t('table.cannotPlay') : t('table.notYourTurn') });
   };
 
   const status = (() => {
     if (!playing) return null;
     if (pending?.type === 'CHOOSE_COLOR' && pending.playerId !== localPlayerId) return t('table.choosingColor', { name: nameOf(pending.playerId) });
+    if (choosingColor) return t('table.chooseColor');
     if (isMyTurn && pending?.type === 'PLAY_DRAWN_CARD') return t('table.drawnPlayable');
     if (isMyTurn && state.pendingDraw > 0) return t('table.mustAnswerStack', { count: state.pendingDraw });
-    if (isMyTurn) return selected ? t('table.tapAgain') : t('table.pickCard');
+    if (isMyTurn) return playableIds.size > 0 ? t('table.pickCard') : t('table.mustDraw');
     return null;
   })();
 
   const lastEvent = useMemo(() => {
     for (let i = state.log.length - 1; i >= 0; i--) {
-      const text = eventText(state.log[i], nameOf, cardName, t);
+      const text = eventText(state.log[i], nameOf, cardName, t, localPlayerId);
       if (text) return { seq: state.log[i].seq, text };
     }
     return null;
-  }, [state.log, nameOf, cardName, t]);
+  }, [state.log, nameOf, cardName, t, localPlayerId]);
 
-  const renderSeat = (seat: (typeof seats)[number]) => {
+  const renderSeat = (seat: Seat) => {
     const player = state.players.find((p) => p.id === seat.playerId)!;
     return (
       <OpponentSeat
         key={seat.playerId}
         player={player}
-        seat={seat}
+        seat={narrow ? { ...seat, position: 'left' } : seat}
         name={nameOf(player.id)}
-        active={playing && current.id === player.id}
+        score={state.settings.teamMode ? null : state.scores[player.id] ?? 0}
+        active={playing && (pending?.playerId ?? current.id) === player.id}
         hasUno={state.unoState.playersWithOneCard.includes(player.id)}
-        compact={compact}
+        compact={narrow}
         register={register}
       />
     );
   };
 
-  const selectedCard = selected ? local.hand.find((c) => c.id === selected) : undefined;
+  const narrowSeats = [...opponents].sort((a, b) => NARROW_ORDER.indexOf(a.position) - NARROW_ORDER.indexOf(b.position));
+  const hasSides = !narrow && opponents.some((s) => s.position === 'left' || s.position === 'right');
+  const pad = narrow ? 'inset-x-1 top-[58px] bottom-1' : `${hasSides ? 'inset-x-[64px] lg:inset-x-[84px]' : 'inset-x-2'} top-[40px] bottom-2`;
 
   return (
-    <div className="relative h-[100dvh] w-full max-w-6xl mx-auto flex flex-col overflow-hidden select-none">
+    <div className="game-room relative h-[100dvh] w-full flex flex-col overflow-hidden select-none">
       {/* Header */}
-      <header className="flex items-center justify-between gap-2 px-3 pt-2 pb-1 shrink-0">
-        <button type="button" onClick={onExit} className="flex items-center gap-1 rounded-xl px-2 py-1.5 text-sm text-ink-400 hover:text-white hover:bg-white/5" aria-label={t('table.exit')}>
+      <header className="w-full max-w-6xl mx-auto grid grid-cols-[auto_1fr_auto] items-center gap-1.5 px-2 sm:px-4 pt-2 pb-1 shrink-0">
+        <button
+          type="button"
+          onClick={onExit}
+          className="flex items-center gap-1 rounded-xl min-h-[40px] px-2 text-sm text-ink-400 hover:text-white hover:bg-white/5"
+          aria-label={t('table.exit')}
+        >
           <ArrowLeft className="w-4 h-4" />
           <span className="hidden sm:inline">{t('table.exit')}</span>
         </button>
-        <div className="text-xs sm:text-sm text-ink-400 font-semibold truncate">
-          {t('table.round', { round: state.roundNumber })}
-          {state.settings.teamMode
-            ? state.teams.map((team) => ` · ${t('table.teamScore', { team: team.name, score: state.teamScores[team.id] ?? 0 })}`).join('')
-            : ` · ${t('table.yourScore', { score: state.scores[localPlayerId] ?? 0 })}`}
-        </div>
+        <Scoreboard state={state} localPlayerId={localPlayerId} />
         <div className="flex items-center gap-1">
-          <div className="rounded-xl bg-black/30 px-2 py-1">
-            <LanguageSelector compact />
+          <div className="chip rounded-xl px-2 py-1">
+            <LanguageSelector compact short={narrow} />
           </div>
           {import.meta.env.DEV && (
             <button type="button" onClick={() => setShowDebug((v) => !v)} className="rounded-xl p-2 text-amber-400 hover:bg-white/5" aria-label="debug">
@@ -197,39 +213,63 @@ export function GameTable({ state, localPlayerId, dispatch, onExit, engineError 
         </div>
       </header>
 
-      {/* Top seats */}
-      <div className="flex justify-center items-start gap-2 sm:gap-6 px-2 shrink-0">{seatAt(['top-left', 'top', 'top-right']).map(renderSeat)}</div>
+      {/* Table */}
+      <div className="relative flex-1 min-h-0 w-full max-w-6xl mx-auto px-2 sm:px-4">
+        <div className="relative h-full table-stage">
+          <div className={`table-top ${pad}`}>
+            <div className="table-felt flex items-center justify-center overflow-hidden">
+              <FeltPrint />
+              <div className="relative flex flex-col items-center gap-2 sm:gap-3 px-2" style={{ marginTop: narrow ? 48 : 0 }}>
+                <div className="play-zone">
+                  <TableCenter state={state} pileWidth={pileWidth} canDraw={canDraw} onDraw={() => dispatch(Actions.drawCard(localPlayerId))} register={register} />
+                </div>
+                <CurrentColorBadge color={state.currentColor} />
+                {lastEvent && (
+                  <p key={lastEvent.seq} className="max-w-[92%] truncate text-[11px] sm:text-xs text-white/60 animate-fade-in" aria-live="polite">
+                    {lastEvent.text}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
 
-      {/* Middle: side seats + table */}
-      <div className="flex-1 min-h-0 flex items-center gap-1 sm:gap-4 px-1 sm:px-4">
-        <div className="shrink-0 flex flex-col gap-2">{seatAt(['left']).map(renderSeat)}</div>
-        <div className="relative flex-1 h-full min-w-0 table-stage">
-          <div className="table-surface absolute inset-x-[2%] top-[8%] bottom-[20%] flex items-center justify-center">
-            <TableCenter state={state} pileWidth={pileWidth} canDraw={canDraw} onDraw={() => dispatch(Actions.drawCard(localPlayerId))} register={register} />
-          </div>
-          <div className="absolute inset-x-0 bottom-[2%] flex flex-col items-center gap-1 px-1">
-            <CurrentColorBadge color={state.currentColor} />
-            {lastEvent && (
-              <p key={lastEvent.seq} className="max-w-full truncate text-[11px] sm:text-xs text-ink-400 animate-fade-in" aria-live="polite">
-                {lastEvent.text}
-              </p>
-            )}
-          </div>
+          {/* Seats around the rim */}
+          {narrow ? (
+            <div className="absolute top-0 inset-x-0 z-10 flex justify-center items-start gap-1.5">{narrowSeats.map(renderSeat)}</div>
+          ) : (
+            opponents.map((seat) => (
+              <div key={seat.playerId} className={`absolute z-10 ${SLOT_WIDE[seat.position]}`}>
+                {renderSeat(seat)}
+              </div>
+            ))
+          )}
+
+          {choosingColor && (
+            <div className={`absolute z-30 ${pad} rounded-[clamp(64px,18vmin,180px)]`}>
+              <ColorPicker onChoose={(color) => dispatch(Actions.chooseColor(localPlayerId, color))} />
+            </div>
+          )}
         </div>
-        <div className="shrink-0 flex flex-col gap-2">{seatAt(['right']).map(renderSeat)}</div>
       </div>
 
       {/* Local player */}
-      <section ref={register(`seat:${localPlayerId}`)} className="shrink-0 pb-[max(8px,env(safe-area-inset-bottom))]" aria-label={nameOf(localPlayerId)}>
-        <div className="flex items-center justify-between gap-2 px-3 min-h-[48px]">
+      <section
+        ref={register(`seat:${localPlayerId}`)}
+        className="relative w-full max-w-6xl mx-auto shrink-0 pb-[max(6px,env(safe-area-inset-bottom))]"
+        aria-label={nameOf(localPlayerId)}
+      >
+        <div className="flex items-center justify-between gap-2 px-3 min-h-[52px]">
           <div className="min-w-0 flex-1">
             {isMyTurn ? (
-              <span key={state.turnNumber} className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-brand-400 to-brand-600 px-3 py-1 text-xs sm:text-sm font-extrabold text-ink-950 shadow-glow animate-banner">
+              <span
+                key={state.turnNumber}
+                className="inline-flex items-center rounded-full bg-gradient-to-r from-[#f3ecdc] to-[#e2d3ae] px-3 py-1 text-xs sm:text-sm font-extrabold tracking-wide text-ink-950 shadow-glow-gold animate-banner"
+              >
                 {t('table.yourTurn')}
               </span>
             ) : playing ? (
               <span key={state.turnNumber} className="text-xs sm:text-sm text-ink-400 animate-fade-in truncate block">
-                {t('table.turnOf', { name: nameOf(current.id) })}
+                {t('table.turnOf', { name: nameOf(pending?.playerId ?? current.id) })}
               </span>
             ) : null}
             {status && <p className="mt-0.5 text-[11px] text-ink-400 truncate">{status}</p>}
@@ -237,25 +277,23 @@ export function GameTable({ state, localPlayerId, dispatch, onExit, engineError 
 
           <div className="flex items-center gap-2 shrink-0">
             {canCatch && unoTarget && (
-              <button type="button" onClick={() => dispatch(Actions.challengeUno(localPlayerId, unoTarget))} className="flex items-center gap-1 rounded-xl bg-danger-500/20 border border-danger-500/40 px-3 py-2 text-xs font-bold text-danger-400 animate-pop">
+              <button
+                type="button"
+                onClick={() => dispatch(Actions.challengeUno(localPlayerId, unoTarget))}
+                className="flex items-center gap-1 rounded-xl min-h-[44px] bg-danger-600 px-3 text-xs font-bold text-white shadow-lg animate-pop"
+              >
                 <Hand className="w-4 h-4" />
                 {t('table.catch', { name: nameOf(unoTarget) })}
               </button>
             )}
-            {selectedCard && (
-              <button type="button" onClick={() => play(selectedCard)} className="flex items-center gap-1 rounded-xl bg-gradient-to-b from-brand-400 to-brand-600 px-4 py-2.5 text-sm font-bold text-ink-950 animate-pop">
-                <Play className="w-4 h-4" />
-                {t('table.play')}
-              </button>
-            )}
             {canPass && (
-              <button type="button" onClick={() => dispatch(Actions.endTurn(localPlayerId))} className="flex items-center gap-1 rounded-xl glass px-3 py-2.5 text-sm font-semibold">
+              <button type="button" onClick={() => dispatch(Actions.endTurn(localPlayerId))} className="chip flex items-center gap-1 rounded-xl min-h-[44px] px-3 text-sm font-semibold">
                 <SkipForward className="w-4 h-4" />
                 {t('table.pass')}
               </button>
             )}
-            {canDraw && !selectedCard && (
-              <button type="button" onClick={() => dispatch(Actions.drawCard(localPlayerId))} className="rounded-xl glass px-4 py-2.5 text-sm font-semibold">
+            {canDraw && (
+              <button type="button" onClick={() => dispatch(Actions.drawCard(localPlayerId))} className="chip rounded-xl min-h-[44px] px-4 text-sm font-semibold">
                 {state.pendingDraw > 0 ? t('table.drawCount', { count: state.pendingDraw }) : t('table.draw')}
               </button>
             )}
@@ -263,7 +301,7 @@ export function GameTable({ state, localPlayerId, dispatch, onExit, engineError 
               <button
                 type="button"
                 onClick={() => dispatch(Actions.callUno(localPlayerId))}
-                className="w-14 h-14 rounded-full bg-gradient-to-br from-gold-400 via-amber-500 to-rose-600 text-ink-950 font-display font-extrabold text-base shadow-glow-gold border-2 border-white/80 animate-pop"
+                className="w-14 h-14 rounded-full bg-gradient-to-br from-gold-400 via-amber-500 to-rose-600 text-ink-950 font-display font-extrabold text-base shadow-glow-gold border-2 border-[#f3ecdc] animate-pop"
               >
                 {t('table.uno')}
               </button>
@@ -271,25 +309,22 @@ export function GameTable({ state, localPlayerId, dispatch, onExit, engineError 
           </div>
         </div>
 
-        {hint && (
-          <p key={hint.id} className="text-center text-xs text-danger-400 animate-fade-in" role="status">
-            {hint.text}
-          </p>
-        )}
-
         <PlayerHand
           cards={local.hand}
           cardWidth={handCardWidth}
           playableIds={playableIds}
-          interactive={playing && !choosingColor}
-          selectedId={selected}
+          myMove={myMove}
           highlightId={pending?.type === 'PLAY_DRAWN_CARD' && pending.playerId === localPlayerId ? pending.cardId : null}
-          onCardClick={onCardClick}
+          onCardTap={onCardTap}
           register={register}
         />
-      </section>
 
-      {choosingColor && <ColorPicker onChoose={(color) => dispatch(Actions.chooseColor(localPlayerId, color))} />}
+        {toast && (
+          <p key={toast.id} role="status" className="panel pointer-events-none absolute left-1/2 top-14 z-20 rounded-full px-4 py-2 text-xs sm:text-sm font-semibold whitespace-nowrap animate-toast">
+            {toast.text}
+          </p>
+        )}
+      </section>
 
       {(state.status === 'ROUND_OVER' || state.status === 'GAME_OVER') && (
         <RoundResult
@@ -308,7 +343,7 @@ export function GameTable({ state, localPlayerId, dispatch, onExit, engineError 
         {bursts.map((b) => (
           <span
             key={b.id}
-            className={`absolute font-display font-extrabold text-2xl sm:text-3xl px-4 py-1 rounded-2xl animate-burst ${
+            className={`absolute font-display font-extrabold text-2xl sm:text-3xl px-4 py-1 rounded-2xl border-2 border-[#f3ecdc] animate-burst ${
               b.tone === 'good' ? 'bg-gradient-to-br from-gold-400 to-rose-600 text-ink-950 shadow-glow-gold' : 'bg-danger-600 text-white'
             }`}
             style={{ left: b.x, top: b.y }}

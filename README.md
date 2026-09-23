@@ -2,6 +2,13 @@
 
 Juego de cartas estilo UNO hecho con React, TypeScript, Vite y Tailwind CSS.
 
+## Jugar online
+
+GitHub Pages: https://siiknotic.github.io/Unopro/
+
+Se publica automáticamente con `.github/workflows/deploy.yml` en cada push a la rama por defecto
+(tests, typecheck, lint y build deben pasar). Requiere **Settings → Pages → Source: GitHub Actions**.
+
 ## Requisitos
 
 - Node.js 22 o superior

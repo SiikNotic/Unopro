@@ -5,9 +5,11 @@ import type { LanguageCode } from '@/i18n/config';
 
 interface LanguageSelectorProps {
   compact?: boolean;
+  /** Show the short code (EN/ES) instead of the language name — for tight headers. */
+  short?: boolean;
 }
 
-export function LanguageSelector({ compact = false }: LanguageSelectorProps) {
+export function LanguageSelector({ compact = false, short = false }: LanguageSelectorProps) {
   const { language, setLanguage } = useI18n();
 
   if (compact) {
@@ -15,13 +17,14 @@ export function LanguageSelector({ compact = false }: LanguageSelectorProps) {
       <div className="flex items-center gap-2">
         <Globe className="w-4 h-4 text-ink-400" />
         <select
+          aria-label={LANGUAGES.find((l) => l.code === language)?.label}
           value={language}
           onChange={(e) => setLanguage(e.target.value as LanguageCode)}
           className="bg-transparent text-sm text-white border-none outline-none cursor-pointer"
         >
           {LANGUAGES.map((lang) => (
             <option key={lang.code} value={lang.code} className="bg-ink-800">
-              {lang.label}
+              {short ? lang.flag : lang.label}
             </option>
           ))}
         </select>

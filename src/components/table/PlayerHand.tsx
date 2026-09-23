@@ -8,72 +8,59 @@ interface PlayerHandProps {
   cards: Card[];
   cardWidth: number;
   playableIds: Set<string>;
-  interactive: boolean;
-  selectedId: string | null;
+  /** False while it is not the player's move (cards are shown but not dimmed as "illegal"). */
+  myMove: boolean;
   highlightId?: string | null;
-  onCardClick: (card: Card, el: HTMLElement) => void;
+  onCardTap: (card: Card, el: HTMLElement) => void;
   register: (key: string) => (el: HTMLElement | null) => void;
 }
 
-/** Overlapping, slightly fanned hand. Scrolls horizontally inside itself when it cannot fit. */
-export function PlayerHand({ cards, cardWidth, playableIds, interactive, selectedId, highlightId, onCardClick, register }: PlayerHandProps) {
+/**
+ * Fanned, overlapping hand. One tap plays a legal card (the parent validates through the engine).
+ * Scrolls horizontally inside itself when it cannot fit, so the page never does.
+ */
+export function PlayerHand({ cards, cardWidth, playableIds, myMove, highlightId, onCardTap, register }: PlayerHandProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const available = useElementWidth(containerRef) - 16;
+  const available = useElementWidth(containerRef) - 24;
   const cardName = useCardName();
   const n = cards.length;
   const cardHeight = cardWidth * 1.5;
 
-  const maxStep = cardWidth * 0.7;
+  const maxStep = cardWidth * 0.68;
   const minStep = cardWidth * 0.5;
   const fitStep = n > 1 ? (available - cardWidth) / (n - 1) : 0;
   const step = n > 1 ? Math.max(minStep, Math.min(maxStep, fitStep)) : 0;
   const totalWidth = cardWidth + step * Math.max(0, n - 1);
-  const spread = Math.min(4, 36 / Math.max(n, 1));
+  const spread = Math.min(3.2, 30 / Math.max(n, 1));
 
   return (
     <div
       ref={containerRef}
-      className="w-full overflow-x-auto overflow-y-hidden px-2"
-      style={{ paddingTop: cardHeight * 0.22, paddingBottom: cardHeight * 0.18, scrollbarWidth: 'thin' }}
+      className="w-full overflow-x-auto overflow-y-hidden px-3"
+      style={{ paddingTop: cardHeight * 0.2, paddingBottom: cardHeight * 0.22, scrollbarWidth: 'thin' }}
     >
-      <div className="relative mx-auto" style={{ width: totalWidth, height: cardHeight + 6 }}>
+      <div className="relative mx-auto" style={{ width: totalWidth, height: cardHeight + 4 }}>
         {cards.map((card, i) => {
           const offset = i - (n - 1) / 2;
-          const fan = `rotate(${offset * spread}deg) translateY(${offset * offset * spread * 0.25}px)`;
-          const selected = card.id === selectedId;
-          const playable = playableIds.has(card.id);
+          const fan = `rotate(${offset * spread}deg) translateY(${offset * offset * spread * 0.22}px)`;
+          const playable = myMove && playableIds.has(card.id);
           const classes = [
             'hand-card block origin-bottom',
-            interactive ? 'hand-card-interactive cursor-pointer' : 'cursor-default',
-            selected ? 'hand-card-selected' : '',
-            interactive && !playable ? 'hand-card-disabled' : '',
+            playable ? 'hand-card-playable cursor-pointer' : 'cursor-default',
+            myMove && !playable ? 'hand-card-dim' : '',
+            card.id === highlightId ? 'hand-card-drawn' : '',
           ].join(' ');
           return (
-            <div
-              key={card.id}
-              ref={register(`card:${card.id}`)}
-              className="absolute bottom-0"
-              style={{ left: i * step, zIndex: selected ? 100 : i }}
-            >
+            <div key={card.id} ref={register(`card:${card.id}`)} className="absolute bottom-0" style={{ left: i * step, zIndex: i }}>
               <button
                 type="button"
                 className={classes}
-                aria-pressed={selected}
                 aria-label={cardName(card)}
-                aria-disabled={!interactive || !playable}
-                onClick={(e) => onCardClick(card, e.currentTarget)}
-                style={
-                  {
-                    '--fan': fan,
-                    transform: selected ? `${fan} translateY(-18%) scale(1.07)` : fan,
-                  } as React.CSSProperties
-                }
+                aria-disabled={!playable}
+                onClick={(e) => onCardTap(card, e.currentTarget)}
+                style={{ '--fan': fan, transform: playable ? `${fan} translateY(-4%)` : fan } as React.CSSProperties}
               >
-                <GameCard
-                  card={card}
-                  style={{ '--cw': `${cardWidth}px` } as React.CSSProperties}
-                  className={card.id === highlightId && !selected ? 'ring-2 ring-gold-400 ring-offset-2 ring-offset-transparent' : ''}
-                />
+                <GameCard card={card} style={{ '--cw': `${cardWidth}px` } as React.CSSProperties} />
               </button>
             </div>
           );
