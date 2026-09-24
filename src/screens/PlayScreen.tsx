@@ -53,7 +53,7 @@ const TEAMS: CreateGameConfig = {
 const CONFIGS: Partial<Record<GameModeId, CreateGameConfig>> = { classic: CLASSIC, teams: TEAMS };
 
 export function PlayScreen() {
-  const { goHome, params } = useNavigation();
+  const { navigate, params } = useNavigation();
   const config = CONFIGS[params.mode ?? 'classic'] ?? CLASSIC;
   const { state, dispatch, error } = useGameEngine(config);
   const localPlayerId = useMemo(() => getLocalPlayerId(state), [state]);
@@ -91,5 +91,5 @@ export function PlayScreen() {
   );
   useAutoPlayers(state, dispatch, controllers, thinkDelay);
 
-  return <GameTable state={state} localPlayerId={localPlayerId} dispatch={dispatch} onExit={goHome} engineError={error} scenario={scenario} />;
+  return <GameTable state={state} localPlayerId={localPlayerId} dispatch={dispatch} onExit={() => navigate('gameModes')} engineError={error} scenario={scenario} />;
 }

@@ -1,9 +1,8 @@
 import { useEffect } from 'react';
 import type { ReactNode } from 'react';
-import { ArrowLeft, Gift, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Gift, HelpCircle, ShieldCheck } from 'lucide-react';
 import { useNavigation } from '@/components/Navigation';
 import { SceneBackground } from '@/components/scene/SceneBackground';
-import { Button } from '@/components/ui/Button';
 import { MusicButton } from '@/components/ui/MusicButton';
 import { useI18n } from '@/i18n';
 import { useWallet } from '@/casino/useWallet';
@@ -22,11 +21,20 @@ interface CasinoFrameProps {
   scenario: ScenarioId;
   /** Replaces the animated scene with a custom backdrop. */
   backdrop?: ReactNode;
+  /** Opens the game's rules. */
+  onHelp?: () => void;
+  /** Primary controls, pinned to the bottom of the screen (above the phone's home bar). */
+  dock?: ReactNode;
+  /** Widest the content may grow on tablets and desktops. */
+  maxWidth?: string;
   children: ReactNode;
 }
 
-/** Shared shell for the casino: animated scene, header with the chip balance, refill offer and the virtual-chips notice. */
-export function CasinoFrame({ title, subtitle, back, scenario, backdrop, children }: CasinoFrameProps) {
+/**
+ * Shared shell for every casino game: a top bar that always says where you are and how to go back,
+ * the table in the middle and the controls in a dock under the thumb. Respects notches and home bars.
+ */
+export function CasinoFrame({ title, subtitle, back, scenario, backdrop, onHelp, dock, maxWidth = 'max-w-3xl', children }: CasinoFrameProps) {
   const { navigate } = useNavigation();
   const { t } = useI18n();
   const { balance, canRefill, refill } = useWallet();
@@ -38,51 +46,64 @@ export function CasinoFrame({ title, subtitle, back, scenario, backdrop, childre
   }, []);
 
   return (
-    <div className="relative min-h-[100dvh] w-full overflow-x-hidden" style={scenarioStyle(scenario) as React.CSSProperties}>
-      <div className="fixed inset-0">
+    <div className="relative min-h-[100dvh] w-full flex flex-col overflow-x-clip" style={scenarioStyle(scenario) as React.CSSProperties}>
+      <div className="fixed inset-0" aria-hidden>
         {backdrop ?? <SceneBackground scenario={scenario} />}
+        {/* keep the backdrop as atmosphere; the game stays the brightest thing on screen */}
+        <div className="absolute inset-0 bg-[#0a0e0c]/60" />
       </div>
-      <div className="relative w-full max-w-3xl mx-auto px-3 sm:px-6 pt-4 pb-8 flex flex-col gap-4">
-        <header className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => navigate(back)}
-            aria-label={t('common.back')}
-            className="btn-game btn-secondary shrink-0 w-11 h-11 rounded-xl flex items-center justify-center"
-          >
+
+      <header className="cz-topbar cz-safe-x">
+        <div className={`mx-auto w-full ${maxWidth} flex items-center gap-2`}>
+          <button type="button" onClick={() => navigate(back)} className="cz-btn cz-btn-quiet cz-btn-sm -ml-2 px-2 shrink-0" aria-label={t('casino.backToGames')}>
             <ArrowLeft className="w-5 h-5" />
+            <span className="hidden sm:inline">{t('casino.games')}</span>
           </button>
           <div className="min-w-0 flex-1">
-            <h1 className="font-display font-extrabold text-xl sm:text-2xl text-white truncate drop-shadow">{title}</h1>
-            {subtitle && <p className="text-xs sm:text-sm text-white/70 truncate">{subtitle}</p>}
+            <h1 className="font-display font-extrabold text-[17px] sm:text-xl leading-tight text-[var(--cz-ivory)] truncate">{title}</h1>
+            {subtitle && <p className="hidden sm:block text-xs text-[var(--cz-muted)] truncate">{subtitle}</p>}
           </div>
           <ChipBalance balance={balance} />
-          <MusicButton />
-        </header>
+          {onHelp && (
+            <button type="button" onClick={onHelp} className="cz-btn cz-btn-secondary cz-icon-btn" aria-label={t('casino.rules')} title={t('casino.rules')}>
+              <HelpCircle className="w-5 h-5" />
+            </button>
+          )}
+          <MusicButton className="!hidden min-[400px]:!flex !w-11 !h-11 !rounded-xl" />
+        </div>
+      </header>
 
+      <main className={`relative flex-1 mx-auto w-full ${maxWidth} cz-safe-x py-3 sm:py-5 flex flex-col gap-3 sm:gap-4`}>
         {canRefill && (
-          <div className="glass-strong rounded-2xl p-3 flex flex-col sm:flex-row items-center gap-3 casino-pop" role="status">
-            <p className="text-sm text-white text-center sm:text-left flex-1">{t('casino.broke')}</p>
-            <Button
-              size="sm"
-              icon={<Gift className="w-4 h-4" />}
+          <div className="cz-panel p-3 flex items-center gap-3 cz-fade-in" role="status">
+            <p className="text-sm text-[var(--cz-ivory)] flex-1 min-w-0">{t('casino.broke')}</p>
+            <button
+              type="button"
+              className="cz-btn cz-btn-primary cz-btn-sm shrink-0"
               onClick={() => {
                 refill();
                 playSfx('cashIn');
               }}
             >
-              {t('casino.refill', { amount: REFILL_CHIPS })}
-            </Button>
+              <Gift className="w-4 h-4" />
+              {t('casino.refillShort', { amount: REFILL_CHIPS })}
+            </button>
           </div>
         )}
-
         {children}
-
-        <p className="flex items-center justify-center gap-1.5 text-center text-[11px] sm:text-xs text-white/60 px-2">
+        <p className="mt-auto flex items-center justify-center gap-1.5 text-center text-[11px] text-[var(--cz-muted)] px-2 pt-1">
           <ShieldCheck className="w-3.5 h-3.5 shrink-0" aria-hidden />
           {t('casino.disclaimer')}
         </p>
-      </div>
+      </main>
+
+      {dock && (
+        <div className="cz-dock cz-safe-x">
+          <div className={`mx-auto w-full ${maxWidth}`}>
+            <div className="mx-auto w-full max-w-xl">{dock}</div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

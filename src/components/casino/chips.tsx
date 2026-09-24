@@ -46,13 +46,40 @@ export function ChipSelector({ selected, onSelect, max, values = CHIP_VALUES }: 
 export function ChipBalance({ balance }: { balance: number }) {
   const { t } = useI18n();
   return (
-    <div className="flex items-center gap-1.5 rounded-full bg-black/45 border border-gold-400/40 pl-1.5 pr-3 py-1 shadow-lg" aria-label={t('casino.balanceAria', { amount: balance })}>
-      <span className="w-6 h-6 rounded-full bg-gradient-to-b from-gold-400 to-gold-600 flex items-center justify-center text-ink-950">
-        <Coins className="w-3.5 h-3.5" aria-hidden />
+    <div className="cz-pill cz-pill-gold min-h-[36px] px-2.5 shrink-0" aria-label={t('casino.balanceAria', { amount: balance })} title={t('casino.balance')}>
+      <Coins className="w-4 h-4 text-[var(--cz-gold)]" aria-hidden />
+      <span key={balance} className="casino-pop text-[14px]" aria-live="polite">
+        {formatChips(balance)}
       </span>
-      <span key={balance} className="font-display font-extrabold tabular-nums text-sm sm:text-base text-white casino-pop" aria-live="polite">
-        {balance.toLocaleString()}
-      </span>
+    </div>
+  );
+}
+
+interface ChipAdderProps {
+  onAdd: (value: number) => void;
+  /** Chips above this are disabled. */
+  max: number;
+  values?: readonly number[];
+}
+
+/** Row of chips where each tap adds that chip to the bet. */
+export function ChipAdder({ onAdd, max, values = CHIP_VALUES }: ChipAdderProps) {
+  const { t } = useI18n();
+  return (
+    <div className="flex items-center justify-center gap-1.5 min-[360px]:gap-2 sm:gap-3" role="group" aria-label={t('casino.addChips')}>
+      {values.map((v) => (
+        <button
+          key={v}
+          type="button"
+          aria-label={t('casino.addChip', { amount: v })}
+          disabled={v > max}
+          onClick={() => onAdd(v)}
+          className="casino-chip active:translate-y-0.5"
+          style={{ '--chip': chipColor(v), '--size': 'clamp(42px, 12.5vw, 54px)' } as React.CSSProperties}
+        >
+          <span>{formatChips(v)}</span>
+        </button>
+      ))}
     </div>
   );
 }

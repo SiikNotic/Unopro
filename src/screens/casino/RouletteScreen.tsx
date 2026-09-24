@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { RotateCcw, Trash2, Undo2, Disc3 } from 'lucide-react';
+import { RotateCcw, Trash2, Undo2 } from 'lucide-react';
 import { CasinoFrame } from '@/components/casino/CasinoFrame';
 import { Chip, ChipSelector } from '@/components/casino/chips';
 import { RouletteWheel } from '@/components/casino/RouletteWheel';
-import { Button } from '@/components/ui/Button';
+import { RulesSheet } from '@/components/casino/RulesSheet';
 import { useI18n } from '@/i18n';
 import { useWallet } from '@/casino/useWallet';
 import type { Bet, BetType } from '@/casino/roulette';
@@ -27,10 +27,12 @@ export function RouletteScreen() {
   const { t } = useI18n();
   const { balance, spend, credit } = useWallet();
   const reduced = useReducedMotion();
-  const vw = useViewport().width;
+  const { width: vw, height: vh } = useViewport();
   const [bets, setBets] = useState<Bet[]>([]);
   const [lastBets, setLastBets] = useState<Bet[]>([]);
   const [chip, setChip] = useState(10);
+  const [tab, setTab] = useState<'numbers' | 'outside'>('numbers');
+  const [help, setHelp] = useState(false);
   const [phase, setPhase] = useState<Phase>('idle');
   const [result, setResult] = useState<number | null>(null);
   const [won, setWon] = useState(0);
@@ -118,154 +120,181 @@ export function RouletteScreen() {
         aria-label={`${aria ?? String(label)}${amount ? ` — ${t('casino.onSpot', { amount })}` : ''}`}
         className={`roulette-spot ${colorClass} ${win ? 'roulette-win' : ''} ${extra}`}
       >
-        <span className="text-[13px] sm:text-sm leading-none">{label}</span>
+        <span className="leading-none">{label}</span>
         {amount > 0 && (
           <span className="roulette-stack">
-            <Chip value={amount} size={24} />
+            <Chip value={amount} size={22} />
           </span>
         )}
       </button>
     );
   };
 
-  const numberSpot = (n: number, style?: React.CSSProperties) => (
-    <div key={n} style={style} className="contents">
-      {spot('straight', n, n, COLOR_CLASS[pocketColor(n)], '', t('casino.roulette.number', { n }))}
-    </div>
-  );
-
-  const dozens = [1, 2, 3].map((d) => spot('dozen', d, t(`casino.roulette.dozen${d}`), 'roulette-outside', '', t('casino.roulette.dozenAria', { d })));
-  const columns = [1, 2, 3].map((c) => spot('column', c, '2:1', 'roulette-outside', '', t('casino.roulette.columnAria', { c })));
+  const numberSpot = (n: number) => spot('straight', n, n, COLOR_CLASS[pocketColor(n)], '', t('casino.roulette.number', { n }));
+  const dozenSpot = (d: number) => spot('dozen', d, t(`casino.roulette.dozen${d}`), 'roulette-outside', '', t('casino.roulette.dozenAria', { d }));
+  const columnSpot = (c: number, label: React.ReactNode = '2:1') => spot('column', c, label, 'roulette-outside', '', t('casino.roulette.columnAria', { c }));
   const evens: [BetType, string, string][] = [
-    ['low', '1–18', 'roulette-outside'],
-    ['even', t('casino.roulette.even'), 'roulette-outside'],
     ['red', t('casino.roulette.red'), 'roulette-red'],
     ['black', t('casino.roulette.black'), 'roulette-black'],
+    ['even', t('casino.roulette.even'), 'roulette-outside'],
     ['odd', t('casino.roulette.odd'), 'roulette-outside'],
+    ['low', '1–18', 'roulette-outside'],
     ['high', '19–36', 'roulette-outside'],
   ];
 
-  const wheelSize = Math.max(200, Math.min(vw - 72, 290));
+  const numbersStaked = bets.filter((b) => b.type === 'straight').reduce((s, b) => s + b.amount, 0);
+  const outsideStaked = staked - numbersStaked;
+  const lastTotal = lastBets.reduce((s, b) => s + b.amount, 0);
+  const wide = vw >= 768;
+  const wheelSize = wide ? 272 : Math.round(Math.max(150, Math.min(vw * 0.5, vh * 0.27, 250)));
+  const repeat = phase === 'result' || (bets.length === 0 && lastBets.length > 0);
+
+  const resultBlock = (
+    <div className="flex flex-col items-center gap-2 min-w-0" role="status" aria-live="polite">
+      <div
+        className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center font-display font-extrabold text-2xl sm:text-3xl text-white border-2 border-[rgba(216,178,106,0.6)] ${
+          result !== null && !spinning ? COLOR_CLASS[pocketColor(result)] : 'bg-black/40'
+        } ${showWin ? 'casino-pop' : ''}`}
+        aria-label={result !== null ? t('casino.roulette.result', { n: result }) : t('casino.roulette.waiting')}
+      >
+        {spinning ? <span className="w-2.5 h-2.5 rounded-full bg-white/80 animate-ping" aria-hidden /> : (result ?? '–')}
+      </div>
+      <p className={`text-center text-sm font-semibold min-h-[20px] ${showWin && won > 0 ? 'text-[var(--cz-gold-hover)]' : 'text-[var(--cz-muted)]'}`}>
+        {spinning ? t('casino.roulette.spinning') : showWin ? (won > 0 ? t('casino.roulette.paid', { amount: won }) : t('casino.noWin')) : t('casino.roulette.placeBets')}
+      </p>
+      {history.length > 0 && (
+        <div className="flex flex-col items-center gap-1 w-full">
+          <span className="cz-label">{t('casino.roulette.history')}</span>
+          <div className="flex flex-wrap justify-center gap-1 max-w-[200px] sm:max-w-[240px]">
+            {history.slice(0, wide ? 12 : 8).map((n, i) => (
+              <span key={`${i}-${n}`} className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full text-[11px] font-bold text-white flex items-center justify-center ${COLOR_CLASS[pocketColor(n)]} ${i === 0 ? 'ring-1 ring-[var(--cz-gold)]' : 'opacity-85'}`}>
+                {n}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  const dock = (
+    <div className="flex flex-col gap-2.5">
+      <ChipSelector selected={chip} onSelect={(v) => { setChip(v); playSfx('chip'); }} max={Math.max(0, balance - (phase === 'result' ? 0 : staked))} />
+      <div className="flex gap-2">
+        <button type="button" className="cz-btn cz-btn-secondary cz-icon-btn !w-12 !h-[54px]" disabled={spinning || phase === 'result' || bets.length === 0} onClick={() => setBets(bets.slice(0, -1))} aria-label={t('casino.undo')} title={t('casino.undo')}>
+          <Undo2 className="w-5 h-5" />
+        </button>
+        <button
+          type="button"
+          className="cz-btn cz-btn-secondary cz-icon-btn !w-12 !h-[54px]"
+          disabled={spinning || bets.length === 0}
+          onClick={() => {
+            setBets([]);
+            if (phase === 'result') setPhase('idle');
+          }}
+          aria-label={t('casino.clear')}
+          title={t('casino.clear')}
+        >
+          <Trash2 className="w-5 h-5" />
+        </button>
+        {repeat ? (
+          <button type="button" className="cz-btn cz-btn-primary cz-btn-lg flex-1 min-w-0" disabled={spinning || lastTotal > balance} onClick={() => doSpin(lastBets)}>
+            <RotateCcw className="w-5 h-5 shrink-0" /> <span className="truncate">{t('casino.roulette.spinAgain', { amount: lastTotal })}</span>
+          </button>
+        ) : (
+          <button type="button" className="cz-btn cz-btn-primary cz-btn-lg flex-1 min-w-0" disabled={spinning || staked === 0} onClick={() => doSpin(bets)}>
+            <span className="truncate">{spinning ? t('casino.roulette.spinning') : staked > 0 ? t('casino.roulette.spinFor', { amount: staked }) : t('casino.roulette.pickSpots')}</span>
+          </button>
+        )}
+      </div>
+    </div>
+  );
 
   return (
-    <CasinoFrame title={t('casino.roulette.name')} subtitle={t('casino.roulette.rules')} back="casino" scenario="city">
-      <section className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8">
-        <div ref={wheelRef}>
+    <CasinoFrame
+      title={t('casino.roulette.name')}
+      subtitle={t('casino.roulette.rules')}
+      back="gameModes"
+      scenario="city"
+      onHelp={() => setHelp(true)}
+      dock={dock}
+      maxWidth="max-w-5xl"
+    >
+      {help && (
+        <RulesSheet title={t('casino.roulette.helpTitle')} items={['how', 'inside', 'outside', 'zero'].map((k) => t(`casino.roulette.help.${k}`))} onClose={() => setHelp(false)} />
+      )}
+
+      <div className="grid gap-3 sm:gap-4 md:grid-cols-[320px_1fr] md:items-start">
+        {/* Wheel, last result and history */}
+        <section ref={wheelRef} className="cz-panel p-3 sm:p-4 grid grid-cols-[auto_1fr] md:grid-cols-1 items-center justify-items-center gap-3 md:gap-4" aria-label={t('casino.roulette.wheel')}>
           <RouletteWheel rotorDeg={rotor} ballDeg={ball} durationMs={reduced ? 0 : SPIN_MS} highlight={showWin ? result : null} size={wheelSize} label={t('casino.roulette.wheel')} />
-        </div>
-        <div className="flex flex-col items-center gap-3 min-w-0">
-          <div
-            className={`w-20 h-20 rounded-full flex items-center justify-center font-display font-extrabold text-3xl text-white shadow-xl border-4 border-gold-400/70 ${
-              result !== null ? COLOR_CLASS[pocketColor(result)] : 'bg-black/50'
-            } ${showWin ? 'casino-pop' : ''}`}
-            role="status"
-            aria-live="polite"
-            aria-label={result !== null ? t('casino.roulette.result', { n: result }) : t('casino.roulette.waiting')}
-          >
-            {spinning ? <Disc3 className="w-8 h-8 animate-spin text-white/70" aria-hidden /> : (result ?? '–')}
+          {resultBlock}
+        </section>
+
+        {/* Betting layout */}
+        <section className="cz-felt p-3 sm:p-4" aria-label={t('casino.roulette.board')}>
+          {/* Phones and small tablets: two tabs with thumb-sized spots */}
+          <div className="lg:hidden flex flex-col gap-3">
+            <div className="cz-seg" role="tablist" aria-label={t('casino.roulette.board')}>
+              {(['numbers', 'outside'] as const).map((k) => {
+                const amount = k === 'numbers' ? numbersStaked : outsideStaked;
+                return (
+                  <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => setTab(k)}>
+                    {t(`casino.roulette.tab.${k}`)}
+                    {amount > 0 && <span className="cz-num ml-1 opacity-70">· {amount}</span>}
+                  </button>
+                );
+              })}
+            </div>
+            {tab === 'numbers' ? (
+              <div className="grid grid-cols-6 gap-1.5" role="tabpanel">
+                {spot('straight', 0, 0, 'roulette-green', 'col-span-6', t('casino.roulette.number', { n: 0 }))}
+                {NUMBERS.map((n) => numberSpot(n))}
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3" role="tabpanel">
+                <div>
+                  <p className="cz-label mb-1.5 text-[rgba(232,214,170,0.75)]">{t('casino.roulette.evenMoney')}</p>
+                  <div className="grid grid-cols-2 gap-1.5">{evens.map(([type, label, cls]) => spot(type, undefined, label, cls))}</div>
+                </div>
+                <div>
+                  <p className="cz-label mb-1.5 text-[rgba(232,214,170,0.75)]">{t('casino.roulette.dozens')}</p>
+                  <div className="grid grid-cols-3 gap-1.5">{[1, 2, 3].map((d) => dozenSpot(d))}</div>
+                </div>
+                <div>
+                  <p className="cz-label mb-1.5 text-[rgba(232,214,170,0.75)]">{t('casino.roulette.columns')}</p>
+                  <div className="grid grid-cols-3 gap-1.5">{[1, 2, 3].map((c) => columnSpot(c, t('casino.roulette.columnShort', { c })))}</div>
+                </div>
+              </div>
+            )}
           </div>
-          {showWin && (
-            <p className={`font-display font-extrabold text-lg casino-pop ${won > 0 ? 'text-gold-400' : 'text-white/75'}`}>
-              {won > 0 ? t('casino.roulette.paid', { amount: won }) : t('casino.noWin')}
-            </p>
-          )}
-          {history.length > 0 && (
-            <div className="flex flex-col items-center gap-1">
-              <span className="text-[10px] uppercase tracking-widest text-white/60 font-bold">{t('casino.roulette.history')}</span>
-              <div className="flex flex-wrap justify-center gap-1 max-w-[240px]">
-                {history.map((n, i) => (
-                  <span key={`${i}-${n}`} className={`w-7 h-7 rounded-full text-[11px] font-extrabold text-white flex items-center justify-center ${COLOR_CLASS[pocketColor(n)]}`}>
-                    {n}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </section>
 
-      <section className="casino-felt mx-2 p-2.5 sm:p-4" aria-label={t('casino.roulette.board')}>
-        {/* Phones: vertical board */}
-        <div className="grid sm:hidden grid-cols-3 gap-1">
-          {spot('straight', 0, 0, 'roulette-green', 'col-span-3', t('casino.roulette.number', { n: 0 }))}
-          {NUMBERS.map((n) => numberSpot(n))}
-          {columns}
-          {dozens}
-          {evens.map(([type, label, cls]) => spot(type, undefined, label, cls))}
-        </div>
-        {/* Wider screens: classic horizontal layout */}
-        <div className="hidden sm:grid gap-1" style={{ gridTemplateColumns: 'repeat(14, minmax(0, 1fr))' }}>
-          <div className="contents">{spot('straight', 0, 0, 'roulette-green', 'row-span-3', t('casino.roulette.number', { n: 0 }))}</div>
-          {NUMBERS.map((n) => (
-            <div key={n} className="contents">
-              <div style={{ gridColumn: 2 + Math.floor((n - 1) / 3), gridRow: 3 - ((n - 1) % 3) }} className="grid">
-                {spot('straight', n, n, COLOR_CLASS[pocketColor(n)], '', t('casino.roulette.number', { n }))}
+          {/* Tablets and desktop: the classic layout */}
+          <div className="hidden lg:grid gap-1" style={{ gridTemplateColumns: 'repeat(14, minmax(0, 1fr))' }}>
+            <div className="row-span-3 grid">{spot('straight', 0, 0, 'roulette-green', '', t('casino.roulette.number', { n: 0 }))}</div>
+            {NUMBERS.map((n) => (
+              <div key={n} style={{ gridColumn: 2 + Math.floor((n - 1) / 3), gridRow: 3 - ((n - 1) % 3) }} className="grid">
+                {numberSpot(n)}
               </div>
-            </div>
-          ))}
-          {columns.map((c, i) => (
-            <div key={i} style={{ gridColumn: 14, gridRow: 3 - i }} className="grid">
-              {c}
-            </div>
-          ))}
-          {dozens.map((d, i) => (
-            <div key={i} style={{ gridColumn: `${2 + i * 4} / span 4`, gridRow: 4 }} className="grid">
-              {d}
-            </div>
-          ))}
-          {evens.map(([type, label, cls], i) => (
-            <div key={type} style={{ gridColumn: `${2 + i * 2} / span 2`, gridRow: 5 }} className="grid">
-              {spot(type, undefined, label, cls)}
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <div className="glass-strong rounded-3xl p-3 sm:p-4 flex flex-col gap-3">
-        <div className="flex items-center justify-between text-sm px-1">
-          <span className="text-ink-400">{t('casino.totalBet')}</span>
-          <span className="font-display font-extrabold text-white tabular-nums">{staked}</span>
-        </div>
-        <ChipSelector selected={chip} onSelect={(v) => { setChip(v); playSfx('chip'); }} max={Math.max(0, balance - (phase === 'result' ? 0 : staked))} />
-        <div className="flex gap-2">
-          <button
-            type="button"
-            aria-label={t('casino.undo')}
-            title={t('casino.undo')}
-            disabled={spinning || phase === 'result' || bets.length === 0}
-            onClick={() => setBets(bets.slice(0, -1))}
-            className="btn-game btn-secondary shrink-0 w-12 min-h-[48px] rounded-2xl flex items-center justify-center"
-          >
-            <Undo2 className="w-5 h-5" />
-          </button>
-          <button
-            type="button"
-            aria-label={t('casino.clear')}
-            title={t('casino.clear')}
-            disabled={spinning || bets.length === 0}
-            onClick={() => {
-              setBets([]);
-              if (phase === 'result') setPhase('idle');
-            }}
-            className="btn-game btn-secondary shrink-0 w-12 min-h-[48px] rounded-2xl flex items-center justify-center"
-          >
-            <Trash2 className="w-5 h-5" />
-          </button>
-          {phase === 'result' || (bets.length === 0 && lastBets.length > 0) ? (
-            <Button
-              className="flex-1"
-              icon={<RotateCcw className="w-5 h-5" />}
-              disabled={spinning || lastBets.reduce((s, b) => s + b.amount, 0) > balance}
-              onClick={() => doSpin(lastBets)}
-            >
-              {t('casino.again')}
-            </Button>
-          ) : (
-            <Button className="flex-1" icon={<Disc3 className="w-5 h-5" />} disabled={spinning || staked === 0} onClick={() => doSpin(bets)}>
-              {t('casino.roulette.spin')}
-            </Button>
-          )}
-        </div>
+            ))}
+            {[1, 2, 3].map((c, i) => (
+              <div key={c} style={{ gridColumn: 14, gridRow: 3 - i }} className="grid">
+                {columnSpot(c)}
+              </div>
+            ))}
+            {[1, 2, 3].map((d, i) => (
+              <div key={d} style={{ gridColumn: `${2 + i * 4} / span 4`, gridRow: 4 }} className="grid">
+                {dozenSpot(d)}
+              </div>
+            ))}
+            {[evens[4], evens[2], evens[0], evens[1], evens[3], evens[5]].map(([type, label, cls], i) => (
+              <div key={type} style={{ gridColumn: `${2 + i * 2} / span 2`, gridRow: 5 }} className="grid">
+                {spot(type, undefined, label, cls)}
+              </div>
+            ))}
+          </div>
+          <p className="mt-3 text-center text-[11px] text-[rgba(232,214,170,0.6)]">{t('casino.roulette.payHint')}</p>
+        </section>
       </div>
     </CasinoFrame>
   );

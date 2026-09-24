@@ -234,14 +234,25 @@ export function GameTable({ state, localPlayerId, dispatch, onExit, engineError,
   const pad = narrow ? 'inset-x-2.5 top-[60px] bottom-3' : `${hasSides ? 'inset-x-[64px] lg:inset-x-[84px]' : 'inset-x-2'} top-[40px] bottom-2`;
 
   return (
-    <div className="game-room relative h-[100dvh] w-full flex flex-col overflow-hidden select-none" style={scenarioStyle(scenario) as React.CSSProperties}>
+    <div
+      className="game-room relative h-[100dvh] w-full flex flex-col overflow-hidden select-none"
+      style={
+        {
+          ...scenarioStyle(scenario),
+          paddingTop: 'var(--safe-top)',
+          paddingBottom: 'var(--safe-bottom)',
+          paddingLeft: 'var(--safe-left)',
+          paddingRight: 'var(--safe-right)',
+        } as React.CSSProperties
+      }
+    >
       <SceneBackground scenario={scenario} />
       {/* Header */}
       <header className="relative z-10 w-full max-w-6xl mx-auto grid grid-cols-[auto_1fr_auto] items-center gap-1.5 px-2 sm:px-4 pt-2 pb-1 shrink-0">
         <button
           type="button"
           onClick={onExit}
-          className="flex items-center gap-1 rounded-xl min-h-[40px] px-2 text-sm text-ink-400 hover:text-white hover:bg-white/5"
+          className="flex items-center justify-center gap-1 rounded-xl min-h-[40px] min-w-[40px] px-2 text-sm text-ink-400 hover:text-white hover:bg-white/5"
           aria-label={t('table.exit')}
         >
           <ArrowLeft className="w-4 h-4" />
@@ -249,7 +260,7 @@ export function GameTable({ state, localPlayerId, dispatch, onExit, engineError,
         </button>
         <Scoreboard state={state} localPlayerId={localPlayerId} />
         <div className="flex items-center gap-1">
-          <MusicButton className="!w-8 !h-8 !rounded-lg" />
+          <MusicButton className="!w-10 !h-10 !rounded-lg" />
           <div className="chip rounded-xl px-2 py-1">
             <LanguageSelector compact short={narrow} />
           </div>

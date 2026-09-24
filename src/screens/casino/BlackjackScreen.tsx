@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { Hand as HandIcon, HelpCircle, Plus, RotateCcw, Split, Square, Layers, Trash2, X } from 'lucide-react';
+import { Hand as HandIcon, Layers, Plus, RotateCcw, Split, X } from 'lucide-react';
 import { CasinoFrame } from '@/components/casino/CasinoFrame';
-import { Chip, ChipSelector } from '@/components/casino/chips';
+import { Chip, ChipAdder } from '@/components/casino/chips';
 import { PlayingCardView } from '@/components/casino/PlayingCardView';
-import { CardShoe, ChipStacks, DiscardTray, FeltArt } from '@/components/casino/blackjackArt';
+import { RulesSheet } from '@/components/casino/RulesSheet';
 import { SaloonBackdrop } from '@/components/casino/SaloonBackdrop';
+import { CardShoe } from '@/components/casino/blackjackArt';
 import { useI18n } from '@/i18n';
 import { useWallet } from '@/casino/useWallet';
 import { MIN_BET } from '@/casino/wallet';
@@ -19,9 +20,11 @@ import { playSfx } from '@/audio/sfx';
 let savedTable: bj.BlackjackState | null = null;
 let savedBet = 0;
 
+/** Overlapping row of cards; overlaps more as the hand grows so it never gets wider than ~3 cards. */
 function CardRow({ cards, width, hideHole = false, dealtFrom = 0 }: { cards: PlayingCard[]; width: number; hideHole?: boolean; dealtFrom?: number }) {
+  const overlap = cards.length <= 2 ? 0.34 : cards.length <= 4 ? 0.55 : 0.68;
   return (
-    <div className="flex justify-center" style={{ minHeight: width * 1.5 }}>
+    <div className="flex justify-center" style={{ height: width * 1.5 }}>
       {cards.map((card, i) => (
         <PlayingCardView
           key={card.id}
@@ -29,11 +32,16 @@ function CardRow({ cards, width, hideHole = false, dealtFrom = 0 }: { cards: Pla
           width={width}
           faceDown={hideHole && i === 1}
           className={i >= dealtFrom ? 'casino-deal' : ''}
-          style={{ marginLeft: i > 0 ? -width * (cards.length > 3 ? 0.62 : 0.42) : 0, animationDelay: `${Math.max(0, i - dealtFrom) * 0.12}s` }}
+          style={{ marginLeft: i > 0 ? -width * overlap : 0, animationDelay: `${Math.max(0, i - dealtFrom) * 0.12}s` }}
         />
       ))}
     </div>
   );
+}
+
+/** Empty card outline where the cards will land. */
+function CardSlot({ width }: { width: number }) {
+  return <div className="rounded-[10px] border border-dashed border-[rgba(232,214,170,0.28)]" style={{ width, height: width * 1.5 }} aria-hidden />;
 }
 
 function totalLabel(cards: PlayingCard[]): string {
@@ -41,48 +49,21 @@ function totalLabel(cards: PlayingCard[]): string {
   return soft && total < 21 ? `${total - 10}/${total}` : String(total);
 }
 
-const OUTCOME_PLAQUE: Record<bj.Outcome, string> = {
-  blackjack: 'bj-plaque-win',
-  win: 'bj-plaque-win',
-  push: 'bj-plaque-push',
-  lose: 'bj-plaque-lose',
+const OUTCOME_PILL: Record<bj.Outcome, string> = {
+  blackjack: 'cz-pill-win',
+  win: 'cz-pill-win',
+  push: 'cz-pill-push',
+  lose: 'cz-pill-lose',
 };
-
-function RulesSheet({ onClose }: { onClose: () => void }) {
-  const { t } = useI18n();
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
-  return (
-    <div className="gr5-help-backdrop" onClick={onClose}>
-      <div className="gr5-help p-4 sm:p-5" role="dialog" aria-modal="true" aria-labelledby="bj-help-title" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between mb-3">
-          <h2 id="bj-help-title" className="gr-title text-xl">{t('casino.blackjack.helpTitle')}</h2>
-          <button type="button" className="gr5-btn w-10 h-10 min-h-0 p-0" onClick={onClose} aria-label={t('common.close')}>
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-        <ul className="flex flex-col gap-2 text-sm text-white/85 list-disc pl-5">
-          {['goal', 'values', 'actions', 'dealer', 'pays'].map((k) => (
-            <li key={k}>{t(`casino.blackjack.help.${k}`)}</li>
-          ))}
-        </ul>
-      </div>
-    </div>
-  );
-}
 
 export function BlackjackScreen() {
   const { t } = useI18n();
   const { balance, spend, credit } = useWallet();
   const reduced = useReducedMotion();
-  const vw = useViewport().width;
+  const { width: vw, height: vh } = useViewport();
   const [table, setTable] = useState<bj.BlackjackState>(() => savedTable ?? bj.createBlackjack(randomSeed()));
   const [bet, setBet] = useState(savedBet);
   const [lastBet, setLastBet] = useState(savedBet);
-  const [chip, setChip] = useState(25);
   const [help, setHelp] = useState(false);
   // Dealer cards revealed so far once the round settles (one by one, for suspense).
   const [dealerShown, setDealerShown] = useState(table.phase === 'SETTLED' ? table.dealer.length : 2);
@@ -137,11 +118,10 @@ export function BlackjackScreen() {
     setTable(next);
   };
 
-  const betting = table.phase !== 'PLAYER';
-  const addChip = () => {
-    if (bet + chip > balance) return;
+  const addChip = (value: number) => {
+    if (bet + value > balance) return;
     playSfx('chip');
-    setBet((b) => b + chip);
+    setBet((b) => b + value);
   };
 
   const dealWith = (amount: number) => {
@@ -166,154 +146,167 @@ export function BlackjackScreen() {
     apply(action === 'double' ? bj.double(table) : bj.split(table));
   };
 
-  const cardWidth = Math.round(Math.min(92, Math.max(50, vw * 0.16)));
-  const handWidth = table.hands.length > 1 ? Math.round(cardWidth * 0.8) : cardWidth;
   const inPlay = table.phase === 'PLAYER';
+  const hasRound = table.hands.length > 0;
+  const split = table.hands.length > 1;
+  // Cards fit both the width and the height of the phone, so dealer and player hands always show whole.
+  const cardWidth = Math.round(Math.min(vw >= 768 ? 128 : 104, Math.max(52, Math.min(vw * (split ? 0.16 : 0.21), (vh - 330) / 3.4))));
   const dealerCards = inPlay ? table.dealer : table.dealer.slice(0, dealerShown);
   const netResult = settledVisible ? bj.totalPayout(table) - table.hands.reduce((s, h) => s + h.bet, 0) : 0;
-  const hasRound = table.hands.length > 0;
-  const extraDouble = bj.canDouble(table) && balance >= bj.extraStake(table, 'double');
-  const extraSplit = bj.canSplit(table) && balance >= bj.extraStake(table, 'split');
+  const doubleStake = bj.canDouble(table) ? bj.extraStake(table, 'double') : 0;
+  const canDoubleNow = bj.canDouble(table) && balance >= doubleStake;
+  const canSplitNow = bj.canSplit(table) && balance >= bj.extraStake(table, 'split');
   const dealerBust = settledVisible && bj.isBust(table.dealer);
+  const tableBet = inPlay || settledVisible ? table.hands.reduce((s, h) => s + h.bet, 0) : bet;
 
-  // Result plaque: the reason for a single hand, the net for split hands.
-  let banner = '';
+  // One line in the middle of the table that says what happened.
+  let message = '';
+  let tone = '';
   if (settledVisible) {
-    if (table.hands.length === 1) {
+    if (!split) {
       const hand = table.hands[0];
-      banner = t(`casino.blackjack.reason.${bj.resultReason(hand, table.dealer)}`, {
+      message = t(`casino.blackjack.reason.${bj.resultReason(hand, table.dealer)}`, {
         player: bj.handTotal(hand.cards).total,
         dealer: bj.handTotal(table.dealer).total,
       });
-    } else banner = netResult > 0 ? t('casino.youWon', { amount: netResult }) : netResult < 0 ? t('casino.youLost', { amount: -netResult }) : t('casino.blackjack.pushed');
+    } else message = netResult > 0 ? t('casino.youWon', { amount: netResult }) : netResult < 0 ? t('casino.youLost', { amount: -netResult }) : t('casino.blackjack.pushed');
+    tone = netResult > 0 ? 'cz-pill-win' : netResult < 0 ? 'cz-pill-lose' : 'cz-pill-push';
+  } else if (table.phase === 'SETTLED') {
+    message = t('casino.blackjack.dealerPlays');
+  } else if (inPlay) {
+    message = split ? t('casino.blackjack.playHand', { n: table.active + 1 }) : t('casino.blackjack.yourMove');
+  } else {
+    message = bet > 0 ? t('casino.blackjack.readyToDeal') : t('casino.blackjack.placeBet');
   }
-  const bannerTone = netResult > 0 ? 'bj-banner-win' : netResult < 0 ? 'bj-banner-lose' : '';
+
+  const dealDisabled = bet < MIN_BET;
+  const rebet = bet === 0 && lastBet > 0 && table.phase === 'SETTLED';
+
+  const dock = inPlay ? (
+    <div className="flex flex-col gap-2">
+      <div className="grid grid-cols-2 gap-2">
+        <button type="button" className="cz-btn cz-btn-primary cz-btn-lg" onClick={() => { playSfx('draw'); apply(bj.hit(table)); }}>
+          <Plus className="w-5 h-5" /> {t('casino.blackjack.hit')}
+        </button>
+        <button type="button" className="cz-btn cz-btn-strong cz-btn-lg" onClick={() => { playSfx('turn'); apply(bj.stand(table)); }}>
+          <HandIcon className="w-5 h-5" /> {t('casino.blackjack.stand')}
+        </button>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <button type="button" className="cz-btn cz-btn-secondary" disabled={!canDoubleNow} onClick={() => doExtra('double')}>
+          <Layers className="w-4 h-4" /> {t('casino.blackjack.double')}
+          {doubleStake > 0 && <span className="cz-num text-[var(--cz-muted)] font-semibold">+{doubleStake}</span>}
+        </button>
+        <button type="button" className="cz-btn cz-btn-secondary" disabled={!canSplitNow} onClick={() => doExtra('split')}>
+          <Split className="w-4 h-4" /> {t('casino.blackjack.split')}
+        </button>
+      </div>
+    </div>
+  ) : (
+    <div className="flex flex-col gap-2.5">
+      <div className="flex items-center gap-2">
+        <div className="flex-1 min-w-0">
+          <ChipAdder onAdd={addChip} max={Math.max(0, balance - bet)} />
+        </div>
+        <button type="button" className="cz-btn cz-btn-secondary cz-icon-btn" disabled={bet === 0} onClick={() => setBet(0)} aria-label={t('casino.clear')} title={t('casino.clear')}>
+          <X className="w-5 h-5" />
+        </button>
+      </div>
+      {rebet ? (
+        <button type="button" className="cz-btn cz-btn-primary cz-btn-lg w-full" disabled={lastBet > balance} onClick={() => dealWith(lastBet)}>
+          <RotateCcw className="w-5 h-5" /> {t('casino.rebet', { amount: lastBet })}
+        </button>
+      ) : (
+        <button type="button" className="cz-btn cz-btn-primary cz-btn-lg w-full" disabled={dealDisabled} onClick={() => dealWith(bet)}>
+          {bet > 0 ? t('casino.blackjack.dealFor', { amount: bet }) : t('casino.minBet', { amount: MIN_BET })}
+        </button>
+      )}
+    </div>
+  );
 
   return (
-    <CasinoFrame title={t('casino.blackjack.short')} subtitle={t('casino.blackjack.rules')} back="casino" scenario="lounge" backdrop={<SaloonBackdrop />}>
-      {help && <RulesSheet onClose={() => setHelp(false)} />}
+    <CasinoFrame
+      title={t('casino.blackjack.short')}
+      subtitle={t('casino.blackjack.rules')}
+      back="gameModes"
+      scenario="lounge"
+      backdrop={<SaloonBackdrop />}
+      onHelp={() => setHelp(true)}
+      dock={dock}
+    >
+      {help && (
+        <RulesSheet
+          title={t('casino.blackjack.helpTitle')}
+          items={['goal', 'values', 'actions', 'dealer', 'pays'].map((k) => t(`casino.blackjack.help.${k}`))}
+          onClose={() => setHelp(false)}
+        />
+      )}
 
-      <section className="bj-table mx-auto w-full max-w-[760px]" aria-label={t('casino.blackjack.table')}>
-        {['8%', '30%', '50%', '70%', '92%'].map((left, i) => (
-          <span key={left} className="bj-stud" style={{ left, bottom: i === 0 || i === 4 ? '26%' : i === 2 ? '3px' : '9%', transform: 'translateX(-50%)' }} aria-hidden />
-        ))}
-        <div className="bj-felt px-2 pt-2 pb-10 sm:pb-14 flex flex-col items-center gap-2" style={{ minHeight: cardWidth * 4.6 + 60 }}>
-          <FeltArt topText={t('casino.blackjack.feltTop')} bottomText={t('casino.blackjack.feltBottom')} />
-          <div className="absolute left-2 top-2 sm:left-5 sm:top-3 opacity-90">
-            <DiscardTray width={Math.round(cardWidth * 0.5)} />
-          </div>
-          <CardShoe className="absolute right-2 top-2 sm:right-5 sm:top-3 w-14 h-10 sm:w-24 sm:h-[68px] drop-shadow-lg" />
+      <section className="cz-felt flex-1 flex flex-col items-center justify-center gap-3 sm:gap-6 px-3 py-4 sm:px-8 sm:py-8 min-h-[340px]" aria-label={t('casino.blackjack.table')}>
+        <CardShoe className="hidden sm:block absolute right-6 top-5 w-20 h-14 opacity-90" />
 
-          {/* Dealer */}
-          <div className="relative flex flex-col items-center gap-1.5 mt-1">
-            {hasRound ? (
-              <CardRow cards={dealerCards} width={cardWidth} hideHole={inPlay} dealtFrom={inPlay ? 0 : 2} />
-            ) : (
-              <div style={{ height: cardWidth * 1.5 }} />
+        {/* Dealer */}
+        <div className="flex flex-col items-center gap-2">
+          <div className="flex items-center gap-2">
+            <span className="cz-label text-[rgba(232,214,170,0.75)]">{t('casino.blackjack.dealer')}</span>
+            {hasRound && (
+              <span className={`cz-pill ${dealerBust ? 'cz-pill-lose' : ''}`}>{dealerBust ? t('casino.blackjack.bust') : totalLabel(inPlay ? table.dealer.slice(0, 1) : dealerCards)}</span>
             )}
-            <span className={`bj-plaque text-xs sm:text-sm ${dealerBust ? 'bj-plaque-lose' : ''}`}>
-              {t('casino.blackjack.dealer')}
-              {hasRound && <strong>{dealerBust ? t('casino.blackjack.bust') : totalLabel(inPlay ? table.dealer.slice(0, 1) : dealerCards)}</strong>}
-            </span>
           </div>
+          {hasRound ? (
+            <CardRow cards={dealerCards} width={cardWidth} hideHole={inPlay} dealtFrom={inPlay ? 0 : 2} />
+          ) : (
+            <div className="flex gap-2"><CardSlot width={cardWidth} /><CardSlot width={cardWidth} /></div>
+          )}
+        </div>
 
-          {/* Result plaque */}
-          <div className="relative min-h-[52px] flex items-center justify-center px-3 my-1" role="status" aria-live="polite">
-            {settledVisible && <p className={`bj-banner text-sm sm:text-lg ${bannerTone}`}>{banner}</p>}
-            {!hasRound && <p className="text-white/70 text-sm text-center max-w-[240px]">{t('casino.blackjack.placeBet')}</p>}
-          </div>
+        {/* Status line */}
+        <div className="min-h-[40px] flex flex-col items-center justify-center gap-1 text-center px-2" role="status" aria-live="polite">
+          {settledVisible ? (
+            <span className={`cz-pill ${tone} min-h-[36px] px-4 text-sm sm:text-base casino-pop`}>{message}</span>
+          ) : (
+            <span className="text-sm text-[rgba(243,238,227,0.78)]">{message}</span>
+          )}
+          {!hasRound && <span className="cz-felt-print text-[10px] sm:text-xs">{t('casino.blackjack.feltTop')} · {t('casino.blackjack.feltBottom')}</span>}
+        </div>
 
-          {/* Player hands */}
-          <div className="relative flex justify-center gap-3 sm:gap-8 w-full">
-            {hasRound &&
-              table.hands.map((hand, i) => {
-                const active = inPlay && i === table.active && table.hands.length > 1;
+        {/* Player */}
+        <div className="flex flex-col items-center gap-2 w-full">
+          {hasRound ? (
+            <div className={`flex justify-center w-full ${split ? 'gap-3 sm:gap-10' : ''}`}>
+              {table.hands.map((hand, i) => {
+                const active = inPlay && split && i === table.active;
                 const result = settledVisible ? table.results[i] : undefined;
                 return (
-                  <div key={i} className={`flex flex-col items-center gap-1.5 rounded-2xl p-1 transition-shadow ${active ? 'ring-2 ring-gold-400/80 bg-black/10' : ''}`}>
-                    <CardRow cards={hand.cards} width={handWidth} />
-                    <span className={`bj-plaque text-xs sm:text-sm ${result ? OUTCOME_PLAQUE[result.outcome] : ''}`}>
-                      {result ? t(`casino.blackjack.outcome.${result.outcome}`) : t('casino.blackjack.total')}
-                      <strong>{totalLabel(hand.cards)}</strong>
-                    </span>
-                    <span className="flex items-center gap-1 text-white text-xs font-bold tabular-nums">
-                      <Chip value={hand.bet} size={20} label="" />
-                      {hand.bet}
-                    </span>
+                  <div key={i} className={`flex flex-col items-center gap-2 rounded-2xl px-1.5 py-1.5 transition-colors ${active ? 'bg-black/20 ring-1 ring-[var(--cz-gold)]' : ''}`}>
+                    <CardRow cards={hand.cards} width={cardWidth} />
+                    <div className="flex items-center gap-1.5 flex-wrap justify-center">
+                      <span className={`cz-pill ${result ? OUTCOME_PILL[result.outcome] : ''}`}>
+                        {result ? `${t(`casino.blackjack.outcome.${result.outcome}`)} · ${bj.handTotal(hand.cards).total}` : totalLabel(hand.cards)}
+                      </span>
+                      <span className="cz-pill" aria-label={t('casino.betOf', { amount: hand.bet })}>
+                        <Chip value={hand.bet} size={16} label="" /> {hand.bet}
+                      </span>
+                    </div>
                   </div>
                 );
               })}
-          </div>
-
-          {/* Bet spot with the player's chip stacks beside it */}
-          {betting && (
-            <div className="relative flex items-end justify-center gap-3 sm:gap-6 mt-1">
-              <ChipStacks balance={balance - bet} size={vw < 380 ? 22 : 28} />
-              <button
-                type="button"
-                onClick={addChip}
-                disabled={bet + chip > balance}
-                className="bj-spot w-[88px] h-[88px] sm:w-24 sm:h-24 flex flex-col items-center justify-center gap-1 text-white disabled:opacity-60"
-                aria-label={t('casino.addChip', { amount: chip })}
-              >
-                {bet > 0 ? (
-                  <>
-                    <Chip value={bet} size={44} />
-                    <span className="text-xs font-extrabold tabular-nums">{bet}</span>
-                  </>
-                ) : (
-                  <>
-                    <Plus className="w-6 h-6 text-[#e9c46a]" aria-hidden />
-                    <span className="text-[11px] font-bold uppercase tracking-wide text-[#e9c46a]">{t('casino.bet')}</span>
-                  </>
-                )}
-              </button>
+            </div>
+          ) : (
+            <div className="flex gap-2"><CardSlot width={cardWidth} /><CardSlot width={cardWidth} /></div>
+          )}
+          {!hasRound && (
+            <div className="flex items-center gap-2 min-h-[28px]">
+              <span className="cz-label text-[rgba(232,214,170,0.75)]">{t('casino.blackjack.you')}</span>
+              {tableBet > 0 && (
+                <span className="cz-pill">
+                  <Chip value={tableBet} size={16} label="" /> {tableBet}
+                </span>
+              )}
             </div>
           )}
         </div>
       </section>
-
-      {/* Controls */}
-      <div className="bj-rail mx-auto w-full max-w-[760px] p-3 sm:p-4 flex flex-col gap-3">
-        {inPlay ? (
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <button type="button" className="gr5-btn" onClick={() => { playSfx('draw'); apply(bj.hit(table)); }}>
-              <Plus className="w-5 h-5" /> {t('casino.blackjack.hit')}
-            </button>
-            <button type="button" className="gr5-btn" onClick={() => { playSfx('turn'); apply(bj.stand(table)); }}>
-              <HandIcon className="w-5 h-5" /> {t('casino.blackjack.stand')}
-            </button>
-            <button type="button" className="gr5-btn" disabled={!extraDouble} onClick={() => doExtra('double')}>
-              <Layers className="w-5 h-5" /> {t('casino.blackjack.double')}
-            </button>
-            <button type="button" className="gr5-btn" disabled={!extraSplit} onClick={() => doExtra('split')}>
-              <Split className="w-5 h-5" /> {t('casino.blackjack.split')}
-            </button>
-          </div>
-        ) : (
-          <>
-            <ChipSelector selected={chip} onSelect={(v) => { setChip(v); playSfx('chip'); }} max={Math.max(0, balance - bet)} />
-            <div className="flex gap-2">
-              <button type="button" className="gr5-btn w-12 shrink-0 p-0" aria-label={t('casino.clear')} title={t('casino.clear')} disabled={bet === 0} onClick={() => setBet(0)}>
-                <Trash2 className="w-5 h-5" />
-              </button>
-              {bet === 0 && lastBet > 0 && table.phase === 'SETTLED' ? (
-                <button type="button" className="gr5-btn gr5-btn-on flex-1" disabled={lastBet > balance} onClick={() => dealWith(lastBet)}>
-                  <RotateCcw className="w-4 h-4" /> {t('casino.rebet', { amount: lastBet })}
-                </button>
-              ) : (
-                <button type="button" className="gr5-btn gr5-btn-on flex-1" disabled={bet < MIN_BET} onClick={() => dealWith(bet)}>
-                  <Square className="w-4 h-4" /> {t('casino.blackjack.deal')}
-                </button>
-              )}
-              <button type="button" className="gr5-btn w-12 shrink-0 p-0" aria-label={t('casino.blackjack.helpTitle')} title={t('casino.blackjack.helpTitle')} onClick={() => setHelp(true)}>
-                <HelpCircle className="w-5 h-5" />
-              </button>
-            </div>
-            <p className="text-center text-[11px] text-white/55">{t('casino.minBet', { amount: MIN_BET })}</p>
-          </>
-        )}
-      </div>
     </CasinoFrame>
   );
 }

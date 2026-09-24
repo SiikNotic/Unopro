@@ -22,15 +22,13 @@
     "title": "Carta",
     "subtitle": "A modern card game",
     "play": "Play",
-    "gameModes": "Game Modes",
     "tutorial": "Tutorial",
     "settings": "Settings",
-    "language": "Language",
-    "casino": "Casino"
+    "language": "Language"
   },
   "gameModes": {
-    "title": "Game Modes",
-    "subtitle": "Choose how you want to play",
+    "title": "Play",
+    "subtitle": "Choose what to play",
     "classic": {
       "name": "Classic",
       "description": "The original experience. First to empty their hand wins the round."
@@ -48,7 +46,9 @@
       "description": "Fine-tune rules and build your own variant from the ground up."
     },
     "players": "{min}–{max} players",
-    "selectMode": "Select"
+    "cartaTitle": "Carta",
+    "cartaSubtitle": "The card game against bots",
+    "casinoSubtitle": "With shared virtual chips"
   },
   "settings": {
     "title": "Settings",
@@ -94,16 +94,117 @@
   },
   "tutorial": {
     "title": "Tutorial",
-    "subtitle": "Learn the basics",
-    "comingSoon": "Tutorial coming soon",
-    "description": "An interactive walkthrough will guide you through the rules, card types, and strategies in a future update.",
-    "learnMore": "In the meantime, here's what you'll learn:",
+    "subtitle": "Learn to play step by step",
+    "groups": {
+      "carta": "Carta",
+      "casino": "Casino"
+    },
+    "lessonOf": "Lesson {n} of {total}",
+    "backToTopics": "Back to topics",
+    "allTopics": "See all topics",
+    "previous": "Previous",
+    "next": "Next",
+    "lessonNav": "Lesson navigation",
+    "tryCarta": "Play a game",
+    "tryGame": "Try this game",
+    "visual": {
+      "onTable": "On the table:",
+      "sameColor": "Same colour",
+      "sameNumber": "Same number",
+      "noMatch": "No match",
+      "numbers": "Numbers",
+      "actions": "Action",
+      "wilds": "Wilds"
+    },
     "topics": {
-      "cards": "Understanding card types and colors",
-      "turns": "Turn order and direction",
-      "specials": "Special cards and their effects",
-      "uno": "Calling UNO and penalties",
-      "strategy": "Basic strategies and tips"
+      "cards": {
+        "title": "Card types",
+        "summary": "Colours, numbers and special cards",
+        "intro": "The deck has 108 cards in four colours. Each colour has its own symbol (flame, sun, leaf and drop), so you never rely on colour alone.",
+        "s1t": "Number cards",
+        "s1b": "0 to 9 in every colour. They are the core of the game and score their number.",
+        "s2t": "Action cards",
+        "s2b": "Skip, Reverse and Draw Two have a colour and change the pace of the game.",
+        "s3t": "Wilds",
+        "s3b": "Wild and Wild Draw Four have no colour: when you play one you choose the next colour."
+      },
+      "turns": {
+        "title": "Turns and direction",
+        "summary": "What you can play and when to draw",
+        "intro": "Everyone starts with 7 cards. On your turn you play a card that matches the one on the table.",
+        "s1t": "What you can play",
+        "s1b": "A card of the same colour, the same number or the same symbol. Wilds can be played almost any time.",
+        "s2t": "If you can't play",
+        "s2b": "Draw one card. If it fits you may play it; otherwise you pass.",
+        "s3t": "Direction",
+        "s3b": "Play goes clockwise. Reverse flips it; with two players it works like a Skip."
+      },
+      "specials": {
+        "title": "Special cards",
+        "summary": "What each action card does",
+        "intro": "Special cards are your best tool to slow down whoever is winning.",
+        "s1t": "Skip and Reverse",
+        "s1b": "Skip: the next player loses their turn. Reverse: play changes direction.",
+        "s2t": "Draw Two",
+        "s2b": "The next player draws 2 cards and loses their turn.",
+        "s3t": "Wild and Wild Draw Four",
+        "s3b": "You choose the new colour. With +4 the next player also draws 4 and loses their turn; you may only play it when you have no card of the current colour."
+      },
+      "uno": {
+        "title": "Calling UNO",
+        "summary": "Warn everyone when you have one card left",
+        "intro": "When you are about to be down to a single card you have to warn the others.",
+        "s1t": "When to call it",
+        "s1b": "Tap “UNO!” as you play your second-to-last card.",
+        "s2t": "If you forget",
+        "s2b": "If you are left with one card without calling it and a rival catches you, you draw 2 penalty cards.",
+        "s3t": "Catching others",
+        "s3b": "If a rival forgot to call UNO, tap the alert to make them draw. Drawing a card cancels UNO."
+      },
+      "strategy": {
+        "title": "Strategy and scoring",
+        "summary": "Tips and how a game is won",
+        "intro": "The first player out of cards wins the round and scores the cards left in the rivals' hands.",
+        "s1t": "Scoring",
+        "s1b": "Numbers score their value, action cards 20 and wilds 50. The first to 500 points wins the game.",
+        "s2t": "Keep your wilds",
+        "s2b": "Save them for the end or to stop someone about to win. Switch to the colour you hold most of.",
+        "s3t": "Watch your rivals",
+        "s3b": "Keep an eye on how many cards they have and use Draw Two or Skip on whoever is closest to winning."
+      },
+      "blackjack": {
+        "title": "Blackjack",
+        "summary": "Get to 21 without going over",
+        "intro": "You play against the dealer. Whoever gets closer to 21 without going over wins.",
+        "s1t": "Card values",
+        "s1b": "2 to 10 count their number, face cards 10 and an Ace 1 or 11. An Ace plus a ten-value card as your first two is Blackjack.",
+        "s2t": "Your choices",
+        "s2b": "Hit: take a card. Stand: keep your hand. Double: double the bet and take exactly one card. Split: turn a pair into two hands.",
+        "s3t": "Dealer and payouts",
+        "s3b": "The dealer draws to 17 and stands. A win pays 1 to 1, Blackjack 3 to 2 and a push returns your bet."
+      },
+      "roulette": {
+        "title": "Roulette",
+        "summary": "Bet on numbers, colours or dozens",
+        "intro": "Single-zero European roulette. Pick a chip, place it on the layout and spin.",
+        "s1t": "How to bet",
+        "s1b": "Pick the chip value below and tap spots. Each tap adds one chip; you can undo or clear before spinning.",
+        "s2t": "Payouts",
+        "s2b": "Straight up (one number) pays 35 to 1. Dozens and columns 2 to 1. Red, black, even, odd and halves 1 to 1.",
+        "s3t": "The zero",
+        "s3b": "If 0 comes up every outside bet loses. Only a bet on 0 wins."
+      },
+      "slots": {
+        "title": "Slots",
+        "summary": "5 reels, 10 lines and a wild",
+        "intro": "Gold Rush has 5 reels and up to 10 paylines. Win with 3, 4 or 5 matching symbols from the left.",
+        "s1t": "Lines and bet",
+        "s1b": "Choose 1, 5 or 10 lines and the bet per line. Your total bet is lines × bet per line.",
+        "s2t": "The wild",
+        "s2b": "The sheriff star stands in for any symbol and also pays on its own.",
+        "s3t": "Prizes",
+        "s3b": "Five sevens on a line is the jackpot. Help shows the full paytable and every line."
+      }
     }
   },
   "cards": {
@@ -255,7 +356,7 @@
       "rules": "Blackjack pays 3:2 · Dealer stands on 17",
       "table": "Blackjack table",
       "dealer": "Dealer",
-      "placeBet": "Pick a chip, then tap the circle to bet",
+      "placeBet": "Tap a chip to bet",
       "deal": "Deal",
       "hit": "Hit",
       "stand": "Stand",
@@ -289,7 +390,13 @@
         "higher": "You win! {player} against {dealer}",
         "lower": "Dealer wins: {dealer} against {player}",
         "push": "Push at {player}: your bet comes back"
-      }
+      },
+      "dealerPlays": "Dealer is playing…",
+      "playHand": "Playing hand {n}",
+      "yourMove": "Hit for another card or stand?",
+      "readyToDeal": "Ready: tap Deal",
+      "dealFor": "Deal · {amount}",
+      "you": "You"
     },
     "roulette": {
       "name": "Roulette",
@@ -311,7 +418,28 @@
       "result": "The ball landed on {n}",
       "waiting": "Waiting for a spin",
       "history": "Last numbers",
-      "paid": "You collect {amount} chips!"
+      "paid": "You collect {amount} chips!",
+      "spinning": "Ball is spinning…",
+      "placeBets": "Pick a chip and tap the layout",
+      "spinAgain": "Repeat · {amount}",
+      "spinFor": "Spin · {amount}",
+      "pickSpots": "Tap the layout",
+      "helpTitle": "Roulette rules",
+      "help": {
+        "how": "Pick the chip value below and tap spots on the layout. Each tap adds one chip; you can undo or clear before spinning.",
+        "inside": "Straight up (one number): pays 35 to 1.",
+        "outside": "Dozens and columns pay 2 to 1. Red, black, even, odd, 1–18 and 19–36 pay 1 to 1.",
+        "zero": "Single-zero European wheel: if 0 comes up, every outside bet loses."
+      },
+      "tab": {
+        "numbers": "Numbers",
+        "outside": "Outside"
+      },
+      "evenMoney": "Pays 1 to 1",
+      "dozens": "Dozens · pay 2 to 1",
+      "columns": "Columns · pay 2 to 1",
+      "columnShort": "Col. {c}",
+      "payHint": "Straight 35:1 · Dozen and column 2:1 · Colour, even/odd and halves 1:1"
     },
     "slots": {
       "name": "Slots",
@@ -365,6 +493,13 @@
       "howToWin": "Win with 3, 4 or 5 matching symbols in a row from the first (left) reel on an active line. Each line pays its multiplier × the bet per line.",
       "wildRule": "The sheriff star is wild: it stands in for any symbol and also pays on its own.",
       "paylines": "Paylines"
-    }
+    },
+    "backToGames": "Back to games",
+    "games": "Games",
+    "rules": "Rules",
+    "balance": "Balance",
+    "refillShort": "Refill {amount}",
+    "addChips": "Add chips to the bet",
+    "betOf": "Bet of {amount}"
   }
 }

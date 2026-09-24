@@ -22,15 +22,13 @@
     "title": "Carta",
     "subtitle": "Un juego de cartas moderno",
     "play": "Jugar",
-    "gameModes": "Modos de juego",
     "tutorial": "Tutorial",
     "settings": "Ajustes",
-    "language": "Idioma",
-    "casino": "Casino"
+    "language": "Idioma"
   },
   "gameModes": {
-    "title": "Modos de juego",
-    "subtitle": "Elige cómo quieres jugar",
+    "title": "Jugar",
+    "subtitle": "Elige a qué quieres jugar",
     "classic": {
       "name": "Clásico",
       "description": "La experiencia original. El primero en quedarse sin cartas gana la ronda."
@@ -48,7 +46,9 @@
       "description": "Ajusta las reglas y crea tu propia variante desde cero."
     },
     "players": "{min}–{max} jugadores",
-    "selectMode": "Seleccionar"
+    "cartaTitle": "Carta",
+    "cartaSubtitle": "El juego de cartas contra bots",
+    "casinoSubtitle": "Con fichas virtuales compartidas"
   },
   "settings": {
     "title": "Ajustes",
@@ -94,16 +94,117 @@
   },
   "tutorial": {
     "title": "Tutorial",
-    "subtitle": "Aprende lo básico",
-    "comingSoon": "Tutorial próximamente",
-    "description": "Un recorrido interactivo te guiará por las reglas, tipos de cartas y estrategias en una próxima actualización.",
-    "learnMore": "Mientras tanto, esto es lo que aprenderás:",
+    "subtitle": "Aprende a jugar paso a paso",
+    "groups": {
+      "carta": "Carta",
+      "casino": "Casino"
+    },
+    "lessonOf": "Lección {n} de {total}",
+    "backToTopics": "Volver a los temas",
+    "allTopics": "Ver todos los temas",
+    "previous": "Anterior",
+    "next": "Siguiente",
+    "lessonNav": "Navegación entre lecciones",
+    "tryCarta": "Jugar una partida",
+    "tryGame": "Probar este juego",
+    "visual": {
+      "onTable": "En la mesa:",
+      "sameColor": "Mismo color",
+      "sameNumber": "Mismo número",
+      "noMatch": "No coincide",
+      "numbers": "Números",
+      "actions": "Acción",
+      "wilds": "Comodines"
+    },
     "topics": {
-      "cards": "Comprender tipos y colores de cartas",
-      "turns": "Orden de turnos y dirección",
-      "specials": "Cartas especiales y sus efectos",
-      "uno": "Cantar UNO y penalizaciones",
-      "strategy": "Estrategias básicas y consejos"
+      "cards": {
+        "title": "Tipos de cartas",
+        "summary": "Colores, números y cartas especiales",
+        "intro": "La baraja tiene 108 cartas en cuatro colores. Cada color lleva su propio símbolo (llama, sol, hoja y gota), así nunca dependes solo del color.",
+        "s1t": "Cartas numéricas",
+        "s1b": "Del 0 al 9 en cada color. Son la base del juego y valen su número en la puntuación.",
+        "s2t": "Cartas de acción",
+        "s2b": "Salto, Reversa y Roba dos tienen color y cambian el ritmo de la partida.",
+        "s3t": "Comodines",
+        "s3b": "El Comodín y el Comodín roba cuatro no tienen color: al jugarlos eliges el color que sigue."
+      },
+      "turns": {
+        "title": "Turnos y dirección",
+        "summary": "Qué puedes jugar y cuándo robar",
+        "intro": "Cada jugador empieza con 7 cartas. En tu turno juegas una carta que coincida con la de la mesa.",
+        "s1t": "Qué carta puedes jugar",
+        "s1b": "Una del mismo color, del mismo número o del mismo símbolo. Los comodines se pueden jugar casi siempre.",
+        "s2t": "Si no puedes jugar",
+        "s2b": "Roba una carta. Si esa carta sirve, puedes jugarla; si no, pasas el turno.",
+        "s3t": "Dirección del juego",
+        "s3b": "Se juega en sentido horario. La Reversa cambia el sentido; con dos jugadores funciona como un Salto."
+      },
+      "specials": {
+        "title": "Cartas especiales",
+        "summary": "Qué hace cada carta de acción",
+        "intro": "Las cartas especiales son tu mejor herramienta para frenar a quien va ganando.",
+        "s1t": "Salto y Reversa",
+        "s1b": "Salto: el siguiente jugador pierde su turno. Reversa: el juego cambia de dirección.",
+        "s2t": "Roba dos",
+        "s2b": "El siguiente jugador roba 2 cartas y pierde su turno.",
+        "s3t": "Comodín y Comodín roba cuatro",
+        "s3b": "Eliges el nuevo color. Con el +4, además, el siguiente roba 4 y pierde el turno; solo puedes jugarlo si no tienes cartas del color actual."
+      },
+      "uno": {
+        "title": "Cantar UNO",
+        "summary": "Avisa cuando te quede una carta",
+        "intro": "Cuando estás a punto de quedarte con una sola carta, tienes que avisar a los demás.",
+        "s1t": "Cuándo cantarlo",
+        "s1b": "Pulsa «¡UNO!» al jugar tu penúltima carta.",
+        "s2t": "Si se te olvida",
+        "s2b": "Si te quedas con una carta sin cantarlo y un rival te pilla, robas 2 cartas de castigo.",
+        "s3t": "Pillar a los demás",
+        "s3b": "Si ves que un rival no ha cantado UNO, pulsa el aviso para que robe. Robar una carta anula el UNO."
+      },
+      "strategy": {
+        "title": "Estrategia y puntos",
+        "summary": "Consejos y cómo se gana la partida",
+        "intro": "Gana la ronda quien se queda sin cartas primero, y se lleva los puntos de las cartas que tienen los rivales.",
+        "s1t": "Cómo se puntúa",
+        "s1b": "Los números valen su valor, las cartas de acción 20 y los comodines 50. Gana la partida quien llega antes a 500 puntos.",
+        "s2t": "Guarda los comodines",
+        "s2b": "Resérvalos para el final o para cortar a quien está a punto de ganar. Cambia al color del que tengas más cartas.",
+        "s3t": "Vigila a los rivales",
+        "s3b": "Fíjate en cuántas cartas les quedan y usa Roba dos o Salto con quien esté más cerca de ganar."
+      },
+      "blackjack": {
+        "title": "Blackjack",
+        "summary": "Llega a 21 sin pasarte",
+        "intro": "Juegas contra el crupier. Gana quien se acerca más a 21 sin pasarse.",
+        "s1t": "Valor de las cartas",
+        "s1b": "Del 2 al 10 valen su número, las figuras 10 y el As 1 u 11. As más carta de 10 al empezar es Blackjack.",
+        "s2t": "Tus decisiones",
+        "s2b": "Pedir: otra carta. Plantarse: te quedas. Doblar: doblas la apuesta y recibes una sola carta. Dividir: separas una pareja en dos manos.",
+        "s3t": "El crupier y los pagos",
+        "s3b": "El crupier pide hasta 17 y se planta. Ganar paga 1 a 1, el Blackjack 3 a 2 y el empate devuelve tu apuesta."
+      },
+      "roulette": {
+        "title": "Ruleta",
+        "summary": "Apuesta a números, colores o docenas",
+        "intro": "Ruleta europea con un solo cero. Eliges una ficha, la colocas en el tapete y giras.",
+        "s1t": "Cómo apostar",
+        "s1b": "Elige el valor de la ficha abajo y toca las casillas. Cada toque añade una ficha; puedes deshacer o borrar antes de girar.",
+        "s2t": "Pagos",
+        "s2b": "Pleno (un número) paga 35 a 1. Docenas y columnas 2 a 1. Rojo, negro, par, impar y mitades 1 a 1.",
+        "s3t": "El cero",
+        "s3b": "Si sale el 0, pierden todas las apuestas exteriores. Solo gana quien apostó al 0."
+      },
+      "slots": {
+        "title": "Tragamonedas",
+        "summary": "5 rodillos, 10 líneas y un comodín",
+        "intro": "Fiebre del Oro tiene 5 rodillos y hasta 10 líneas de pago. Gana con 3, 4 o 5 símbolos iguales desde la izquierda.",
+        "s1t": "Líneas y apuesta",
+        "s1b": "Elige 1, 5 o 10 líneas y la apuesta por línea. La apuesta total es líneas × apuesta por línea.",
+        "s2t": "El comodín",
+        "s2b": "La estrella de sheriff sustituye a cualquier símbolo y además paga por sí misma.",
+        "s3t": "Premios",
+        "s3b": "Cinco sietes en una línea es el jackpot. En Ayuda tienes la tabla completa de premios y las líneas."
+      }
     }
   },
   "cards": {
@@ -255,7 +356,7 @@
       "rules": "Blackjack paga 3:2 · El crupier se planta en 17",
       "table": "Mesa de blackjack",
       "dealer": "Crupier",
-      "placeBet": "Toca las fichas y luego el círculo para apostar",
+      "placeBet": "Toca una ficha para apostar",
       "deal": "Repartir",
       "hit": "Pedir",
       "stand": "Plantarse",
@@ -289,7 +390,13 @@
         "higher": "¡Ganas! {player} contra {dealer}",
         "lower": "El crupier gana: {dealer} contra {player}",
         "push": "Empate a {player}: recuperas tu apuesta"
-      }
+      },
+      "dealerPlays": "El crupier juega…",
+      "playHand": "Juegas la mano {n}",
+      "yourMove": "¿Pides otra carta o te plantas?",
+      "readyToDeal": "Listo: pulsa Repartir",
+      "dealFor": "Repartir · {amount}",
+      "you": "Tú"
     },
     "roulette": {
       "name": "Ruleta",
@@ -311,7 +418,28 @@
       "result": "Salió el {n}",
       "waiting": "Esperando giro",
       "history": "Últimos números",
-      "paid": "¡Cobras {amount} fichas!"
+      "paid": "¡Cobras {amount} fichas!",
+      "spinning": "La bola gira…",
+      "placeBets": "Elige ficha y toca el tapete",
+      "spinAgain": "Repetir · {amount}",
+      "spinFor": "Girar · {amount}",
+      "pickSpots": "Toca el tapete",
+      "helpTitle": "Reglas de la ruleta",
+      "help": {
+        "how": "Elige el valor de la ficha abajo y toca las casillas del tapete. Cada toque añade una ficha; puedes deshacer o borrar antes de girar.",
+        "inside": "Pleno (un número): paga 35 a 1.",
+        "outside": "Docenas y columnas pagan 2 a 1. Rojo, negro, par, impar, 1–18 y 19–36 pagan 1 a 1.",
+        "zero": "Ruleta europea con un solo cero: si sale el 0, pierden todas las apuestas exteriores."
+      },
+      "tab": {
+        "numbers": "Números",
+        "outside": "Exteriores"
+      },
+      "evenMoney": "Paga 1 a 1",
+      "dozens": "Docenas · paga 2 a 1",
+      "columns": "Columnas · paga 2 a 1",
+      "columnShort": "Col. {c}",
+      "payHint": "Pleno 35:1 · Docena y columna 2:1 · Color, par/impar y mitades 1:1"
     },
     "slots": {
       "name": "Tragamonedas",
@@ -365,6 +493,13 @@
       "howToWin": "Gana con 3, 4 o 5 símbolos iguales seguidos desde el primer rodillo (izquierda) en una línea activa. Cada línea paga su multiplicador × la apuesta por línea.",
       "wildRule": "La estrella de sheriff es comodín: sustituye a cualquier símbolo y además paga por sí misma.",
       "paylines": "Líneas de pago"
-    }
+    },
+    "backToGames": "Volver a juegos",
+    "games": "Juegos",
+    "rules": "Reglas",
+    "balance": "Saldo",
+    "refillShort": "Recargar {amount}",
+    "addChips": "Añadir fichas a la apuesta",
+    "betOf": "Apuesta de {amount}"
   }
 }

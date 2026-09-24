@@ -1,4 +1,4 @@
-import { Play, Gamepad2, BookOpen, Settings, Coins } from 'lucide-react';
+import { Play, BookOpen, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Logo } from '@/components/ui/Logo';
 import { LanguageSelector } from '@/components/LanguageSelector';
@@ -20,15 +20,16 @@ export function HomeScreen() {
 
   const menuItems: HomeMenuItem[] = [
     { screen: 'gameModes', icon: <Play className="w-5 h-5" />, labelKey: 'home.play', variant: 'primary' },
-    { screen: 'gameModes', icon: <Gamepad2 className="w-5 h-5" />, labelKey: 'home.gameModes', variant: 'secondary' },
-    { screen: 'casino', icon: <Coins className="w-5 h-5" />, labelKey: 'home.casino', variant: 'secondary' },
     { screen: 'tutorial', icon: <BookOpen className="w-5 h-5" />, labelKey: 'home.tutorial', variant: 'secondary' },
     { screen: 'settings', icon: <Settings className="w-5 h-5" />, labelKey: 'home.settings', variant: 'secondary' },
   ];
 
   return (
-    <div className="min-h-screen w-full flex flex-col items-center justify-center px-5 sm:px-8 max-w-md mx-auto">
-      <div className="fixed top-4 right-4 z-10">
+    <div
+      className="min-h-[100dvh] w-full flex flex-col items-center justify-center px-5 sm:px-8 max-w-md mx-auto"
+      style={{ paddingTop: 'max(24px, var(--safe-top))', paddingBottom: 'max(24px, var(--safe-bottom))' }}
+    >
+      <div className="fixed z-10" style={{ top: 'max(16px, var(--safe-top))', right: 'max(16px, var(--safe-right))' }}>
         <MusicButton />
       </div>
       <div className="flex flex-col items-center gap-2 mb-12 animate-slide-up">

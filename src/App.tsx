@@ -7,7 +7,6 @@ import { GameModesScreen } from '@/screens/GameModesScreen';
 import { SettingsScreen } from '@/screens/SettingsScreen';
 import { TutorialScreen } from '@/screens/TutorialScreen';
 import { PlayScreen } from '@/screens/PlayScreen';
-import { CasinoScreen } from '@/screens/casino/CasinoScreen';
 import { BlackjackScreen } from '@/screens/casino/BlackjackScreen';
 import { RouletteScreen } from '@/screens/casino/RouletteScreen';
 import { SlotsScreen } from '@/screens/casino/SlotsScreen';
@@ -23,7 +22,6 @@ function ScreenRouter() {
     settings: <SettingsScreen />,
     tutorial: <TutorialScreen />,
     play: <PlayScreen />,
-    casino: <CasinoScreen />,
     blackjack: <BlackjackScreen />,
     roulette: <RouletteScreen />,
     slots: <SlotsScreen />,

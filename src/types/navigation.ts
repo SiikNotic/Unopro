@@ -1,6 +1,6 @@
 import type { GameModeId } from '@/game/rules/modes';
 
-export type Screen = 'home' | 'gameModes' | 'settings' | 'tutorial' | 'play' | 'casino' | 'blackjack' | 'roulette' | 'slots';
+export type Screen = 'home' | 'gameModes' | 'settings' | 'tutorial' | 'play' | 'blackjack' | 'roulette' | 'slots';
 
 export interface ScreenParams {
   mode?: GameModeId;
