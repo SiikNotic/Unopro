@@ -289,30 +289,39 @@
     },
     "slots": {
       "name": "Tragamonedas",
-      "description": "Tres rodillos con símbolos originales. Alinea tres iguales en la línea.",
-      "rules": "Una línea de pago · Tres sietes paga ×200",
-      "machine": "Máquina tragamonedas",
-      "marquee": "Carta Fortuna",
+      "description": "Fiebre del Oro: águilas, búfalos, carretas y lingotes. Alinea tres iguales.",
+      "rules": "Fiebre del Oro · Tres sietes paga ×200",
+      "machine": "Máquina tragamonedas Fiebre del Oro",
+      "marquee": "Fiebre del Oro",
       "betPerSpin": "Apuesta por tirada",
       "spin": "Tirar ({amount})",
       "spinning": "Girando…",
       "win": "¡Premio de {amount} fichas!",
       "line": "Línea de pago: {symbols}",
       "paytable": "Tabla de premios",
-      "twoGems": "Dos gemas",
-      "mixedSuits": "Tres palos distintos",
-      "oneGem": "Una gema",
       "payNote": "Premio = apuesta × multiplicador (incluye tu apuesta). Retorno teórico: {rtp} %.",
       "symbols": {
         "seven": "siete",
-        "gem": "gema",
-        "star": "estrella",
-        "flame": "llama",
-        "drop": "gota",
-        "leaf": "hoja",
-        "sun": "sol"
+        "gold": "lingote de oro",
+        "eagle": "águila",
+        "bison": "búfalo",
+        "wagon": "carreta",
+        "horse": "caballo",
+        "horseshoe": "herradura"
       },
-      "betBack": "Recuperas tu apuesta"
+      "betBack": "Recuperas tu apuesta",
+      "twoGold": "Dos lingotes",
+      "oneGold": "Un lingote",
+      "mixedFrontier": "Tres del Oeste distintos",
+      "bigWin": "¡Gran premio!",
+      "megaWin": "¡Fiebre del oro!",
+      "chips": "fichas",
+      "pullLever": "Tirar de la palanca",
+      "suspense": "¡El último rodillo decide…!",
+      "good": "¡Suerte, forastero!",
+      "best": "Récord",
+      "bestAria": "Mejor premio: {amount} fichas",
+      "hint": "Consejo: pulsa la palanca o la barra espaciadora."
     }
   }
 }

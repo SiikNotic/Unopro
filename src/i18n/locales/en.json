@@ -289,30 +289,39 @@
     },
     "slots": {
       "name": "Slots",
-      "description": "Three reels with original symbols. Line up three of a kind on the payline.",
-      "rules": "One payline · Three sevens pay ×200",
-      "machine": "Slot machine",
-      "marquee": "Carta Fortune",
+      "description": "Gold Rush: eagles, bison, wagons and gold bars. Line up three of a kind.",
+      "rules": "Gold Rush · Three sevens pay ×200",
+      "machine": "Gold Rush slot machine",
+      "marquee": "Gold Rush",
       "betPerSpin": "Bet per spin",
       "spin": "Spin ({amount})",
       "spinning": "Spinning…",
       "win": "You won {amount} chips!",
       "line": "Payline: {symbols}",
       "paytable": "Paytable",
-      "twoGems": "Two gems",
-      "mixedSuits": "Three different suits",
-      "oneGem": "One gem",
       "payNote": "Prize = bet × multiplier (your bet included). Theoretical return: {rtp}%.",
       "symbols": {
         "seven": "seven",
-        "gem": "gem",
-        "star": "star",
-        "flame": "flame",
-        "drop": "drop",
-        "leaf": "leaf",
-        "sun": "sun"
+        "gold": "gold bar",
+        "eagle": "eagle",
+        "bison": "bison",
+        "wagon": "covered wagon",
+        "horse": "horse",
+        "horseshoe": "horseshoe"
       },
-      "betBack": "Your bet comes back"
+      "betBack": "Your bet comes back",
+      "twoGold": "Two gold bars",
+      "oneGold": "One gold bar",
+      "mixedFrontier": "Three different frontier symbols",
+      "bigWin": "Big win!",
+      "megaWin": "Gold fever!",
+      "chips": "chips",
+      "pullLever": "Pull the lever",
+      "suspense": "The last reel decides…!",
+      "good": "Good luck, stranger!",
+      "best": "Best",
+      "bestAria": "Best win: {amount} chips",
+      "hint": "Tip: pull the lever or press the space bar."
     }
   }
 }

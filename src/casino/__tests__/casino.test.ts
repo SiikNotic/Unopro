@@ -164,11 +164,20 @@ describe('roulette', () => {
 describe('slots', () => {
   it('scores paylines', () => {
     expect(slots.lineWin(['seven', 'seven', 'seven'])).toEqual({ multiplier: 200, kind: 'three' });
-    expect(slots.lineWin(['gem', 'sun', 'gem'])).toEqual({ multiplier: 5, kind: 'twoGems' });
-    expect(slots.lineWin(['flame', 'drop', 'leaf'])).toEqual({ multiplier: 1, kind: 'mixedSuits' });
-    expect(slots.lineWin(['flame', 'flame', 'leaf']).kind).toBe('none');
-    expect(slots.lineWin(['star', 'gem', 'seven'])).toEqual({ multiplier: 1, kind: 'oneGem' });
-    expect(slots.lineWin(['star', 'seven', 'sun']).multiplier).toBe(0);
+    expect(slots.lineWin(['eagle', 'eagle', 'eagle'])).toEqual({ multiplier: 30, kind: 'three' });
+    expect(slots.lineWin(['gold', 'horse', 'gold'])).toEqual({ multiplier: 5, kind: 'twoGold' });
+    expect(slots.lineWin(['bison', 'wagon', 'horseshoe'])).toEqual({ multiplier: 1, kind: 'mixedFrontier' });
+    expect(slots.lineWin(['bison', 'bison', 'horse']).kind).toBe('none');
+    expect(slots.lineWin(['eagle', 'gold', 'seven'])).toEqual({ multiplier: 1, kind: 'oneGold' });
+    expect(slots.lineWin(['eagle', 'seven', 'horse']).multiplier).toBe(0);
+  });
+
+  it('marks the reels that make up a win', () => {
+    expect(slots.winningReels(['seven', 'seven', 'seven'])).toEqual([0, 1, 2]);
+    expect(slots.winningReels(['gold', 'horse', 'gold'])).toEqual([0, 2]);
+    expect(slots.winningReels(['eagle', 'gold', 'seven'])).toEqual([1]);
+    expect(slots.winningReels(['bison', 'wagon', 'horse'])).toEqual([0, 1, 2]);
+    expect(slots.winningReels(['eagle', 'seven', 'horse'])).toEqual([]);
   });
 
   it('returns between 90% and 100% to the player', () => {

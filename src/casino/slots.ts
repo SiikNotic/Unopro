@@ -1,37 +1,46 @@
-// Three-reel slot with original symbols and one payline. Pure; results come from a seeded PRNG.
+// Three-reel "Gold Rush" slot with original Old West symbols and one payline.
+// Pure; results come from a seeded PRNG.
 import type { Rng } from '@/game/engine';
 
-export type SlotSymbol = 'seven' | 'gem' | 'star' | 'flame' | 'drop' | 'leaf' | 'sun';
+export type SlotSymbol = 'seven' | 'gold' | 'eagle' | 'bison' | 'wagon' | 'horse' | 'horseshoe';
 
 /** Each reel strip (20 stops). Rarer symbols pay more. */
 export const REEL: SlotSymbol[] = [
   'seven',
-  'gem', 'gem',
-  'star', 'star', 'star',
-  'flame', 'flame', 'flame',
-  'drop', 'drop', 'drop',
-  'leaf', 'leaf', 'leaf', 'leaf',
-  'sun', 'sun', 'sun', 'sun',
+  'gold', 'gold',
+  'eagle', 'eagle', 'eagle',
+  'bison', 'bison', 'bison',
+  'wagon', 'wagon', 'wagon',
+  'horse', 'horse', 'horse', 'horse',
+  'horseshoe', 'horseshoe', 'horseshoe', 'horseshoe',
 ];
 
-export const THREE_OF_A_KIND: Record<SlotSymbol, number> = { seven: 200, gem: 60, star: 30, flame: 15, drop: 15, leaf: 10, sun: 10 };
-export const TWO_GEMS = 5;
-export const ONE_GEM = 1;
-/** Three different suits (flame, drop, leaf, sun) on the line. */
-export const MIXED_SUITS = 1;
-const SUIT_SYMBOLS = new Set<SlotSymbol>(['flame', 'drop', 'leaf', 'sun']);
+export const THREE_OF_A_KIND: Record<SlotSymbol, number> = { seven: 200, gold: 60, eagle: 30, bison: 15, wagon: 15, horse: 10, horseshoe: 10 };
+export const TWO_GOLD = 5;
+export const ONE_GOLD = 1;
+/** Three different frontier symbols (bison, wagon, horse, horseshoe) on the line. */
+export const MIXED_FRONTIER = 1;
+export const FRONTIER_SYMBOLS = new Set<SlotSymbol>(['bison', 'wagon', 'horse', 'horseshoe']);
 
-export type WinKind = 'three' | 'twoGems' | 'mixedSuits' | 'oneGem' | 'none';
+export type WinKind = 'three' | 'twoGold' | 'mixedFrontier' | 'oneGold' | 'none';
 
-/** Multiplier of the bet for a payline. */
+/** Multiplier of the bet for a payline (the stake is included: ×1 gives the bet back). */
 export function lineWin(line: SlotSymbol[]): { multiplier: number; kind: WinKind } {
   const [a, b, c] = line;
   if (a === b && b === c) return { multiplier: THREE_OF_A_KIND[a], kind: 'three' };
-  const gems = line.filter((s) => s === 'gem').length;
-  if (gems === 2) return { multiplier: TWO_GEMS, kind: 'twoGems' };
-  if (line.every((s) => SUIT_SYMBOLS.has(s)) && new Set(line).size === 3) return { multiplier: MIXED_SUITS, kind: 'mixedSuits' };
-  if (gems === 1) return { multiplier: ONE_GEM, kind: 'oneGem' };
+  const golds = line.filter((s) => s === 'gold').length;
+  if (golds === 2) return { multiplier: TWO_GOLD, kind: 'twoGold' };
+  if (line.every((s) => FRONTIER_SYMBOLS.has(s)) && new Set(line).size === 3) return { multiplier: MIXED_FRONTIER, kind: 'mixedFrontier' };
+  if (golds === 1) return { multiplier: ONE_GOLD, kind: 'oneGold' };
   return { multiplier: 0, kind: 'none' };
+}
+
+/** Which reels (0–2) make up the win, for highlighting. */
+export function winningReels(line: SlotSymbol[]): number[] {
+  const { kind } = lineWin(line);
+  if (kind === 'three' || kind === 'mixedFrontier') return [0, 1, 2];
+  if (kind === 'twoGold' || kind === 'oneGold') return [0, 1, 2].filter((i) => line[i] === 'gold');
+  return [];
 }
 
 /** Stop index for each reel; the visible column is stop-1, stop, stop+1 (payline in the middle). */

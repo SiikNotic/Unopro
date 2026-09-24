@@ -18,7 +18,12 @@ export type SfxName =
   | 'chip'
   | 'wheel'
   | 'reelStop'
-  | 'cashIn';
+  | 'cashIn'
+  | 'lever'
+  | 'reelSpin'
+  | 'anticipation'
+  | 'coin'
+  | 'bigWin';
 
 let enabled = true;
 let ctx: AudioContext | null = null;
@@ -173,6 +178,35 @@ const SOUNDS: Record<SfxName, (c: AudioContext, t: number) => void> = {
   cashIn: (c, t) => {
     [1047, 1319, 1568, 2093].forEach((f, i) => tone(c, f, t + i * 0.06, 0.18, 'sine', 0.12));
     for (let i = 0; i < 5; i++) tone(c, 2600 + i * 120, t + 0.25 + i * 0.05, 0.05, 'triangle', 0.05);
+  },
+  // Slots: the lever ratchets down and springs back.
+  lever: (c, t) => {
+    for (let i = 0; i < 5; i++) noise(c, t + i * 0.035, 0.025, 1800 - i * 150, 0.22);
+    tone(c, 120, t + 0.2, 0.12, 'sine', 0.25, 60);
+  },
+  // Slots: reels whirring, the clicks slowing as they settle (about two seconds).
+  reelSpin: (c, t) => {
+    let at = t;
+    for (let i = 0; i < 30; i++) {
+      noise(c, at, 0.018, 2600, 0.09);
+      at += 0.045 + i * 0.0017;
+    }
+  },
+  // Slots: rising tremolo while the last reel keeps everyone waiting.
+  anticipation: (c, t) => {
+    for (let i = 0; i < 12; i++) tone(c, 440 + i * 45, t + i * 0.11, 0.1, 'triangle', 0.07);
+  },
+  // A single coin landing in the tray.
+  coin: (c, t) => {
+    tone(c, 3100, t, 0.09, 'sine', 0.08);
+    tone(c, 4650, t + 0.012, 0.07, 'sine', 0.04);
+  },
+  // Big win fanfare.
+  bigWin: (c, t) => {
+    [523, 659, 784, 1047, 1319].forEach((f, i) => tone(c, f, t + i * 0.09, 0.28, 'square', 0.05));
+    [523, 659, 784, 1047, 1319].forEach((f, i) => tone(c, f, t + i * 0.09, 0.32, 'triangle', 0.12));
+    [1047, 1319, 1568].forEach((f) => tone(c, f, t + 0.5, 1.1, 'sine', 0.09));
+    for (let i = 0; i < 10; i++) tone(c, 2800 + (i % 4) * 300, t + 0.55 + i * 0.07, 0.06, 'sine', 0.05);
   },
 };
 
