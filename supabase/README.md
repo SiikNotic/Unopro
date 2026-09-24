@@ -1,4 +1,4 @@
-# Servidor de las tragamonedas (opcional)
+# Servidores opcionales: salas online y tragamonedas
 
 Sin configurar nada, la web funciona en **modo local**: cada tirada se decide en el navegador con
 aleatoriedad criptográfica y se cobra/paga en un solo paso, idempotente. Eso protege contra dobles
@@ -35,6 +35,21 @@ Los jugadores solo pueden **leer** sus propias filas (RLS). No pueden escribir s
    - `VITE_SLOTS_API_URL=https://<proyecto>.supabase.co/functions/v1/slot-spin`
 
    La CSP de la build añade ese origen a `connect-src` automáticamente.
+
+## Salas online (Dominó y Bingo)
+
+Proyecto: `unopro-juegos`. Ver `docs/games-platform.md` para la arquitectura.
+
+1. Activa *Anonymous sign-ins* (Authentication → Providers / Sign In).
+2. Aplica `migrations/20260925000000_game_rooms.sql`.
+3. `npm run functions:build` (genera `functions/game-room/index.ts` desde `source.ts`) y despliega
+   `game-room` con verificación JWT. Los orígenes permitidos (CORS) están en `source.ts`.
+4. En GitHub → Settings → Secrets and variables → Actions → **Variables**:
+   `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` (clave publishable; son públicas). El workflow las pasa
+   al build y la CSP añade el origen `https://` y `wss://` (Realtime).
+
+Coste: cada cliente en partida hace un `tick` cada 0,7 s (bingo) o 1 s (dominó), y cada 3 s en el lobby.
+Solo las pestañas visibles lo hacen.
 
 ## Pruebas
 

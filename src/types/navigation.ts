@@ -17,6 +17,8 @@ export interface ScreenParams {
   game?: TableGame;
   /** Room screen opened to join (with a code) rather than to create. */
   join?: boolean;
+  /** Online room code (room lobby, or an online match). */
+  room?: string;
 }
 
 export type ScreenChangeEvent = { from: Screen | null; to: Screen };

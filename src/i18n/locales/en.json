@@ -908,14 +908,15 @@
     "scene": "Scene",
     "start": "Start match",
     "online": "Online",
-    "onlineNote": "Online play is designed but the server is not connected yet: you can see what the room will look like, but you can't play with people elsewhere yet."
+    "onlineNote": "Online play is designed but the server is not connected yet: you can see what the room will look like, but you can't play with people elsewhere yet.",
+    "onlineReady": "Play with friends far away: create a room and send them the code, or join theirs. Empty seats are played by a server bot."
   },
   "room": {
     "create": "Create room",
     "join": "Join",
     "createTitle": "{game} room",
     "joinTitle": "Join {game}",
-    "offline": "Online play is not connected yet. Nobody can join with this code for now; you can start right away with bots in the empty seats.",
+    "offline": "This build has no online server configured. You can play now with bots in the empty seats.",
     "code": "Room code",
     "codeAria": "Room code: {code}",
     "copy": "Copy code",
@@ -927,7 +928,22 @@
     "start": "Start match",
     "codeLabel": "5-character code",
     "badCode": "That code isn't valid: 5 letters or digits (no 0, O, 1, I or L).",
-    "cannotJoin": "Valid code, but there is no online server to connect to yet. Once it's live you'll join from here."
+    "cannotJoin": "Valid code, but there is no online server to connect to yet. Once it's live you'll join from here.",
+    "yourName": "Your name",
+    "namePlaceholder": "How others will see you",
+    "needName": "Type your name to enter.",
+    "seatsLabel": "Seats at the table",
+    "seatsNote": "Seats nobody takes by the start are played by a bot.",
+    "shareHint": "Send this code to your friends: {game} → Online → Join.",
+    "botIfEmpty": "bot if nobody comes",
+    "host": "Host",
+    "notReady": "Not ready",
+    "startOnline": "Start match",
+    "waitReady": "Waiting for everyone to be ready.",
+    "readyAction": "I'm ready",
+    "notReadyAction": "Not ready yet",
+    "hostStarts": "The host starts the match once everyone is ready.",
+    "leave": "Leave room"
   },
   "domino": {
     "roundOf": "Hand {n} · to {target}",
@@ -1039,5 +1055,29 @@
       "score": "Each round gives 100 points to its winners, split evenly.\nIf all 75 balls go out and nobody calls, the round ends with no winner."
     },
     "pts": "{n} pts"
+  },
+  "online": {
+    "room": "Room {code}",
+    "live": "live",
+    "connecting": "Connecting…",
+    "reconnecting": "Reconnecting…",
+    "timeLeft": "{s} s",
+    "backHome": "Back home",
+    "errors": {
+      "unauthorized": "Couldn't sign in to the server. Try again.",
+      "rate_limited": "Too many requests; wait a moment.",
+      "bad_request": "Invalid request.",
+      "not_found": "That room doesn't exist or has ended.",
+      "not_member": "You're not in that room.",
+      "full": "The room is full.",
+      "started": "That match has already started.",
+      "not_host": "Only the host can do that.",
+      "not_ready": "Not everyone is ready yet.",
+      "not_playing": "The match isn't being played.",
+      "forbidden": "That action isn't allowed.",
+      "busy": "The server isn't answering. Retrying…",
+      "rule": "Invalid move."
+    },
+    "polling": "syncing"
   }
 }

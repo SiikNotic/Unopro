@@ -9,6 +9,7 @@ import { BINGO_SCENES, BINGO_SPEEDS, DIFFICULTIES, DOMINO_SCENES, loadBingoSetup
 import type { BingoSetup, DominoSetup } from '../setup';
 import type { TableGame } from '@/types/navigation';
 import { BingoArt, DominoArt } from './GameArt';
+import { onlineConfig } from '@/games/online/client';
 import './hub.css';
 import '../fonts.css';
 
@@ -182,7 +183,7 @@ export function MatchSetupScreen({ game }: { game: TableGame }) {
               <KeyRound className="w-4 h-4" /> {t('room.join')}
             </button>
           </div>
-          <p className="ms-note mt-2">{t('setup.onlineNote')}</p>
+          <p className="ms-note mt-2">{t(onlineConfig() ? 'setup.onlineReady' : 'setup.onlineNote')}</p>
         </section>
       </main>
     </div>

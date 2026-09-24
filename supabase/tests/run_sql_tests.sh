@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Runs the slot SQL tests against a THROWAWAY local Postgres (never a real project).
+# Runs the slot and game-room SQL tests against a THROWAWAY local Postgres (never a real project).
 # Usage: PGHOST=... PGPORT=... PGUSER=postgres supabase/tests/run_sql_tests.sh
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -11,6 +11,10 @@ psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20260924000000_slots.sql
 # applying the migration twice must be harmless
 psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20260924000000_slots.sql
 psql -q -v ON_ERROR_STOP=1 -d "$DB" -f slots_test.sql
+psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20260925000000_game_rooms.sql
+# applying it twice must be harmless too
+psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20260925000000_game_rooms.sql
+psql -q -v ON_ERROR_STOP=1 -d "$DB" -f game_rooms_test.sql
 
 # Concurrency: 40 parallel commits for one player who can afford only 5 bets of 200 (balance 1000),
 # 10 of them replaying the same request id. Exactly 5 distinct spins may be booked, never a negative balance.

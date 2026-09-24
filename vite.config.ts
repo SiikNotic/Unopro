@@ -12,7 +12,7 @@ const cspFor = (apiOrigins: string[]) => [
   "font-src 'self' https://fonts.gstatic.com",
   "img-src 'self' data:",
   "media-src 'self'",
-  // The slot server's origin, only when one is configured at build time (VITE_SUPABASE_URL).
+  // The Supabase origin (and its Realtime websocket), only when one is configured at build time.
   ["connect-src 'self'", ...apiOrigins].join(' '),
   "object-src 'none'",
   "base-uri 'self'",
@@ -44,7 +44,10 @@ function securityHeaders(csp: string): Plugin {
   // https://vitejs.dev/config/
   export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', 'VITE_');
-    const csp = cspFor([...new Set([...originOf(env.VITE_SUPABASE_URL), ...originOf(env.VITE_SLOTS_API_URL)])]);
+    const https = [...originOf(env.VITE_SUPABASE_URL), ...originOf(env.VITE_SLOTS_API_URL), ...originOf(env.VITE_GAMES_API_URL)];
+    // Online rooms receive their updates over wss://<project>.supabase.co/realtime/v1.
+    const wss = originOf(env.VITE_SUPABASE_URL).map((o) => o.replace(/^https:/, 'wss:'));
+    const csp = cspFor([...new Set([...https, ...wss])]);
     return {
     // Relative asset paths so the build works from any sub-path (e.g. GitHub Pages at /<repo>/).
     // The app keeps navigation in memory (no URL routes), so a page refresh always lands on index.html.

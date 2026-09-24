@@ -4,6 +4,7 @@ import type { Screen, ScreenParams } from '@/types/navigation';
 import { SCREENS } from '@/types/navigation';
 import { GAME_MODES } from '@/game/rules/modes';
 import { isMachineId } from '@/casino/premium/engine';
+import { ROOM_CODE_RE } from '@/games/shared/multiplayer/roomCode';
 
 interface NavigationContextValue {
   currentScreen: Screen;
@@ -29,8 +30,9 @@ interface HistoryState extends Entry {
 const NavigationContext = createContext<NavigationContextValue | null>(null);
 
 /**
- * A match screen is never re-entered from history or a reload: that would silently start a new match.
- * It lands on the game's setup instead.
+ * A local match screen is never re-entered from history or a reload: that would silently start a new
+ * match. It lands on the game's setup instead. Online matches (with a room code) are re-entered: the
+ * server kept the state.
  */
 const MATCH_FALLBACK: Partial<Record<Screen, Screen>> = { play: 'gameModes', domino: 'dominoSetup', bingo: 'bingoSetup' };
 
@@ -51,17 +53,18 @@ function cleanParams(raw: unknown): ScreenParams {
   if (isMachineId(p.machine)) out.machine = p.machine;
   if (p.game === 'domino' || p.game === 'bingo') out.game = p.game;
   if (p.join === true) out.join = true;
+  if (typeof p.room === 'string' && ROOM_CODE_RE.test(p.room)) out.room = p.room;
   return out;
 }
 
 const sameEntry = (a: Entry | null, screen: Screen, params: ScreenParams) =>
-  !!a && a.screen === screen && (a.params.topic ?? '') === (params.topic ?? '') && (a.params.mode ?? '') === (params.mode ?? '') && (a.params.machine ?? '') === (params.machine ?? '') && (a.params.game ?? '') === (params.game ?? '') && !!a.params.join === !!params.join;
+  !!a && a.screen === screen && (a.params.topic ?? '') === (params.topic ?? '') && (a.params.mode ?? '') === (params.mode ?? '') && (a.params.machine ?? '') === (params.machine ?? '') && (a.params.game ?? '') === (params.game ?? '') && !!a.params.join === !!params.join && (a.params.room ?? '') === (params.room ?? '');
 
 export function NavigationProvider({ children }: { children: ReactNode }) {
   const [entry, setEntry] = useState<Entry>(() => {
     const restored = typeof window !== 'undefined' ? sanitize(window.history.state) : null;
     // A reload during a match goes back to its setup instead of silently dealing a new game.
-    const fallback = restored && MATCH_FALLBACK[restored.screen];
+    const fallback = restored && !restored.params.room && MATCH_FALLBACK[restored.screen];
     if (fallback) return { screen: fallback, params: {} };
     return restored ?? { screen: 'home', params: {} };
   });
@@ -77,7 +80,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       popping.current = false;
       let next = sanitize(e.state) ?? { carta: true as const, screen: 'home' as Screen, params: {}, depth: 0, prev: null };
       // Never re-enter a match through back/forward: that would silently deal a brand-new game.
-      const fallback = MATCH_FALLBACK[next.screen];
+      const fallback = !next.params.room && MATCH_FALLBACK[next.screen];
       if (fallback) {
         next = { ...next, screen: fallback, params: {} };
         window.history.replaceState(next, '');

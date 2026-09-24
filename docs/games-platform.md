@@ -35,10 +35,26 @@ UI                                 src/games/<game>/ui, shared pieces in src/gam
 
 ### Online status
 
-What is real now: local play against bots, and in Domino several people passing one device (the hand is
-covered between turns). The room screen (code, seats, ready) is the future lobby's interface. It says
-plainly that the online server is not connected: nobody can join a code yet, and "start" fills the empty
-seats with bots. No backend was added in this phase.
+Local play (bots, and hot-seat Domino) always works. Online rooms work when the build has
+`VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY`; without them the room screen says the server is not
+connected and offers bots.
+
+How an online room works (server-authoritative):
+
+- `supabase/functions/game-room` (bundled from `source.ts` by `npm run functions:build`) runs the same pure
+  engines (`src/games/online/server/handler.ts`). Ops: `create`, `join`, `ready`, `start`, `act`, `tick`,
+  `sync`, `leave`, `rematch`. The JWT (anonymous Supabase session) is verified; a player can act only for
+  their own seat; house actions (calling balls, closing rounds) never come from a client.
+- `game_rooms` holds the secret state (hands, boneyard, ball order, seed) and has no policy: no player can
+  read it. After every change the function writes each member their own sanitised view to `room_views`
+  (RLS: read your own row only), and Supabase Realtime pushes it to them.
+- Writes go through `room_insert` / `room_commit` (service role only) with an optimistic version check,
+  so two simultaneous actions can never both apply.
+- Bots, the bingo caller and turn timeouts run on the server clock; the clients' periodic `tick` only
+  asks the server whether it is time (and doubles as the polling fallback if the websocket drops). An idle
+  human's turn is played by a bot after 45 s.
+- Tests: `src/games/online/__tests__/handler.test.ts` (flows, hidden info, races, impersonation, timing)
+  and `supabase/tests/game_rooms_test.sql` (RLS, permissions, version conflicts).
 
 ## Domino rules (as implemented)
 

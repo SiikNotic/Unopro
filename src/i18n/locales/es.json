@@ -908,14 +908,15 @@
     "scene": "Escenario",
     "start": "Empezar partida",
     "online": "Online",
-    "onlineNote": "El modo online está preparado pero el servidor aún no está conectado: puedes ver cómo será la sala, pero todavía no se puede jugar con otras personas a distancia."
+    "onlineNote": "El modo online está preparado pero el servidor aún no está conectado: puedes ver cómo será la sala, pero todavía no se puede jugar con otras personas a distancia.",
+    "onlineReady": "Juega con amigos a distancia: crea una sala y pásales el código, o únete con el suyo. Los asientos libres los juega un bot del servidor."
   },
   "room": {
     "create": "Crear sala",
     "join": "Unirse",
     "createTitle": "Sala de {game}",
     "joinTitle": "Unirse a {game}",
-    "offline": "El juego online aún no está conectado. Este código no permite que nadie se una todavía; puedes empezar ahora con bots en los asientos libres.",
+    "offline": "Esta versión no tiene servidor online configurado. Puedes jugar ahora con bots en los asientos libres.",
     "code": "Código de sala",
     "codeAria": "Código de sala: {code}",
     "copy": "Copiar código",
@@ -927,7 +928,22 @@
     "start": "Empezar partida",
     "codeLabel": "Código de 5 caracteres",
     "badCode": "Ese código no es válido: son 5 letras o números (sin 0, O, 1, I ni L).",
-    "cannotJoin": "Código correcto, pero todavía no hay servidor online al que conectarse. Cuando esté activo, podrás unirte desde aquí."
+    "cannotJoin": "Código correcto, pero todavía no hay servidor online al que conectarse. Cuando esté activo, podrás unirte desde aquí.",
+    "yourName": "Tu nombre",
+    "namePlaceholder": "Cómo te verán los demás",
+    "needName": "Escribe tu nombre para entrar.",
+    "seatsLabel": "Asientos de la mesa",
+    "seatsNote": "Los asientos que nadie ocupe al empezar los juega un bot.",
+    "shareHint": "Pasa este código a tus amigos: en {game} → Online → Unirse.",
+    "botIfEmpty": "bot si no llega nadie",
+    "host": "Anfitrión",
+    "notReady": "No listo",
+    "startOnline": "Empezar partida",
+    "waitReady": "Esperando a que todos estén listos.",
+    "readyAction": "Estoy listo",
+    "notReadyAction": "Aún no estoy listo",
+    "hostStarts": "El anfitrión empezará la partida cuando todos estén listos.",
+    "leave": "Salir de la sala"
   },
   "domino": {
     "roundOf": "Ronda {n} · a {target}",
@@ -1039,5 +1055,29 @@
       "score": "Cada ronda reparte 100 puntos entre sus ganadores, a partes iguales.\nSi salen las 75 bolas y nadie canta, la ronda termina sin ganador."
     },
     "pts": "{n} pts"
+  },
+  "online": {
+    "room": "Sala {code}",
+    "live": "en directo",
+    "connecting": "Conectando…",
+    "reconnecting": "Reconectando…",
+    "timeLeft": "{s} s",
+    "backHome": "Volver al inicio",
+    "errors": {
+      "unauthorized": "No se pudo iniciar sesión en el servidor. Inténtalo de nuevo.",
+      "rate_limited": "Demasiadas peticiones; espera un momento.",
+      "bad_request": "Petición no válida.",
+      "not_found": "Esa sala no existe o ya terminó.",
+      "not_member": "No estás en esa sala.",
+      "full": "La sala está llena.",
+      "started": "Esa partida ya empezó.",
+      "not_host": "Solo el anfitrión puede hacer eso.",
+      "not_ready": "Aún no están todos listos.",
+      "not_playing": "La partida no está en juego.",
+      "forbidden": "Esa acción no está permitida.",
+      "busy": "El servidor no responde. Reintentando…",
+      "rule": "Jugada no válida."
+    },
+    "polling": "sincronizando"
   }
 }
