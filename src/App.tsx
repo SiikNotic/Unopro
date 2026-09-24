@@ -13,6 +13,8 @@ import { RouletteScreen } from '@/screens/casino/RouletteScreen';
 import { SlotsScreen } from '@/screens/casino/SlotsScreen';
 import { ProfileScreen } from '@/screens/ProfileScreen';
 import { WalletProvider } from '@/casino/WalletProvider';
+import { AccountProvider } from '@/account/AccountProvider';
+import { AccountOverlay } from '@/account/AccountOverlay';
 import type { Screen } from '@/types/navigation';
 
 // The slot machines (engine, math, art, sounds) load only when a player opens them.
@@ -22,6 +24,7 @@ const MatchSetupScreen = lazy(() => import('@/games/shared/ui/MatchSetupScreen')
 const RoomScreen = lazy(() => import('@/games/shared/ui/RoomScreen').then((m) => ({ default: m.RoomScreen })));
 const DominoScreen = lazy(() => import('@/games/domino/ui/DominoScreen').then((m) => ({ default: m.DominoScreen })));
 const BingoScreen = lazy(() => import('@/games/bingo/ui/BingoScreen').then((m) => ({ default: m.BingoScreen })));
+const AccountScreen = lazy(() => import('@/account/AccountScreen').then((m) => ({ default: m.AccountScreen })));
 const PremiumSlotScreen = lazy(() => import('@/screens/casino/PremiumSlotScreen').then((m) => ({ default: m.PremiumSlotScreen })));
 
 function ScreenRouter() {
@@ -44,12 +47,14 @@ function ScreenRouter() {
     bingoSetup: <MatchSetupScreen key="bingo" game="bingo" />,
     bingo: <BingoScreen />,
     room: <RoomScreen />,
+    account: <AccountScreen />,
   };
 
   return (
     <main className="relative min-h-screen w-full">
       <Background />
       <Suspense fallback={<div className="min-h-screen" aria-busy="true" />}>{screens[currentScreen]}</Suspense>
+      <AccountOverlay />
     </main>
   );
 }
@@ -58,11 +63,13 @@ function App() {
   return (
     <I18nProvider>
       <PreferencesProvider>
-        <WalletProvider>
-          <NavigationProvider>
-            <ScreenRouter />
-          </NavigationProvider>
-        </WalletProvider>
+        <AccountProvider>
+          <WalletProvider>
+            <NavigationProvider>
+              <ScreenRouter />
+            </NavigationProvider>
+          </WalletProvider>
+        </AccountProvider>
       </PreferencesProvider>
     </I18nProvider>
   );

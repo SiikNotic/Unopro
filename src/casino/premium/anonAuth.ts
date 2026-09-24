@@ -2,7 +2,9 @@
 // identifies the player only from the resulting JWT; the browser never tells it who it is.
 import { storage } from '@/storage';
 
-const KEY = 'carta.slots.session';
+/** One Supabase session per browser: an anonymous guest's, or a registered player's (see src/account). */
+export const SESSION_KEY = 'carta.slots.session';
+const KEY = SESSION_KEY;
 
 interface Session {
   access_token: string;

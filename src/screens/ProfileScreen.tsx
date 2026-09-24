@@ -1,11 +1,14 @@
 import { useState } from 'react';
-import { Check, Pencil } from 'lucide-react';
+import { Check, ChevronRight, CircleUserRound, Pencil } from 'lucide-react';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { ChipBalance } from '@/components/casino/chips';
 import { useI18n } from '@/i18n';
 import { useWallet } from '@/casino/useWallet';
 import { formatChips } from '@/casino/chipValues';
 import { NAME_MAX, useProfileName } from '@/settings/profile';
+import { useNavigation } from '@/components/Navigation';
+import { useAccount } from '@/account/useAccount';
+import { useAccountHistory } from '@/account/history';
 
 function Stat({ label, value, tone = '' }: { label: string; value: string; tone?: string }) {
   return (
@@ -19,11 +22,17 @@ function Stat({ label, value, tone = '' }: { label: string; value: string; tone?
 /** Local profile: display name, chips, lifetime stats and the latest casino rounds. */
 export function ProfileScreen() {
   const { t, language } = useI18n();
-  const { balance, stats, history } = useWallet();
+  const { balance, stats, history: localHistory, mode } = useWallet();
+  const { navigate } = useNavigation();
+  const account = useAccount();
+  const accountMode = mode === 'account';
+  const ledger = useAccountHistory(accountMode);
+  const history = accountMode ? (ledger.entries ?? []) : localHistory;
   const [name, setName] = useProfileName();
+  const shown = (accountMode && account.user?.name) || name || t('profile.guest');
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(name);
-  const shown = name || t('profile.guest');
+
   const net = stats.won - stats.wagered;
   const time = new Intl.DateTimeFormat(language, { dateStyle: 'short', timeStyle: 'short' });
 
@@ -72,10 +81,29 @@ export function ProfileScreen() {
                 </button>
               </div>
             )}
-            <p className="text-xs text-[var(--cz-muted)] mt-1">{t('profile.local')}</p>
+            <p className="text-xs text-[var(--cz-muted)] mt-1">{t(accountMode ? 'profile.accountName' : 'profile.local')}</p>
           </div>
         </section>
 
+        {account.status !== 'off' && (
+          <button type="button" onClick={() => navigate('account')} className="cz-panel p-4 flex items-center gap-3 text-left hover:border-[var(--cz-line-strong)]">
+            <CircleUserRound className="w-6 h-6 shrink-0 text-[var(--cz-gold)]" aria-hidden />
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold text-white">{accountMode ? account.user?.email ?? t('account.title') : t('account.guestCta')}</span>
+              <span className="block text-xs text-[var(--cz-muted)]">{accountMode ? t('profile.accountCoins') : t('profile.guestChips')}</span>
+            </span>
+            <ChevronRight className="w-4 h-4 text-[var(--cz-muted)]" aria-hidden />
+          </button>
+        )}
+
+        {accountMode ? (
+          <section>
+            <div className="flex items-center justify-between mb-2 px-1">
+              <h2 className="cz-label">{t('account.coins')}</h2>
+              <ChipBalance balance={balance} />
+            </div>
+          </section>
+        ) : (
         <section>
           <div className="flex items-center justify-between mb-2 px-1">
             <h2 className="cz-label">{t('profile.stats')}</h2>
@@ -90,10 +118,15 @@ export function ProfileScreen() {
             <Stat label={t('profile.refills')} value={stats.refills.toLocaleString()} />
           </div>
         </section>
+        )}
 
         <section>
           <h2 className="cz-label mb-2 px-1">{t('profile.history')}</h2>
-          {history.length === 0 ? (
+          {accountMode && ledger.failed ? (
+            <p className="cz-panel p-4 text-sm text-[var(--cz-muted)]">{t('account.coinsError')}</p>
+          ) : accountMode && !ledger.entries ? (
+            <p className="cz-panel p-4 text-sm text-[var(--cz-muted)]" aria-busy="true">{t('account.loading')}</p>
+          ) : history.length === 0 ? (
             <p className="cz-panel p-4 text-sm text-[var(--cz-muted)]">{t('profile.empty')}</p>
           ) : (
             <ul className="cz-panel divide-y divide-[var(--cz-line)]">
@@ -102,9 +135,10 @@ export function ProfileScreen() {
                 return (
                   <li key={h.id} className="flex items-center gap-3 px-4 py-3">
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-white truncate">{t(`casino.${h.game}.name`)}</p>
+                      <p className="text-sm font-semibold text-white truncate">{h.game === 'bonus' ? t('profile.bonus') : h.game === 'premium' ? t('profile.premium') : t(`casino.${h.game}.name`)}</p>
                       <p className="text-[11px] text-[var(--cz-muted)]">
-                        {time.format(h.at)} · {t('profile.betShort', { amount: h.stake })}
+                        {time.format(h.at)}
+                        {h.stake > 0 && ` · ${t('profile.betShort', { amount: h.stake })}`}
                       </p>
                     </div>
                     <span className={`cz-num text-sm font-bold ${diff > 0 ? 'text-[var(--cz-gold-hover)]' : diff < 0 ? 'text-[#f3c4c8]' : 'text-[var(--cz-muted)]'}`}>
@@ -116,7 +150,7 @@ export function ProfileScreen() {
               })}
             </ul>
           )}
-          <p className="mt-2 px-1 text-[11px] text-[var(--cz-muted)]">{t('profile.historyNote')}</p>
+          <p className="mt-2 px-1 text-[11px] text-[var(--cz-muted)]">{t(accountMode ? 'profile.accountHistoryNote' : 'profile.historyNote')}</p>
         </section>
       </div>
     </ScreenContainer>

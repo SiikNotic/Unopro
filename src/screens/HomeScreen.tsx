@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { BookOpen, ChevronRight, Coins, Layers, Play, Settings, ShieldCheck, UserRound } from 'lucide-react';
+import { BookOpen, ChevronRight, CircleUserRound, Coins, Gift, Layers, Play, Settings, ShieldCheck, UserRound } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useNavigation } from '@/components/Navigation';
 import { MusicButton } from '@/components/ui/MusicButton';
@@ -14,6 +14,7 @@ import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useViewport } from '@/hooks/useViewport';
 import type { Screen } from '@/types/navigation';
 import { GamesHub } from '@/games/shared/ui/GamesHub';
+import { useAccount } from '@/account/useAccount';
 
 interface GameEntry {
   id: LobbyGame;
@@ -170,7 +171,9 @@ export function HomeScreen() {
   const { navigate } = useNavigation();
   const { t } = useI18n();
   const { balance } = useWallet();
-  const [name] = useProfileName();
+  const account = useAccount();
+  const [profileName] = useProfileName();
+  const name = account.user?.name || profileName;
   const play = (g: GameEntry) => navigate(g.screen);
 
   return (
@@ -192,7 +195,12 @@ export function HomeScreen() {
             <Coins className="w-4 h-4 text-[var(--cz-gold)]" aria-hidden />
             <span className="text-[14px]">{formatChips(balance)}</span>
           </button>
-          <MusicButton className="!hidden min-[360px]:!flex !w-11 !h-11 !rounded-xl" />
+          {account.status !== 'off' && (
+            <button type="button" onClick={() => navigate('account')} className={`cz-btn cz-icon-btn ${account.status === 'user' ? 'cz-btn-secondary !border-[rgba(216,178,106,0.55)]' : 'cz-btn-secondary'}`} aria-label={t('account.entry')} title={t('account.entry')}>
+              {account.user?.avatar ? <img src={account.user.avatar} alt="" referrerPolicy="no-referrer" className="w-7 h-7 rounded-full object-cover" /> : <CircleUserRound className={`w-5 h-5 ${account.status === 'user' ? 'text-[var(--cz-gold)]' : ''}`} />}
+            </button>
+          )}
+          <MusicButton className="!hidden min-[400px]:!flex !w-11 !h-11 !rounded-xl" />
           <button type="button" onClick={() => navigate('settings')} className="cz-btn cz-btn-secondary cz-icon-btn" aria-label={t('home.settings')} title={t('home.settings')}>
             <Settings className="w-5 h-5" />
           </button>
@@ -203,6 +211,18 @@ export function HomeScreen() {
         <div className="lobby-rise">
           <p className="text-sm text-[var(--cz-muted)]">{name ? t('lobby.hello', { name }) : t('lobby.helloGuest')}</p>
           <h1 className="font-display font-extrabold text-2xl sm:text-3xl text-white leading-tight">{t('lobby.headline')}</h1>
+          {account.status === 'guest' && (
+            <button type="button" onClick={() => navigate('account')} className="mt-3 w-full sm:w-auto flex items-center gap-3 rounded-2xl border border-[rgba(216,178,106,0.45)] bg-[linear-gradient(120deg,rgba(216,178,106,0.22),rgba(216,178,106,0.06))] px-3.5 py-3 text-left transition-colors hover:bg-[rgba(216,178,106,0.2)]">
+              <span className="flex-none w-10 h-10 rounded-xl bg-[var(--cz-gold)] text-[var(--cz-gold-ink)] flex items-center justify-center">
+                <Gift className="w-5 h-5" aria-hidden />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-display font-bold text-[15px] text-white">{t('account.guestCta')}</span>
+                <span className="block text-xs text-white/70">{t('account.guestCtaHint')}</span>
+              </span>
+              <ChevronRight className="w-5 h-5 text-[var(--cz-gold)]" aria-hidden />
+            </button>
+          )}
         </div>
 
         <section className="lobby-rise" style={{ animationDelay: '60ms' }} aria-labelledby="lobby-hub">

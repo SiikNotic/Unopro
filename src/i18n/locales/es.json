@@ -503,7 +503,20 @@
     "addChips": "Añadir fichas a la apuesta",
     "betOf": "Apuesta de {amount}",
     "otherTab": "Estás jugando en otra pestaña. Aquí las apuestas quedan en pausa para no mezclar saldos.",
-    "playHere": "Jugar aquí"
+    "playHere": "Jugar aquí",
+    "accountBadge": "Cuenta",
+    "accountBroke": "Te quedaste sin monedas en tu cuenta. Las monedas de cuenta no se recargan gratis.",
+    "guestUpsell": "¿Quieres 1,000 monedas que no se pierden? Crea tu cuenta.",
+    "accountErrors": {
+      "unauthorized": "Tu sesión caducó. Vuelve a iniciar sesión.",
+      "account_required": "Confirma tu correo para jugar con monedas de cuenta.",
+      "insufficient_funds": "No tienes monedas suficientes para esa apuesta.",
+      "invalid_bet": "Esa apuesta no es válida.",
+      "conflict": "Esa jugada ya se procesó. Actualizamos la mesa.",
+      "rate_limited": "Vas muy rápido. Espera un segundo.",
+      "bad_request": "No se pudo hacer esa jugada.",
+      "server": "No hay conexión con el servidor. Tus monedas están a salvo: inténtalo de nuevo."
+    }
   },
   "profile": {
     "title": "Perfil",
@@ -523,7 +536,13 @@
     "history": "Últimas rondas",
     "empty": "Aún no has jugado ninguna ronda en el casino.",
     "betShort": "apuesta {amount}",
-    "historyNote": "Se guardan las últimas 50 rondas. Solo fichas virtuales, sin valor real."
+    "historyNote": "Se guardan las últimas 50 rondas. Solo fichas virtuales, sin valor real.",
+    "accountCoins": "Tus monedas se guardan en tu cuenta",
+    "guestChips": "Ahora juegas con fichas de invitado de este dispositivo",
+    "bonus": "Regalo de bienvenida",
+    "premium": "Tragamonedas premium",
+    "accountHistoryNote": "Últimas 50 operaciones de tu cuenta. Monedas virtuales, sin valor real.",
+    "accountName": "Este nombre se usa en las salas online"
   },
   "lobby": {
     "featured": "Destacados",
@@ -837,7 +856,8 @@
       "fairLocal": "Esta versión no tiene servidor: cada ronda se decide en tu dispositivo con el generador criptográfico del navegador y la matemática de esta máquina, y se cobra y paga en un solo paso, nunca dos veces. Como todo ocurre en tu dispositivo, no es a prueba de manipulación: al conectar el servidor del juego, el resultado y el saldo pasan a decidirse allí.",
       "fairRemote": "Cada ronda la decide el servidor con la matemática de esta máquina: comprueba tu saldo, registra la apuesta, sortea los rodillos, los giros gratis y el bonus, calcula el premio y actualiza tu saldo antes de responder. La pantalla solo reproduce lo recibido. Un reintento nunca cobra ni paga dos veces.",
       "virtual": "Solo fichas virtuales, sin valor real."
-    }
+    },
+    "modeAccount": "Monedas de tu cuenta · decide el servidor"
   },
   "hub": {
     "title": "Juegos",
@@ -1079,5 +1099,77 @@
       "rule": "Jugada no válida."
     },
     "polling": "sincronizando"
+  },
+  "account": {
+    "title": "Tu cuenta",
+    "subtitle": "Regístrate y recibe 1,000 monedas",
+    "subtitleUser": "Tus monedas y tu sesión",
+    "bonusTag": "Regalo de bienvenida",
+    "pitch": "Crea tu cuenta y recibe 1,000 monedas",
+    "pitchText": "Tus monedas se guardan en tu cuenta, a salvo, y te siguen en cualquier dispositivo.",
+    "withGoogle": "Continuar con Google",
+    "withDiscord": "Continuar con Discord",
+    "orEmail": "o con tu correo",
+    "signUp": "Crear cuenta",
+    "signIn": "Iniciar sesión",
+    "createAccount": "Crear cuenta y recibir 1,000",
+    "name": "Nombre (opcional)",
+    "namePlaceholder": "Cómo te verán en las salas",
+    "email": "Correo electrónico",
+    "password": "Contraseña",
+    "passwordHint": "Mínimo {n} caracteres.",
+    "showPassword": "Mostrar contraseña",
+    "hidePassword": "Ocultar contraseña",
+    "working": "Un momento…",
+    "forgot": "¿Olvidaste tu contraseña?",
+    "guestNote": "Puedes seguir jugando como invitado con las fichas de este dispositivo. Las monedas de cuenta solo existen al registrarte.",
+    "checkEmail": "Revisa tu correo",
+    "checkEmailText": "Te enviamos un enlace a {email}. Ábrelo para activar tu cuenta y recibir tus 1,000 monedas.",
+    "resetSent": "Revisa tu correo",
+    "resetSentText": "Si {email} tiene una cuenta, te enviamos un enlace para elegir una contraseña nueva.",
+    "sameBrowser": "Abre el enlace en este mismo navegador para entrar directamente. ¿No llega? Mira en spam.",
+    "resend": "Reenviar correo",
+    "resent": "Correo reenviado",
+    "backToSignIn": "Volver a iniciar sesión",
+    "via": "Sesión con {provider}",
+    "coins": "Monedas de tu cuenta",
+    "bonusDone": "Tu regalo de 1,000 monedas ya está en tu cuenta.",
+    "bonusPending": "Preparando tu regalo de bienvenida…",
+    "coinsError": "No pudimos consultar tus monedas. Revisa tu conexión.",
+    "retry": "Reintentar",
+    "claim": "Recibir 1,000 monedas",
+    "coinsNote": "Monedas virtuales sin valor real. Los resultados y el saldo los decide el servidor.",
+    "play": "Ir a jugar",
+    "signOut": "Cerrar sesión",
+    "signOutNote": "Al cerrar sesión vuelves a las fichas de invitado de este dispositivo. Tus monedas siguen en tu cuenta.",
+    "off": "Esta versión no tiene servidor de cuentas. Juegas como invitado con las fichas de este dispositivo.",
+    "loading": "Cargando tu cuenta…",
+    "newPassword": "Elige una contraseña nueva",
+    "savePassword": "Guardar contraseña",
+    "guestCta": "Regístrate: +1,000 monedas",
+    "guestCtaHint": "Monedas guardadas en tu cuenta",
+    "entry": "Cuenta",
+    "notice": {
+      "bonus": "¡Bienvenido! Recibiste {amount} monedas en tu cuenta.",
+      "welcome": "Sesión iniciada.",
+      "confirmed": "Correo confirmado. Inicia sesión para recibir tus monedas.",
+      "signedOut": "Sesión cerrada. Juegas como invitado.",
+      "passwordChanged": "Contraseña actualizada."
+    },
+    "errors": {
+      "invalid_credentials": "Correo o contraseña incorrectos.",
+      "email_not_confirmed": "Confirma tu correo primero: abre el enlace que te enviamos.",
+      "user_exists": "Ese correo ya tiene cuenta. Inicia sesión.",
+      "weak_password": "Esa contraseña es muy débil. Prueba una más larga.",
+      "invalid_email": "Ese correo no es válido.",
+      "bad_email": "Escribe un correo válido.",
+      "short_password": "La contraseña necesita al menos 8 caracteres.",
+      "rate_limited": "Demasiados intentos. Espera un poco y vuelve a probar.",
+      "provider_disabled": "Ese método de inicio de sesión aún no está activado.",
+      "signups_disabled": "Los registros están cerrados por ahora.",
+      "network": "Sin conexión con el servidor. Revisa tu internet.",
+      "link": "El enlace no es válido o ya caducó. Pide uno nuevo.",
+      "unknown": "Algo salió mal. Vuelve a intentarlo."
+    }
   }
 }

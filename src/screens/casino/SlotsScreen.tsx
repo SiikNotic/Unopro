@@ -10,7 +10,10 @@ import { useWallet } from '@/casino/useWallet';
 import type { LineWin, SlotSymbol } from '@/casino/slots';
 import { BET_PER_LINE, evaluateSpin, LINE_OPTIONS, LINES, lineSymbols, PAYTABLE, REELS, returnToPlayer, spinReels, visibleGrid, WILD, winCells } from '@/casino/slots';
 import { createRng } from '@/game/engine';
-import { cryptoRng, secureSeed } from '@/casino/random';
+import { cryptoRng, newId, secureSeed } from '@/casino/random';
+import { useAccount } from '@/account/useAccount';
+import { serverRound } from '@/account/serverRound';
+import type { SlotsResult } from '@/casino/server/protocol';
 import { useCountUp } from '@/hooks/useCountUp';
 import { useElementWidth } from '@/hooks/useViewport';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
@@ -18,6 +21,8 @@ import { storage } from '@/storage';
 import { playSfx } from '@/audio/sfx';
 
 const rng = cryptoRng();
+/** Marks a spin waiting for the account server (there is no local wallet round then). */
+const SERVER_LOCK = 'server';
 const BASE_DURATIONS = [900, 1150, 1400, 1650, 1900];
 const LOOPS = [2, 2, 3, 3, 4];
 /** Top symbols that make the last reels hold back once three of them line up. */
@@ -119,7 +124,11 @@ function HelpSheet({ onClose, rtp }: { onClose: () => void; rtp: string }) {
 
 export function SlotsScreen() {
   const { t } = useI18n();
-  const { balance, startRound, settleRound } = useWallet();
+  const { balance, startRound, settleRound, mode } = useWallet();
+  const account = useAccount();
+  const [error, setError] = useState<string | null>(null);
+  // Account mode: the balance to show once the reels stop.
+  const landBalance = useRef<number | null>(null);
   const reduced = useReducedMotion();
   const windowRef = useRef<HTMLDivElement>(null);
   const windowWidth = useElementWidth(windowRef);
@@ -156,8 +165,10 @@ export function SlotsScreen() {
       timers.current.forEach((id) => window.clearTimeout(id));
       window.clearTimeout(autoTimer.current);
       window.clearTimeout(previewTimer.current);
-      if (pendingRound.current) settleRound(pendingRound.current);
+      if (pendingRound.current && pendingRound.current !== SERVER_LOCK) settleRound(pendingRound.current);
+      if (landBalance.current !== null) account.setBalance(landBalance.current);
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only on unmount
     [settleRound]
   );
 
@@ -171,18 +182,8 @@ export function SlotsScreen() {
     }
   });
 
-  const doSpin = useCallback(() => {
-    if (pendingRound.current) return;
-    // Reels are drawn first; the stake and the payout they decide are fixed together in one wallet round.
-    const next = spinReels(rng);
-    const result = evaluateSpin(next, lines, betPerLine);
-    const id = startRound('slots', totalBet, result.total);
-    if (!id) {
-      playSfx('error');
-      setAutoLeft(0);
-      return;
-    }
-    pendingRound.current = id;
+  /** Spins the reels to `next` and shows what `result` pays when they stop. */
+  const present = useCallback((next: number[], result: ReturnType<typeof evaluateSpin>, onEnd: () => void) => {
     const nextTier = tierFor(result.total, totalBet, result.jackpot);
     const grid = visibleGrid(next);
     // Hold the last reels back only when three top symbols already line up on an active line.
@@ -215,7 +216,7 @@ export function SlotsScreen() {
     if (tease) later(plan[2], () => playSfx('anticipation'));
     const end = Math.max(...plan) + 180;
     later(end, () => {
-      settleRound(id);
+      onEnd();
       pendingRound.current = null;
       setSpinning(false);
       setOutcome({ id: Date.now(), total: result.total, bet: totalBet, tier: nextTier, wins: result.wins });
@@ -232,7 +233,50 @@ export function SlotsScreen() {
         });
       }
     });
-  }, [startRound, settleRound, totalBet, lines, betPerLine, reduced, stops]);
+  }, [totalBet, lines, reduced, stops]);
+
+  const doSpin = useCallback(() => {
+    if (pendingRound.current) return;
+    if (mode === 'account') {
+      if (totalBet > balance) {
+        playSfx('error');
+        setAutoLeft(0);
+        return;
+      }
+      // Account coins: the server draws the reels and books the round; the reels then show that result.
+      pendingRound.current = SERVER_LOCK;
+      setError(null);
+      void serverRound<SlotsResult>({ op: 'slots', requestId: newId(), lines, betPerLine }).then((res) => {
+        if (!res.ok) {
+          pendingRound.current = null;
+          setError(t(`casino.accountErrors.${res.code}`));
+          playSfx('error');
+          setAutoLeft(0);
+          void account.refreshCoins();
+          return;
+        }
+        const r = res.data;
+        account.setBalance(r.balance - r.payout);
+        landBalance.current = r.balance;
+        present(r.stops, evaluateSpin(r.stops, r.lines, r.betPerLine), () => {
+          account.setBalance(r.balance);
+          landBalance.current = null;
+        });
+      });
+      return;
+    }
+    // Reels are drawn first; the stake and the payout they decide are fixed together in one wallet round.
+    const next = spinReels(rng);
+    const result = evaluateSpin(next, lines, betPerLine);
+    const id = startRound('slots', totalBet, result.total);
+    if (!id) {
+      playSfx('error');
+      setAutoLeft(0);
+      return;
+    }
+    pendingRound.current = id;
+    present(next, result, () => settleRound(id));
+  }, [mode, balance, account, t, present, startRound, settleRound, totalBet, lines, betPerLine]);
 
   // Auto spin: keeps going while there are spins left and chips to cover the bet; a big win pauses it.
   const spinRef = useRef(doSpin);
@@ -305,7 +349,7 @@ export function SlotsScreen() {
   const bigBanner = banner && outcome && (tier === 'big' || tier === 'jackpot');
 
   return (
-    <CasinoFrame title={t('casino.slots.marquee')} subtitle={t('casino.slots.rules')} back="slotLobby" scenario="lounge" backdrop={<SaloonBackdrop />}>
+    <CasinoFrame title={t('casino.slots.marquee')} subtitle={t('casino.slots.rules')} back="slotLobby" scenario="lounge" backdrop={<SaloonBackdrop />} error={error}>
       {celebrating && !reduced && outcome && <CoinShower key={outcome.id} id={outcome.id} count={COINS[tier]} />}
       {help && <HelpSheet onClose={() => setHelp(false)} rtp={rtpLabel()} />}
 

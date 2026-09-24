@@ -1,4 +1,4 @@
-# Servidores opcionales: salas online y tragamonedas
+# Servidores opcionales: cuentas, salas online y tragamonedas
 
 Sin configurar nada, la web funciona en **modo local**: cada tirada se decide en el navegador con
 aleatoriedad criptográfica y se cobra/paga en un solo paso, idempotente. Eso protege contra dobles
@@ -51,10 +51,31 @@ Proyecto: `unopro-juegos`. Ver `docs/games-platform.md` para la arquitectura.
 Coste: cada cliente en partida hace un `tick` cada 0,7 s (bingo) o 1 s (dominó), y cada 3 s en el lobby.
 Solo las pestañas visibles lo hacen.
 
+## Cuentas y monedas de cuenta
+
+- **Invitado**: juega como siempre con las fichas de su navegador (recarga gratis incluida). No tiene fila en el servidor.
+- **Registrado** (correo confirmado, Google o Discord): recibe **una vez** 1,000 monedas en `account_wallets`.
+  Con sesión iniciada, Blackjack, Ruleta, Fiebre del Oro y las 8 tragamonedas premium juegan contra la
+  función `casino`: el servidor sortea con `crypto.getRandomValues`, reserva y paga en una transacción
+  (`account_play`, `bj_open`/`bj_step`) y responde con el resultado. El navegador solo envía la apuesta.
+- Los jugadores leen solo su saldo y su historial (RLS). Nadie puede escribir saldos desde el navegador; las
+  manos de blackjack en curso (con el mazo) no son legibles. La condición «registrado» se comprueba también en
+  la base de datos (`account_registered`: no anónimo y `email_confirmed_at` no nulo).
+
+Puesta en marcha (proyecto `unopro-juegos`):
+
+1. `migrations/20260926000000_accounts.sql` y la función `casino` (`npm run functions:build`; verificación JWT).
+2. Authentication → URL Configuration: *Site URL* `https://siiknotic.github.io/Unopro/` y en *Redirect URLs*
+   `https://siiknotic.github.io/Unopro/**` (y `http://localhost:5173/**` para desarrollo).
+3. Authentication → Providers: *Email* (con confirmación), *Google* y *Discord* con su Client ID / Secret.
+   En Google Cloud y en el Discord Developer Portal, la URL de retorno es
+   `https://mdwkigzorhvktgqlffck.supabase.co/auth/v1/callback`.
+4. Recomendado: SMTP propio (el correo integrado de Supabase envía muy pocos mensajes por hora).
+
 ## Pruebas
 
 - `npm test` incluye el manejador del servidor (`functions/_shared/__tests__`).
-- `tests/run_sql_tests.sh` prueba la migración contra un Postgres **local y desechable**
+- `tests/run_sql_tests.sh` prueba las migraciones (tragamonedas, salas y cuentas) contra un Postgres **local y desechable**
   (`tests/00_supabase_stub.sql` imita el esquema `auth` de Supabase; no lo apliques a un proyecto real):
   idempotencia, conflictos, límites, RLS/IDOR, permisos y 40 tiradas concurrentes.
 

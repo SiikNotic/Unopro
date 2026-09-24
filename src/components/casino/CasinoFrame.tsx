@@ -1,11 +1,12 @@
 import { useEffect } from 'react';
 import type { ReactNode } from 'react';
-import { ArrowLeft, Gift, HelpCircle, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, CircleUserRound, Gift, HelpCircle, ShieldCheck } from 'lucide-react';
 import { useNavigation } from '@/components/Navigation';
 import { SceneBackground } from '@/components/scene/SceneBackground';
 import { MusicButton } from '@/components/ui/MusicButton';
 import { useI18n } from '@/i18n';
 import { useWallet } from '@/casino/useWallet';
+import { useAccount } from '@/account/useAccount';
 import { REFILL_CHIPS } from '@/casino/wallet';
 import { scenarioStyle } from '@/game/scenarios/scenarios';
 import type { ScenarioId } from '@/game/scenarios/scenarios';
@@ -31,6 +32,8 @@ interface CasinoFrameProps {
   balanceOverride?: number | null;
   /** Offer the free refill when the wallet runs dry (default true). */
   allowRefill?: boolean;
+  /** A message about the last round (e.g. the account server refused or couldn't be reached). */
+  error?: string | null;
   children: ReactNode;
 }
 
@@ -38,10 +41,12 @@ interface CasinoFrameProps {
  * Shared shell for every casino game: a top bar that always says where you are and how to go back,
  * the table in the middle and the controls in a dock under the thumb. Respects notches and home bars.
  */
-export function CasinoFrame({ title, subtitle, back, scenario, backdrop, onHelp, dock, maxWidth = 'max-w-3xl', balanceOverride, allowRefill = true, children }: CasinoFrameProps) {
+export function CasinoFrame({ title, subtitle, back, scenario, backdrop, onHelp, dock, maxWidth = 'max-w-3xl', balanceOverride, allowRefill = true, error, children }: CasinoFrameProps) {
   const { back: goBack } = useNavigation();
   const { t } = useI18n();
-  const { balance, canRefill, refill, activeHere, playHere } = useWallet();
+  const { balance, canRefill, refill, activeHere, playHere, mode } = useWallet();
+  const account = useAccount();
+  const { navigate } = useNavigation();
 
   useEffect(() => {
     const unlock = () => unlockAudio();
@@ -67,7 +72,10 @@ export function CasinoFrame({ title, subtitle, back, scenario, backdrop, onHelp,
             <h1 className="font-display font-extrabold text-[17px] sm:text-xl leading-tight text-[var(--cz-ivory)] truncate">{title}</h1>
             {subtitle && <p className="hidden sm:block text-xs text-[var(--cz-muted)] truncate">{subtitle}</p>}
           </div>
-          <ChipBalance balance={balanceOverride === undefined ? balance : balanceOverride} />
+          <span className="flex flex-col items-end">
+            <ChipBalance balance={balanceOverride === undefined ? balance : balanceOverride} />
+            {mode === 'account' && <span className="text-[9px] font-bold uppercase tracking-[0.14em] text-[var(--cz-gold)] leading-none mt-0.5">{t('casino.accountBadge')}</span>}
+          </span>
           {onHelp && (
             <button type="button" onClick={onHelp} className="cz-btn cz-btn-secondary cz-icon-btn" aria-label={t('casino.rules')} title={t('casino.rules')}>
               <HelpCircle className="w-5 h-5" />
@@ -83,6 +91,33 @@ export function CasinoFrame({ title, subtitle, back, scenario, backdrop, onHelp,
             <p className="text-sm text-[var(--cz-ivory)] flex-1 min-w-0">{t('casino.otherTab')}</p>
             <button type="button" className="cz-btn cz-btn-primary cz-btn-sm shrink-0" onClick={playHere}>
               {t('casino.playHere')}
+            </button>
+          </div>
+        )}
+        {mode === 'account' && account.coinsError && (
+          <div className="cz-panel p-3 flex items-center gap-3 cz-fade-in" role="alert">
+            <p className="text-sm text-[var(--cz-ivory)] flex-1 min-w-0">{t('account.coinsError')}</p>
+            <button type="button" className="cz-btn cz-btn-secondary cz-btn-sm shrink-0" onClick={() => void account.refreshCoins()}>
+              {t('account.retry')}
+            </button>
+          </div>
+        )}
+        {error && (
+          <div className="cz-panel p-3 text-sm text-[#ffd0d0] cz-fade-in" role="alert">
+            {error}
+          </div>
+        )}
+        {mode === 'account' && account.coins && account.coins.balance < 10 && (
+          <div className="cz-panel p-3 text-sm text-[var(--cz-ivory)] cz-fade-in" role="status">
+            {t('casino.accountBroke')}
+          </div>
+        )}
+        {canRefill && allowRefill && activeHere && account.status === 'guest' && (
+          <div className="cz-panel p-3 flex items-center gap-3 cz-fade-in" role="status">
+            <p className="text-sm text-[var(--cz-ivory)] flex-1 min-w-0">{t('casino.guestUpsell')}</p>
+            <button type="button" className="cz-btn cz-btn-secondary cz-btn-sm shrink-0" onClick={() => navigate('account')}>
+              <CircleUserRound className="w-4 h-4" />
+              {t('account.signUp')}
             </button>
           </div>
         )}

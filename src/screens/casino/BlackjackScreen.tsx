@@ -11,7 +11,10 @@ import { useWallet } from '@/casino/useWallet';
 import { MIN_BET } from '@/casino/wallet';
 import * as bj from '@/casino/blackjack';
 import type { PlayingCard } from '@/casino/cards';
-import { cryptoRng, secureSeed } from '@/casino/random';
+import { cryptoRng, newId, secureSeed } from '@/casino/random';
+import { useAccount } from '@/account/useAccount';
+import { serverRound } from '@/account/serverRound';
+import type { BlackjackView } from '@/casino/server/protocol';
 import { shuffle } from '@/casino/cards';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useViewport } from '@/hooks/useViewport';
@@ -50,6 +53,20 @@ function saveRound(round: SavedRound) {
     // best effort
   }
 }
+
+/** Stands in for the dealer's hole card while the server keeps it hidden (always drawn face down). */
+const HOLE: PlayingCard = { id: 'hole', rank: '2', suit: 'S' };
+
+/** The server's view of an account hand as a table the screen can draw (no shoe on this side). */
+const tableOf = (v: BlackjackView): bj.BlackjackState => ({
+  phase: v.phase,
+  shoe: [],
+  rngState: 0,
+  hands: v.hands,
+  active: v.active,
+  dealer: v.dealer.map((c) => c ?? HOLE),
+  results: v.results,
+});
 
 /** Clears a hand from the table while keeping the shoe (used when a restored hand was already closed). */
 const clearHand = (t: bj.BlackjackState): bj.BlackjackState => ({ ...t, phase: 'BETTING', hands: [], dealer: [], results: [], active: 0 });
@@ -92,7 +109,13 @@ const OUTCOME_PILL: Record<bj.Outcome, string> = {
 
 export function BlackjackScreen() {
   const { t } = useI18n();
-  const { balance, startRound, raiseStake, settleRound, isOpen, openStake } = useWallet();
+  const { balance, startRound, raiseStake, settleRound, isOpen, openStake, mode } = useWallet();
+  const account = useAccount();
+  const accountMode = mode === 'account';
+  const [error, setError] = useState<string | null>(null);
+  // Account mode: the server's id for the hand on the table, and a lock while a request is in flight.
+  const handRef = useRef<string | null>(null);
+  const serverBusy = useRef(false);
   const reduced = useReducedMotion();
   const { width: vw, height: vh } = useViewport();
   const [initial] = useState(() => {
@@ -121,8 +144,67 @@ export function BlackjackScreen() {
   const lockUntil = useRef<Record<string, number>>({});
 
   useEffect(() => {
-    saveRound({ roundId: roundRef.current, table, lastBet });
-  }, [table, lastBet]);
+    // Account hands live on the server; only a guest's hand is kept in this tab.
+    if (!accountMode) saveRound({ roundId: roundRef.current, table, lastBet });
+  }, [table, lastBet, accountMode]);
+
+  /** Shows what the server answered for an account hand. */
+  const showServer = (v: BlackjackView) => {
+    const next = tableOf(v);
+    const was = tableRef.current;
+    handRef.current = v.phase === 'PLAYER' ? v.requestId : null;
+    tableRef.current = next;
+    setTable(next);
+    account.setBalance(v.balance);
+    if (next.phase === 'SETTLED' && was.phase !== 'SETTLED') resultPending.current = true;
+  };
+
+  // Signed in: pick up a hand left in play (another device, a reload) from the server.
+  useEffect(() => {
+    if (!accountMode) return;
+    let cancelled = false;
+    const fresh = bj.createBlackjack(secureSeed());
+    tableRef.current = fresh;
+    setTable(fresh);
+    roundRef.current = null;
+    void serverRound<{ table: BlackjackView | null; balance: number }>({ op: 'bj' }).then((res) => {
+      if (cancelled || !res.ok) return;
+      account.setBalance(res.data.balance);
+      if (res.data.table) {
+        prevPhase.current = res.data.table.phase;
+        showServer(res.data.table);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per switch to account coins
+  }, [accountMode]);
+
+  /** One request for an account hand; a refused or stale step resyncs the table from the server. */
+  const onServer = async (req: Parameters<typeof serverRound>[0]) => {
+    if (serverBusy.current) return;
+    serverBusy.current = true;
+    setError(null);
+    const res = await serverRound<BlackjackView>(req);
+    serverBusy.current = false;
+    if (res.ok) return showServer(res.data);
+    playSfx('error');
+    setError(t(`casino.accountErrors.${res.code}`));
+    if (res.code === 'conflict') {
+      const again = await serverRound<{ table: BlackjackView | null; balance: number }>({ op: 'bj' });
+      if (again.ok) {
+        account.setBalance(again.data.balance);
+        if (again.data.table) showServer(again.data.table);
+        else if (tableRef.current.phase === 'PLAYER') {
+          const cleared = clearHand(tableRef.current);
+          tableRef.current = cleared;
+          handRef.current = null;
+          setTable(cleared);
+        }
+      }
+    } else void account.refreshCoins();
+  };
 
   const settledVisible = table.phase === 'SETTLED' && dealerShown >= table.dealer.length;
 
@@ -198,6 +280,20 @@ export function BlackjackScreen() {
   const dealWith = (amount: number) =>
     guarded('deal', () => {
       if (tableRef.current.phase === 'PLAYER') return;
+      if (accountMode) {
+        if (amount < MIN_BET || amount > balance) {
+          playSfx('error');
+          return;
+        }
+        playSfx('roundStart');
+        setVoided(false);
+        setLastBet(amount);
+        setBet(0);
+        setDealerShown(2);
+        prevPhase.current = 'BETTING';
+        void onServer({ op: 'bj_deal', requestId: newId(), bet: amount });
+        return;
+      }
       const id = amount >= MIN_BET ? startRound('blackjack', amount, null) : null;
       if (!id) {
         playSfx('error');
@@ -219,6 +315,15 @@ export function BlackjackScreen() {
     guarded(action, () => {
       const current = tableRef.current;
       const allowed = action === 'double' ? bj.canDouble(current) : bj.canSplit(current);
+      if (accountMode) {
+        if (!allowed || !handRef.current || balance < bj.extraStake(current, action)) {
+          playSfx('error');
+          return;
+        }
+        playSfx('chip');
+        void onServer({ op: 'bj_act', requestId: handRef.current, action });
+        return;
+      }
       if (!allowed || !roundRef.current || !raiseStake(roundRef.current, bj.extraStake(current, action))) {
         playSfx('error');
         return;
@@ -227,8 +332,12 @@ export function BlackjackScreen() {
       act(action === 'double' ? bj.double : bj.split);
     });
 
-  const hit = () => guarded('hit', () => { playSfx('draw'); act(bj.hit); });
-  const stand = () => guarded('stand', () => { playSfx('turn'); act(bj.stand); });
+  const serverStep = (action: 'hit' | 'stand') => {
+    if (!handRef.current) return;
+    void onServer({ op: 'bj_act', requestId: handRef.current, action });
+  };
+  const hit = () => guarded('hit', () => { playSfx('draw'); if (accountMode) serverStep('hit'); else act(bj.hit); });
+  const stand = () => guarded('stand', () => { playSfx('turn'); if (accountMode) serverStep('stand'); else act(bj.stand); });
 
   const inPlay = table.phase === 'PLAYER';
   const hasRound = table.hands.length > 0;
@@ -319,6 +428,7 @@ export function BlackjackScreen() {
       backdrop={<SaloonBackdrop />}
       onHelp={() => setHelp(true)}
       dock={dock}
+      error={error}
     >
       {help && (
         <RulesSheet

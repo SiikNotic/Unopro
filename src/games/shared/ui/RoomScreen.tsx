@@ -3,6 +3,7 @@ import { ArrowLeft, Bot, Check, CloudOff, Copy, Crown, KeyRound, LogOut, Play, U
 import { useNavigation } from '@/components/Navigation';
 import { useI18n } from '@/i18n';
 import { useProfileName } from '@/settings/profile';
+import { useAccount } from '@/account/useAccount';
 import type { TableGame } from '@/types/navigation';
 import { newRoomCode, parseRoomCode } from '../multiplayer/roomCode';
 import { loadBingoSetup, loadDominoSetup, saveBingoSetup, saveDominoSetup } from '../setup';
@@ -49,7 +50,8 @@ function RoomEntry({ game, cfg, joining }: { game: TableGame; cfg: OnlineConfig;
   const { t } = useI18n();
   const { back, navigate } = useNavigation();
   const [profileName, saveName] = useProfileName();
-  const [name, setName] = useState(profileName || '');
+  const account = useAccount();
+  const [name, setName] = useState(profileName || account.user?.name || '');
   const [seats, setSeats] = useState(4);
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);

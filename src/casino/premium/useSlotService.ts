@@ -6,6 +6,8 @@ import { createRemoteSlotService } from './remoteHouse';
 import { createAnonAuth } from './anonAuth';
 import { remoteConfig } from './config';
 import type { SlotService } from './service';
+import { onlineConfig, tokenFor } from '@/games/online/client';
+import { casinoUrl } from '@/account/casinoApi';
 
 export const receiptStore = {
   all(): unknown[] {
@@ -29,10 +31,15 @@ storage.remove('carta.slots.receipts');
 
 /** The server when one is configured at build time, otherwise the local house on the wallet ledger. */
 export function useSlotService(): SlotService {
-  const { balance, bookInstantRound, wasSettled } = useWallet();
+  const { balance, bookInstantRound, wasSettled, mode } = useWallet();
   const balanceRef = useRef(balance);
   balanceRef.current = balance;
   return useMemo(() => {
+    // A signed-in player plays for account coins: the casino server decides and books every spin.
+    const online = mode === 'account' ? onlineConfig() : null;
+    if (online) {
+      return createRemoteSlotService({ url: casinoUrl(online), getToken: () => tokenFor(online), headers: { apikey: online.apiKey } });
+    }
     const remote = remoteConfig();
     if (remote) {
       return createRemoteSlotService({
@@ -42,5 +49,5 @@ export function useSlotService(): SlotService {
       });
     }
     return createLocalSlotService({ book: bookInstantRound, wasSettled, getBalance: () => balanceRef.current, store: receiptStore });
-  }, [bookInstantRound, wasSettled]);
+  }, [mode, bookInstantRound, wasSettled]);
 }

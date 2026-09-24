@@ -8,7 +8,10 @@ import { useI18n } from '@/i18n';
 import { useWallet } from '@/casino/useWallet';
 import type { Bet, BetType } from '@/casino/roulette';
 import { betWins, pocketColor, POCKETS, sameSpot, spin, totalPayout, WHEEL_ORDER } from '@/casino/roulette';
-import { cryptoRng } from '@/casino/random';
+import { cryptoRng, newId } from '@/casino/random';
+import { useAccount } from '@/account/useAccount';
+import { serverRound } from '@/account/serverRound';
+import type { RouletteResult } from '@/casino/server/protocol';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useViewport } from '@/hooks/useViewport';
 import { playSfx } from '@/audio/sfx';
@@ -25,7 +28,12 @@ const COLOR_CLASS = { red: 'roulette-red', black: 'roulette-black', green: 'roul
 
 export function RouletteScreen() {
   const { t } = useI18n();
-  const { balance, startRound, settleRound } = useWallet();
+  const { balance, startRound, settleRound, mode } = useWallet();
+  const account = useAccount();
+  const [error, setError] = useState<string | null>(null);
+  // Account mode: a round on the server in flight, and the balance to show once the ball lands.
+  const serverBusy = useRef(false);
+  const landBalance = useRef<number | null>(null);
   const reduced = useReducedMotion();
   const { width: vw, height: vh } = useViewport();
   const [bets, setBets] = useState<Bet[]>([]);
@@ -49,7 +57,9 @@ export function RouletteScreen() {
     () => () => {
       window.clearTimeout(timer.current);
       if (pendingRound.current) settleRound(pendingRound.current);
+      if (landBalance.current !== null) account.setBalance(landBalance.current);
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only on unmount
     [settleRound]
   );
 
@@ -72,10 +82,36 @@ export function RouletteScreen() {
     setBets([...base, { type, value, amount: chip }]);
   };
 
+  /** Turns the wheel to `n` and reveals the result when the ball lands. */
+  const animateTo = (n: number, payout: number, onLand: () => void) => {
+    const index = WHEEL_ORDER.indexOf(n);
+    const target = (((-index * SLICE - rotor) % 360) + 360) % 360;
+    setRotor(rotor + 360 * 4 + target);
+    setBall(ball - 360 * 6 - (((ball % 360) + 360) % 360));
+    playSfx('wheel');
+    wheelRef.current?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'center' });
+
+    timer.current = window.setTimeout(
+      () => {
+        onLand();
+        setResult(n);
+        setWon(payout);
+        setPhase('result');
+        setHistory((h) => (savedHistory = [n, ...h].slice(0, 12)));
+        playSfx(payout > 0 ? 'cashIn' : 'defeat');
+      },
+      reduced ? 250 : SPIN_MS
+    );
+  };
+
   const doSpin = (placed: Bet[]) => {
+    const total = placed.reduce((s, b) => s + b.amount, 0);
+    if (mode === 'account') {
+      void spinOnServer(placed, total);
+      return;
+    }
     // A second tap before React re-renders must not start a second spin.
     if (pendingRound.current) return;
-    const total = placed.reduce((s, b) => s + b.amount, 0);
     // The result is drawn first and fixed in the wallet round together with the stake.
     const n = spin(rng);
     const payout = totalPayout(placed, n);
@@ -89,26 +125,42 @@ export function RouletteScreen() {
     setLastBets(placed);
     setResult(null);
     setPhase('spinning');
+    animateTo(n, payout, () => {
+      settleRound(id);
+      pendingRound.current = null;
+    });
+  };
 
-    const index = WHEEL_ORDER.indexOf(n);
-    const target = (((-index * SLICE - rotor) % 360) + 360) % 360;
-    setRotor(rotor + 360 * 4 + target);
-    setBall(ball - 360 * 6 - (((ball % 360) + 360) % 360));
-    playSfx('wheel');
-    wheelRef.current?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'center' });
-
-    timer.current = window.setTimeout(
-      () => {
-        settleRound(id);
-        pendingRound.current = null;
-        setResult(n);
-        setWon(payout);
-        setPhase('result');
-        setHistory((h) => (savedHistory = [n, ...h].slice(0, 12)));
-        playSfx(payout > 0 ? 'cashIn' : 'defeat');
-      },
-      reduced ? 250 : SPIN_MS
-    );
+  /** Account coins: the server spins, books and answers; the wheel then shows that result. */
+  const spinOnServer = async (placed: Bet[], total: number) => {
+    if (serverBusy.current || landBalance.current !== null) return;
+    if (total <= 0 || total > balance) {
+      playSfx('error');
+      return;
+    }
+    serverBusy.current = true;
+    setError(null);
+    setBets(placed);
+    setLastBets(placed);
+    setResult(null);
+    setPhase('spinning');
+    const res = await serverRound<RouletteResult>({ op: 'roulette', requestId: newId(), bets: placed });
+    serverBusy.current = false;
+    if (!res.ok) {
+      setPhase('idle');
+      setError(t(`casino.accountErrors.${res.code}`));
+      playSfx('error');
+      void account.refreshCoins();
+      return;
+    }
+    const r = res.data;
+    // The stake is gone now; the winnings show when the ball lands.
+    account.setBalance(r.balance - r.payout);
+    landBalance.current = r.balance;
+    animateTo(r.pocket, r.payout, () => {
+      account.setBalance(r.balance);
+      landBalance.current = null;
+    });
   };
 
   const spinning = phase === 'spinning';
@@ -222,6 +274,7 @@ export function RouletteScreen() {
       back="gameModes"
       scenario="city"
       onHelp={() => setHelp(true)}
+      error={error}
       dock={dock}
       maxWidth="max-w-5xl"
     >

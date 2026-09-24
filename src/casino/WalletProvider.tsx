@@ -6,6 +6,8 @@ import type { CasinoGame, InstantRefusal, WalletData } from './ledger';
 import { normalizeWallet, openRound, playRound, raiseStake as raise, RECOVER_AFTER_MS, recoverRounds, refillWallet, settleRound as settle } from './ledger';
 import { newId } from './random';
 import { WALLET_RESET_EVENT, WalletContext } from './walletContext';
+import type { WalletContextValue } from './walletContext';
+import { useAccount } from '@/account/useAccount';
 
 const KEY = 'carta.wallet';
 /** Only the tab holding this lock may place bets (see below). */
@@ -188,8 +190,33 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const isOpen = useCallback((id: string) => read().open.some((o) => o.id === id), [read]);
   const openStake = useCallback((id: string) => read().open.find((o) => o.id === id)?.stake ?? null, [read]);
 
-  const value = useMemo(
-    () => ({
+  const account = useAccount();
+  const accountMode = account.status === 'user';
+  const accountBalance = account.coins?.balance ?? 0;
+
+  const value = useMemo<WalletContextValue>(() => {
+    if (accountMode) {
+      // Signed in: the balance is the account's, and nothing here may move coins (the server does).
+      return {
+        mode: 'account',
+        balance: accountBalance,
+        canRefill: false,
+        refill: () => {},
+        history: [],
+        stats: wallet.stats,
+        startRound: () => null,
+        raiseStake: () => false,
+        settleRound: () => 0,
+        isOpen: () => false,
+        openStake: () => null,
+        bookInstantRound: () => ({ ok: false, reason: 'elsewhere' }),
+        wasSettled: () => false,
+        activeHere: true,
+        playHere: () => {},
+      };
+    }
+    return {
+      mode: 'local',
       balance: wallet.balance,
       canRefill: canRefill(wallet.balance),
       refill,
@@ -204,8 +231,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       wasSettled,
       activeHere,
       playHere,
-    }),
-    [wallet, refill, startRound, raiseStake, settleRound, isOpen, openStake, bookInstantRound, wasSettled, activeHere, playHere]
-  );
+    };
+  }, [accountMode, accountBalance, wallet, refill, startRound, raiseStake, settleRound, isOpen, openStake, bookInstantRound, wasSettled, activeHere, playHere]);
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
 }

@@ -503,7 +503,20 @@
     "addChips": "Add chips to the bet",
     "betOf": "Bet of {amount}",
     "otherTab": "You're playing in another tab. Betting is paused here so balances never mix.",
-    "playHere": "Play here"
+    "playHere": "Play here",
+    "accountBadge": "Account",
+    "accountBroke": "You're out of account coins. Account coins don't refill for free.",
+    "guestUpsell": "Want 1,000 coins you keep? Create your account.",
+    "accountErrors": {
+      "unauthorized": "Your session expired. Sign in again.",
+      "account_required": "Confirm your email to play with account coins.",
+      "insufficient_funds": "You don't have enough coins for that bet.",
+      "invalid_bet": "That bet isn't valid.",
+      "conflict": "That play was already processed. The table was updated.",
+      "rate_limited": "Too fast. Wait a second.",
+      "bad_request": "That play couldn't be made.",
+      "server": "Can't reach the server. Your coins are safe: try again."
+    }
   },
   "profile": {
     "title": "Profile",
@@ -523,7 +536,13 @@
     "history": "Latest rounds",
     "empty": "You haven't played a casino round yet.",
     "betShort": "bet {amount}",
-    "historyNote": "The last 50 rounds are kept. Virtual chips only, no real value."
+    "historyNote": "The last 50 rounds are kept. Virtual chips only, no real value.",
+    "accountCoins": "Your coins are kept in your account",
+    "guestChips": "You're playing with this device's guest chips",
+    "bonus": "Welcome gift",
+    "premium": "Premium slots",
+    "accountHistoryNote": "Your account's last 50 entries. Virtual coins with no real value.",
+    "accountName": "This name is used in online rooms"
   },
   "lobby": {
     "featured": "Featured",
@@ -837,7 +856,8 @@
       "fairLocal": "This version has no server: every round is decided on your device with the browser's cryptographic generator and this machine's math, charged and paid in one step, never twice. Because it all happens on your device it is not tamper-proof: once the game server is connected, results and balance are decided there.",
       "fairRemote": "Every round is decided by the server with this machine's math: it checks your balance, books the bet, draws the reels, free spins and bonus, computes the payout and updates your balance before answering. The screen only replays what it receives. A retry never charges or pays twice.",
       "virtual": "Virtual chips only, no real value."
-    }
+    },
+    "modeAccount": "Your account coins · decided by the server"
   },
   "hub": {
     "title": "Games",
@@ -1079,5 +1099,77 @@
       "rule": "Invalid move."
     },
     "polling": "syncing"
+  },
+  "account": {
+    "title": "Your account",
+    "subtitle": "Sign up and get 1,000 coins",
+    "subtitleUser": "Your coins and session",
+    "bonusTag": "Welcome gift",
+    "pitch": "Create your account and get 1,000 coins",
+    "pitchText": "Your coins are kept safe in your account and follow you to any device.",
+    "withGoogle": "Continue with Google",
+    "withDiscord": "Continue with Discord",
+    "orEmail": "or with your email",
+    "signUp": "Create account",
+    "signIn": "Sign in",
+    "createAccount": "Create account and get 1,000",
+    "name": "Name (optional)",
+    "namePlaceholder": "How others see you in rooms",
+    "email": "Email",
+    "password": "Password",
+    "passwordHint": "At least {n} characters.",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "working": "One moment…",
+    "forgot": "Forgot your password?",
+    "guestNote": "You can keep playing as a guest with this device's chips. Account coins only exist once you sign up.",
+    "checkEmail": "Check your email",
+    "checkEmailText": "We sent a link to {email}. Open it to activate your account and get your 1,000 coins.",
+    "resetSent": "Check your email",
+    "resetSentText": "If {email} has an account, we sent a link to choose a new password.",
+    "sameBrowser": "Open the link in this same browser to sign straight in. Not there? Check spam.",
+    "resend": "Resend email",
+    "resent": "Email sent again",
+    "backToSignIn": "Back to sign in",
+    "via": "Signed in with {provider}",
+    "coins": "Account coins",
+    "bonusDone": "Your 1,000-coin gift is in your account.",
+    "bonusPending": "Getting your welcome gift ready…",
+    "coinsError": "We couldn't load your coins. Check your connection.",
+    "retry": "Try again",
+    "claim": "Get 1,000 coins",
+    "coinsNote": "Virtual coins with no real value. Results and balance are decided by the server.",
+    "play": "Go play",
+    "signOut": "Sign out",
+    "signOutNote": "Signing out takes you back to this device's guest chips. Your coins stay in your account.",
+    "off": "This version has no account server. You play as a guest with this device's chips.",
+    "loading": "Loading your account…",
+    "newPassword": "Choose a new password",
+    "savePassword": "Save password",
+    "guestCta": "Sign up: +1,000 coins",
+    "guestCtaHint": "Coins kept in your account",
+    "entry": "Account",
+    "notice": {
+      "bonus": "Welcome! You got {amount} coins in your account.",
+      "welcome": "Signed in.",
+      "confirmed": "Email confirmed. Sign in to get your coins.",
+      "signedOut": "Signed out. You're playing as a guest.",
+      "passwordChanged": "Password updated."
+    },
+    "errors": {
+      "invalid_credentials": "Wrong email or password.",
+      "email_not_confirmed": "Confirm your email first: open the link we sent you.",
+      "user_exists": "That email already has an account. Sign in.",
+      "weak_password": "That password is too weak. Try a longer one.",
+      "invalid_email": "That email isn't valid.",
+      "bad_email": "Enter a valid email.",
+      "short_password": "The password needs at least 8 characters.",
+      "rate_limited": "Too many tries. Wait a bit and try again.",
+      "provider_disabled": "That sign-in method isn't enabled yet.",
+      "signups_disabled": "Sign-ups are closed for now.",
+      "network": "Can't reach the server. Check your internet.",
+      "link": "The link isn't valid or has expired. Ask for a new one.",
+      "unknown": "Something went wrong. Try again."
+    }
   }
 }

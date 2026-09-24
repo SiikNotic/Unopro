@@ -2,6 +2,11 @@ import { createContext } from 'react';
 import type { CasinoGame, HistoryEntry, InstantRefusal, WalletStats } from './ledger';
 
 export interface WalletContextValue {
+  /**
+   * 'local': a guest's practice chips in this browser. 'account': a signed-in player's account coins on
+   * the server; the games then ask the server for every round, and the local round functions refuse.
+   */
+  mode: 'local' | 'account';
   balance: number;
   canRefill: boolean;
   /** Free refill, only while the balance can't cover the smallest bet. */

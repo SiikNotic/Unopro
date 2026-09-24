@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Runs the slot and game-room SQL tests against a THROWAWAY local Postgres (never a real project).
+# Runs the slot, game-room and accounts SQL tests against a THROWAWAY local Postgres (never a real project).
 # Usage: PGHOST=... PGPORT=... PGUSER=postgres supabase/tests/run_sql_tests.sh
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -15,6 +15,9 @@ psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20260925000000_game_rooms.s
 # applying it twice must be harmless too
 psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20260925000000_game_rooms.sql
 psql -q -v ON_ERROR_STOP=1 -d "$DB" -f game_rooms_test.sql
+psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20260926000000_accounts.sql
+psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20260926000000_accounts.sql
+psql -q -v ON_ERROR_STOP=1 -d "$DB" -f accounts_test.sql
 
 # Concurrency: 40 parallel commits for one player who can afford only 5 bets of 200 (balance 1000),
 # 10 of them replaying the same request id. Exactly 5 distinct spins may be booked, never a negative balance.
@@ -28,4 +31,15 @@ wait
 read -r SPINS BAL REPLAYS < <(psql -At -F ' ' -d "$DB" -c "select (select count(*) from public.slot_spins where user_id = '00000000-0000-0000-0000-0000000000cc'), (select balance from public.casino_wallets where user_id = '00000000-0000-0000-0000-0000000000cc'), (select count(*) from public.slot_spins where request_id = '$REPLAY')")
 echo "concurrency: spins=$SPINS balance=$BAL replayed_id_rows=$REPLAYS"
 [ "$SPINS" = 5 ] && [ "$BAL" = 0 ] && [ "$REPLAYS" -le 1 ] || { echo "CONCURRENCY TEST FAILED"; exit 1; }
+
+# Concurrency on account coins: 30 parallel roulette bookings of 250 for a player with 1,000 coins.
+psql -q -d "$DB" -c "insert into auth.users (id, email_confirmed_at) values ('00000000-0000-0000-0000-0000000000dd', now())"
+psql -q -d "$DB" -c "set role service_role; select * from public.account_claim_bonus('00000000-0000-0000-0000-0000000000dd', gen_random_uuid())" >/dev/null
+for i in $(seq 1 30); do
+  psql -q -d "$DB" -c "set role service_role; select * from public.account_play('00000000-0000-0000-0000-0000000000dd', gen_random_uuid(), 'roulette', 250, 0, '{}')" >/dev/null 2>&1 &
+done
+wait
+read -r ROUNDS ABAL < <(psql -At -F ' ' -d "$DB" -c "select (select count(*) from public.account_ledger where user_id = '00000000-0000-0000-0000-0000000000dd' and game = 'roulette'), (select balance from public.account_wallets where user_id = '00000000-0000-0000-0000-0000000000dd')")
+echo "account concurrency: rounds=$ROUNDS balance=$ABAL"
+[ "$ROUNDS" = 4 ] && [ "$ABAL" = 0 ] || { echo "ACCOUNT CONCURRENCY TEST FAILED"; exit 1; }
 echo "all SQL tests passed"

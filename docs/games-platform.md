@@ -56,6 +56,14 @@ How an online room works (server-authoritative):
 - Tests: `src/games/online/__tests__/handler.test.ts` (flows, hidden info, races, impersonation, timing)
   and `supabase/tests/game_rooms_test.sql` (RLS, permissions, version conflicts).
 
+### Accounts
+
+Guests keep the browser's practice chips. Registered players (confirmed email, Google or Discord; see
+`src/account`) get a one-time 1,000-coin credit on the server and play the casino games for account coins:
+`supabase/functions/casino` (handler in `src/casino/server/handler.ts`) draws every round and books it in the
+database; the screens only animate what it answered. Sign-in uses Supabase Auth over plain fetch (PKCE for
+Google / Discord and email links), stored in the same session slot the online rooms use.
+
 ## Domino rules (as implemented)
 
 - **Tiles and deal:** a double-six set of 28 tiles. Every player gets 7. The rest is the boneyard: 14 tiles

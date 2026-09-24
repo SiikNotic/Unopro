@@ -15,6 +15,7 @@ import '@/components/slots/premiumSlots.css';
 import { useNavigation } from '@/components/Navigation';
 import { useI18n } from '@/i18n';
 import { useWallet } from '@/casino/useWallet';
+import { useAccount } from '@/account/useAccount';
 import { usePreferences, vibrate } from '@/settings/usePreferences';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useElementWidth } from '@/hooks/useViewport';
@@ -215,6 +216,13 @@ function Machine({ machine }: { machine: MachineId }) {
     }
   }, [remote, service]);
   useEffect(() => void refreshHouseBalance(), [refreshHouseBalance]);
+
+  // Signed in: keep the account balance (home, profile) in step with what the server answered.
+  const account = useAccount();
+  const setAccountBalance = account.setBalance;
+  useEffect(() => {
+    if (wallet.mode === 'account' && typeof houseBalance === 'number') setAccountBalance(houseBalance);
+  }, [wallet.mode, houseBalance, setAccountBalance]);
 
   const liveBalance = remote ? houseBalance : wallet.balance;
   const displayBalance = held ?? liveBalance;
@@ -961,7 +969,7 @@ function Machine({ machine }: { machine: MachineId }) {
 
       <p className="mc-mode justify-center">
         {remote ? <Server className="w-3.5 h-3.5" aria-hidden /> : <Smartphone className="w-3.5 h-3.5" aria-hidden />}
-        {remote ? t('slotsPremium.modeRemote') : t('slotsPremium.modeLocal')}
+        {wallet.mode === 'account' ? t('slotsPremium.modeAccount') : remote ? t('slotsPremium.modeRemote') : t('slotsPremium.modeLocal')}
         <button type="button" className="underline underline-offset-2 inline-flex items-center gap-1" onClick={() => setSheet('rules')}>
           <Info className="w-3 h-3" aria-hidden />
           {t('slotsPremium.howItWorks')}

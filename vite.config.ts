@@ -10,7 +10,7 @@ const cspFor = (apiOrigins: string[]) => [
   "script-src 'self'",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' https://fonts.gstatic.com",
-  "img-src 'self' data:",
+  "img-src 'self' data: https://lh3.googleusercontent.com https://cdn.discordapp.com",
   "media-src 'self'",
   // The Supabase origin (and its Realtime websocket), only when one is configured at build time.
   ["connect-src 'self'", ...apiOrigins].join(' '),

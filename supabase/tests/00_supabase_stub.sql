@@ -18,3 +18,6 @@ grant usage on schema public to anon, authenticated, service_role;
 alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
 alter default privileges in schema public grant all on functions to anon, authenticated, service_role;
 alter default privileges in schema public grant all on sequences to anon, authenticated, service_role;
+-- Columns of the real auth.users that the accounts migration reads.
+alter table auth.users add column if not exists is_anonymous boolean not null default false;
+alter table auth.users add column if not exists email_confirmed_at timestamptz;
