@@ -3,6 +3,7 @@ import { REELS, stripsOf } from '@/casino/premium/engine';
 import type { MachineMath } from '@/casino/premium/engine';
 import { ReelMotion } from '@/casino/premium/reelMotion';
 import { SymbolArt } from './SymbolArt';
+import { art3d } from './art3d';
 import type { MachinePresentation } from './presentation';
 
 const CELLS = 5;
@@ -184,7 +185,7 @@ export const ReelSet = forwardRef<ReelSetHandle, ReelSetProps>(function ReelSet(
             {Array.from({ length: CELLS }, (_, j) => (
               <div key={j} ref={(el) => (cells.current[r][j] = el)} className="ps-cell" style={{ height: cellHeight }}>
                 {order.map((sym) => (
-                  <SymbolArt key={sym} def={look.symbols[sym]} style={look.style} kind={math.symbols[sym].kind} />
+                  <SymbolArt key={sym} def={look.symbols[sym]} style={look.style} kind={math.symbols[sym].kind} src={art3d(math.id, sym)} />
                 ))}
               </div>
             ))}

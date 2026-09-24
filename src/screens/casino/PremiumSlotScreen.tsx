@@ -4,7 +4,8 @@ import { CasinoFrame } from '@/components/casino/CasinoFrame';
 import { ReelSet } from '@/components/slots/ReelSet';
 import type { ReelSetHandle } from '@/components/slots/ReelSet';
 import { Particles } from '@/components/slots/Particles';
-import { Cabinet } from '@/components/slots/Cabinet';
+import { Cabinet, MachineBackdrop, MachineLogo } from '@/components/slots/Cabinet';
+import { machineArt } from '@/components/slots/art3d';
 import { isLiteDevice } from '@/components/slots/device';
 import { GLYPHS } from '@/components/slots/glyphs';
 import { SlotHistorySheet, SlotRulesSheet } from '@/components/slots/SlotSheets';
@@ -111,6 +112,7 @@ function Machine({ machine }: { machine: MachineId }) {
   const { t, language } = useI18n();
   const math = MACHINES[machine];
   const look = PRESENTATION[machine];
+  const art = machineArt(machine);
   const service = useSlotService();
   const wallet = useWallet();
   const { preferences, setPreference } = usePreferences();
@@ -742,7 +744,8 @@ function Machine({ machine }: { machine: MachineId }) {
           </div>
           <button
             type="button"
-            className={`mc-spin is-${spinState === 'idle' ? (celebrating ? 'win' : 'ready') : spinState}`}
+            className={`mc-spin is-${spinState === 'idle' ? (celebrating ? 'win' : 'ready') : spinState} ${art.spin ? 'has-3d' : ''}`}
+            style={art.spin ? ({ '--spin-art': `url(${art.spin})` } as React.CSSProperties) : undefined}
             onClick={onSpinButton}
             disabled={spinState === 'spinning' || spinState === 'disabled' || spinState === 'feature'}
             aria-label={spinState === 'stop' ? t('slotsPremium.skipAria') : t('slotsPremium.spinAria', { amount: bet })}
@@ -825,15 +828,15 @@ function Machine({ machine }: { machine: MachineId }) {
         </div>
       )}
       <header className="mc-top">
-        <h2 className="mc-logo">{machineName}</h2>
+        <MachineLogo id={machine} name={machineName} as="h2" />
         <p className="mc-sub">{t(`slotsPremium.machines.${machine}.tag`)}</p>
       </header>
       <div
         ref={windowRef}
-        className={`mc-window ${voided ? 'opacity-60' : ''}`}
+        className={`mc-window ${voided ? 'opacity-60' : ''} ${art.frame ? 'has-3d' : ''}`}
         role="img"
         aria-label={idle ? gridLabel : t('slotsPremium.spinning')}
-        style={{ '--ch': `${cellHeight}px` } as React.CSSProperties}
+        style={{ '--ch': `${cellHeight}px`, ...(art.frame ? { '--frame': `url(${art.frame})` } : {}) } as React.CSSProperties}
       >
         {machine === 'pirates' && <span className="pr-compass" aria-hidden />}
         <ReelSet ref={reels} math={math} look={look} initialStops={initialStops} cellHeight={cellHeight} reduced={reduced} highlight={highlight} onReelLand={onReelLand} />
@@ -940,6 +943,7 @@ function Machine({ machine }: { machine: MachineId }) {
       subtitle={t(`slotsPremium.machines.${machine}.tag`)}
       back="slotLobby"
       scenario="lounge"
+      backdrop={<MachineBackdrop id={machine} />}
       onHelp={() => setSheet('rules')}
       dock={sideways ? undefined : dock}
       maxWidth={sideways ? 'max-w-5xl' : 'max-w-2xl'}

@@ -7,6 +7,7 @@ import { MACHINES } from '@/casino/premium/machines';
 import { MACHINE_STATS } from '@/casino/premium/machineStats';
 import type { HistoryItem } from '@/casino/premium/journal';
 import { SymbolArt } from './SymbolArt';
+import { art3d } from './art3d';
 import { PRESENTATION } from './presentation';
 
 /** Bottom sheet on phones, centred dialog on wider screens; Esc or a tap outside closes it. */
@@ -79,7 +80,7 @@ export function SlotRulesSheet({ machine, bet, remote, onClose }: { machine: Mac
   const art = (s: string) => (
     <span className={`mc-${machine} sl-art !p-0`} style={{ ...(look.palette as React.CSSProperties), width: 48 }}>
       <span className="ps-tile-sym rounded-lg" style={{ '--ch': '46px' } as React.CSSProperties}>
-        <SymbolArt def={look.symbols[s]} style={look.style} kind={m.symbols[s].kind} />
+        <SymbolArt def={look.symbols[s]} style={look.style} kind={m.symbols[s].kind} src={art3d(machine, s)} />
       </span>
     </span>
   );

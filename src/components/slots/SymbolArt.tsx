@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import type { SymbolKind } from '@/casino/premium/engine';
 import { GLYPHS } from './glyphs';
 import type { SymbolArtDef, SymbolStyle } from './presentation';
@@ -7,13 +7,24 @@ interface SymbolArtProps {
   def: SymbolArtDef;
   style: SymbolStyle;
   kind: SymbolKind;
+  /** Pre-rendered 3D art; the vector art below is the fallback if it is missing or fails to load. */
+  src?: string;
 }
 
 /**
  * One symbol drawn in its machine's style (printed ink, cut gems, struck coins, embers, candy bubbles,
- * sepia ink, neon, black enamel). Decorative: the reel window carries the accessible description.
+ * sepia ink, neon, black enamel), as a pre-rendered 3D image when one exists. Decorative: the reel window carries the accessible description.
  */
-export const SymbolArt = memo(function SymbolArt({ def, style, kind }: SymbolArtProps) {
+export const SymbolArt = memo(function SymbolArt({ def, style, kind, src }: SymbolArtProps) {
+  const [broken, setBroken] = useState(false);
+  if (src && !broken) {
+    return (
+      <span className={`ps-sym ps-s-${style} ps-3d ps-k-${kind}`} aria-hidden>
+        <img className="ps-3d-img" src={src} alt="" draggable={false} decoding="async" onError={() => setBroken(true)} />
+        {kind === 'wild' && <span className="ps-tag ps-tag-wild">WILD</span>}
+      </span>
+    );
+  }
   const vars = { '--c1': def.c1, '--c2': def.c2, '--ink': def.ink ?? 'transparent' } as React.CSSProperties;
   let body: React.ReactNode;
   let shape = 'art';

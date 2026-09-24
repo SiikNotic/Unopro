@@ -2,8 +2,9 @@ import { Play } from 'lucide-react';
 import { useNavigation } from '@/components/Navigation';
 import { CasinoFrame } from '@/components/casino/CasinoFrame';
 import { SlotSymbolIcon } from '@/components/casino/slotSymbols';
-import { Cabinet } from '@/components/slots/Cabinet';
+import { Cabinet, MachineLogo } from '@/components/slots/Cabinet';
 import { SymbolArt } from '@/components/slots/SymbolArt';
+import { art3d } from '@/components/slots/art3d';
 import { MachineFacts, Sheet } from '@/components/slots/SlotSheets';
 import { PRESENTATION } from '@/components/slots/presentation';
 import '@/components/slots/premiumSlots.css';
@@ -30,7 +31,7 @@ function Art({ id, symbols }: { id: MachineId; symbols: string[] }) {
     <div className="sl-art mc-window" aria-hidden>
       {symbols.map((s) => (
         <span key={s} className="ps-tile-sym ps-reel">
-          <SymbolArt def={look.symbols[s]} style={look.style} kind={m.symbols[s].kind} />
+          <SymbolArt def={look.symbols[s]} style={look.style} kind={m.symbols[s].kind} src={art3d(id, s)} />
         </span>
       ))}
     </div>
@@ -44,7 +45,7 @@ function Tile({ id, onOpen }: { id: MachineId; onOpen: () => void }) {
     <button type="button" className={`sl-tile mc-${id}`} style={PRESENTATION[id].palette as React.CSSProperties} onClick={onOpen} aria-label={t('slotsPremium.openPreview', { name: t(`slotsPremium.machines.${id}.name`) })}>
       <Cabinet id={id} compact>
         <header className="mc-top">
-          <span className="mc-logo block">{t(`slotsPremium.machines.${id}.name`)}</span>
+          <MachineLogo id={id} name={t(`slotsPremium.machines.${id}.name`)} />
           <span className="sl-status">{t('slotsPremium.available')}</span>
         </header>
         <Art id={id} symbols={signature(id)} />
@@ -74,7 +75,7 @@ function Preview({ id, onPlay, onClose }: { id: MachineId; onPlay: () => void; o
       <div className={`sl-tile mc-${id} pointer-events-none`} style={PRESENTATION[id].palette as React.CSSProperties}>
         <Cabinet id={id} compact>
           <header className="mc-top">
-            <span className="mc-logo block">{t(`slotsPremium.machines.${id}.name`)}</span>
+            <MachineLogo id={id} name={t(`slotsPremium.machines.${id}.name`)} />
             <span className="mc-sub block">{t(`slotsPremium.machines.${id}.tag`)}</span>
           </header>
           <Art id={id} symbols={all} />

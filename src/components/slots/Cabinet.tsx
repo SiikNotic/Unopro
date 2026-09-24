@@ -2,6 +2,7 @@ import { memo, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import type { MachineId } from '@/casino/premium/engine';
 import { PRESENTATION } from './presentation';
+import { art3d } from './art3d';
 
 const Bulbs = ({ where, n }: { where: 'top' | 'bottom'; n: number }) => (
   <span className={`lk-bulbs ${where}`} aria-hidden>
@@ -143,6 +144,22 @@ export function Cabinet({ id, className = '', spinning = false, lite = false, co
           {children}
         </div>
       </div>
+    </div>
+  );
+}
+
+/** The machine's name as its cast 3D logo (the image's alt text is the name), or as styled text if the art is missing. */
+export function MachineLogo({ id, name, as: Tag = 'span' }: { id: MachineId; name: string; as?: 'span' | 'h2' }) {
+  const src = art3d(id, 'logo');
+  return <Tag className={`mc-logo block ${src ? 'has-3d' : ''}`}>{src ? <img src={src} alt={name} draggable={false} decoding="async" /> : name}</Tag>;
+}
+
+/** Full-screen scenery behind a machine (Vegas lights, a jeweller's vault, a temple, a volcano…), pure CSS. */
+export function MachineBackdrop({ id }: { id: MachineId }) {
+  return (
+    <div className={`mb mb-${id}`} aria-hidden>
+      <span className="mb-glow" />
+      <span className="mb-bokeh" />
     </div>
   );
 }

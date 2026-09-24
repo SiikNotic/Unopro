@@ -54,7 +54,7 @@ export function CasinoFrame({ title, subtitle, back, scenario, backdrop, onHelp,
       <div className="fixed inset-0" aria-hidden>
         {backdrop ?? <SceneBackground scenario={scenario} />}
         {/* keep the backdrop as atmosphere; the game stays the brightest thing on screen */}
-        <div className="absolute inset-0 bg-[#0a0e0c]/60" />
+        <div className={`absolute inset-0 ${backdrop ? "bg-[#0a0e0c]/35" : "bg-[#0a0e0c]/60"}`} />
       </div>
 
       <header className="cz-topbar cz-safe-x">
