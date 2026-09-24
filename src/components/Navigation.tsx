@@ -28,6 +28,12 @@ interface HistoryState extends Entry {
 
 const NavigationContext = createContext<NavigationContextValue | null>(null);
 
+/**
+ * A match screen is never re-entered from history or a reload: that would silently start a new match.
+ * It lands on the game's setup instead.
+ */
+const MATCH_FALLBACK: Partial<Record<Screen, Screen>> = { play: 'gameModes', domino: 'dominoSetup', bingo: 'bingoSetup' };
+
 /** Only well-formed screens and params are accepted from history (it survives reloads and can be edited). */
 function sanitize(raw: unknown): HistoryState | null {
   if (!raw || typeof raw !== 'object') return null;
@@ -43,17 +49,20 @@ function cleanParams(raw: unknown): ScreenParams {
   if (p.mode && GAME_MODES.some((m) => m.id === p.mode && m.enabled)) out.mode = p.mode;
   if (typeof p.topic === 'string' && /^[a-z]{2,16}$/.test(p.topic)) out.topic = p.topic;
   if (isMachineId(p.machine)) out.machine = p.machine;
+  if (p.game === 'domino' || p.game === 'bingo') out.game = p.game;
+  if (p.join === true) out.join = true;
   return out;
 }
 
 const sameEntry = (a: Entry | null, screen: Screen, params: ScreenParams) =>
-  !!a && a.screen === screen && (a.params.topic ?? '') === (params.topic ?? '') && (a.params.mode ?? '') === (params.mode ?? '') && (a.params.machine ?? '') === (params.machine ?? '');
+  !!a && a.screen === screen && (a.params.topic ?? '') === (params.topic ?? '') && (a.params.mode ?? '') === (params.mode ?? '') && (a.params.machine ?? '') === (params.machine ?? '') && (a.params.game ?? '') === (params.game ?? '') && !!a.params.join === !!params.join;
 
 export function NavigationProvider({ children }: { children: ReactNode }) {
   const [entry, setEntry] = useState<Entry>(() => {
     const restored = typeof window !== 'undefined' ? sanitize(window.history.state) : null;
-    // A reload during a Carta game goes back to the picker instead of silently dealing a new game.
-    if (restored?.screen === 'play') return { screen: 'gameModes', params: {} };
+    // A reload during a match goes back to its setup instead of silently dealing a new game.
+    const fallback = restored && MATCH_FALLBACK[restored.screen];
+    if (fallback) return { screen: fallback, params: {} };
     return restored ?? { screen: 'home', params: {} };
   });
   const state = useRef<HistoryState>({ carta: true, ...entry, depth: 0, prev: null });
@@ -67,9 +76,10 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     const onPop = (e: PopStateEvent) => {
       popping.current = false;
       let next = sanitize(e.state) ?? { carta: true as const, screen: 'home' as Screen, params: {}, depth: 0, prev: null };
-      // Never re-enter a Carta game through back/forward: that would silently deal a brand-new game.
-      if (next.screen === 'play') {
-        next = { ...next, screen: 'gameModes', params: {} };
+      // Never re-enter a match through back/forward: that would silently deal a brand-new game.
+      const fallback = MATCH_FALLBACK[next.screen];
+      if (fallback) {
+        next = { ...next, screen: fallback, params: {} };
         window.history.replaceState(next, '');
       }
       state.current = next;

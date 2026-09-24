@@ -1,0 +1,92 @@
+/* ==========================================================================
+   Games hub (home), match setup and room screens. Built on the cz-* design system.
+   ========================================================================== */
+
+/* extra button roles of the shared system */
+.cz-btn-danger { background: #a3222f; color: #fff1f2; box-shadow: 0 1px 0 rgba(255, 255, 255, 0.18) inset, 0 6px 16px -8px rgba(163, 34, 47, 0.7); }
+.cz-btn-danger:hover:not(:disabled) { background: #b92a38; }
+.cz-btn-game { min-height: 52px; padding: 0 22px; border-radius: 16px; font-size: 16px; letter-spacing: 0.02em; box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35), 0 1px 0 rgba(255, 255, 255, 0.3) inset, 0 12px 24px -12px rgba(216, 178, 106, 0.8); }
+.cz-btn-game:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0, 0, 0, 0.35), 0 1px 0 rgba(255, 255, 255, 0.3) inset; }
+
+/* ---------- hub cards ---------- */
+.hub-grid { display: grid; gap: 12px; }
+@media (min-width: 720px) { .hub-grid { grid-template-columns: repeat(3, 1fr); gap: 16px; } }
+.hub-card {
+  position: relative; display: flex; flex-direction: column; overflow: hidden; text-align: left; border-radius: 24px; min-height: 196px;
+  border: 1px solid rgba(255, 255, 255, 0.1); background: var(--hub-bg); color: #fff; isolation: isolate;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08) inset, 0 24px 40px -24px rgba(0, 0, 0, 0.95);
+  transition: transform 0.25s cubic-bezier(0.2, 0.9, 0.3, 1.2), box-shadow 0.25s ease, border-color 0.25s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.hub-card::before { content: ''; position: absolute; inset: 0; z-index: -1; background: var(--hub-texture); opacity: 0.9; }
+.hub-card::after { content: ''; position: absolute; inset: 0; z-index: -1; background: radial-gradient(70% 60% at 78% 20%, var(--hub-light), transparent 70%); }
+.hub-card:hover { transform: translateY(-3px); border-color: rgba(255, 236, 200, 0.28); box-shadow: 0 1px 0 rgba(255, 255, 255, 0.1) inset, 0 30px 50px -26px rgba(0, 0, 0, 1); }
+.hub-card:active { transform: scale(0.98); }
+.hub-card:focus-visible { outline: 2px solid var(--cz-gold); outline-offset: 3px; }
+.hub-art { position: absolute; right: -4px; top: 12px; transition: transform 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.2); }
+.hub-card:hover .hub-art, .hub-card:focus-visible .hub-art { transform: translateY(-4px) rotate(-2deg); }
+.hub-body { position: relative; margin-top: auto; padding: 16px; background: linear-gradient(0deg, rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0.35) 60%, transparent); }
+.hub-name { font-size: 26px; line-height: 1; letter-spacing: 0.01em; }
+.hub-carta .hub-name { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; font-weight: 800; }
+.hub-domino .hub-name { font-family: 'Cormorant Garamond', Georgia, serif; font-weight: 700; font-size: 30px; }
+.hub-bingo .hub-name { font-family: 'Lilita One', 'Plus Jakarta Sans', sans-serif; font-weight: 400; font-size: 30px; letter-spacing: 0.03em; }
+.hub-desc { margin-top: 4px; font-size: 13px; line-height: 1.35; color: rgba(255, 255, 255, 0.78); max-width: 32ch; }
+.hub-meta { display: flex; align-items: center; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.hub-chip { display: inline-flex; align-items: center; gap: 5px; min-height: 26px; padding: 0 9px; border-radius: 999px; font-size: 11.5px; font-weight: 700; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.14); }
+.hub-live { width: 7px; height: 7px; border-radius: 50%; background: #5ee39a; box-shadow: 0 0 0 3px rgba(94, 227, 154, 0.2); }
+.hub-go { margin-left: auto; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; color: var(--cz-gold-ink); background: var(--cz-gold); box-shadow: 0 6px 14px -6px rgba(216, 178, 106, 0.8); }
+.hub-bounce { animation: hub-bounce 2.6s ease-in-out infinite; }
+@keyframes hub-bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+
+.hub-carta { --hub-bg: radial-gradient(120% 90% at 70% 10%, #1b5f73 0%, #0d2f3f 45%, #07141c 100%); --hub-light: rgba(120, 220, 255, 0.24); --hub-texture: repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.025) 0 2px, transparent 2px 7px); }
+.hub-domino { --hub-bg: linear-gradient(180deg, #4a2c16, #2a170a); --hub-light: rgba(255, 214, 150, 0.3); --hub-texture: repeating-linear-gradient(92deg, rgba(0, 0, 0, 0.12) 0 2px, transparent 2px 11px), repeating-linear-gradient(88deg, rgba(255, 220, 170, 0.04) 0 1px, transparent 1px 23px); }
+.hub-bingo { --hub-bg: radial-gradient(120% 90% at 70% 10%, #6a2a9a 0%, #2d0f52 55%, #140526 100%); --hub-light: rgba(255, 120, 200, 0.28); --hub-texture: radial-gradient(circle, rgba(255, 209, 102, 0.35) 0 1.5px, transparent 2px) 0 0 / 22px 22px; }
+
+/* hub → game transition: the card's colour grows to fill the screen, then the game fades in */
+.hub-portal { position: fixed; z-index: 80; pointer-events: none; border-radius: 24px; }
+.screen-in { animation: screen-in 0.36s ease both; }
+@keyframes screen-in { from { opacity: 0; transform: scale(0.985); } }
+
+/* ---------- setup ---------- */
+.ms { position: relative; min-height: 100dvh; display: flex; flex-direction: column; color: #fff; overflow-x: clip; }
+.ms-top { position: relative; z-index: 3; display: flex; align-items: center; gap: 8px; padding: max(8px, var(--safe-top, 0px)) 12px 4px; }
+.ms-main { position: relative; z-index: 2; width: 100%; max-width: 640px; margin: 0 auto; padding: 0 14px max(20px, var(--safe-bottom, 0px)); display: flex; flex-direction: column; gap: 14px; }
+.ms-hero { position: relative; display: flex; align-items: center; gap: 12px; min-height: 150px; padding: 16px; border-radius: 24px; overflow: hidden; background: var(--hub-bg); border: 1px solid rgba(255, 255, 255, 0.1); isolation: isolate; }
+.ms-hero::before { content: ''; position: absolute; inset: 0; z-index: -1; background: var(--hub-texture); }
+.ms-hero::after { content: ''; position: absolute; inset: 0; z-index: -1; background: radial-gradient(70% 70% at 80% 30%, var(--hub-light), transparent 70%); }
+.ms-panel { padding: 14px; border-radius: 20px; background: rgba(12, 12, 16, 0.72); border: 1px solid rgba(255, 255, 255, 0.1); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+.ms-row + .ms-row { margin-top: 14px; }
+.ms-label { display: block; margin-bottom: 8px; font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(255, 255, 255, 0.6); }
+.ms-seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; padding: 4px; border-radius: 14px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.08); }
+.ms-seg button { min-height: 42px; border-radius: 10px; font-size: 13.5px; font-weight: 700; color: rgba(255, 255, 255, 0.75); transition: background 0.15s ease, color 0.15s ease; }
+.ms-seg button[aria-pressed='true'] { color: var(--cz-gold-ink); background: var(--cz-gold); box-shadow: 0 4px 12px -6px rgba(216, 178, 106, 0.8); }
+.ms-seg button:focus-visible { outline: 2px solid var(--cz-gold); outline-offset: 1px; }
+.ms-seats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.ms-seat { display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 84px; padding: 8px 4px; border-radius: 14px; background: rgba(255, 255, 255, 0.04); border: 1px dashed rgba(255, 255, 255, 0.14); font-size: 11.5px; font-weight: 700; color: rgba(255, 255, 255, 0.72); text-align: center; }
+.ms-seat.is-on { border-style: solid; border-color: rgba(216, 178, 106, 0.45); background: rgba(216, 178, 106, 0.08); color: #fff; }
+button.ms-seat:focus-visible { outline: 2px solid var(--cz-gold); outline-offset: 2px; }
+.ms-seat .ms-av { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: rgba(255, 255, 255, 0.08); }
+.ms-seat.is-on .ms-av { background: radial-gradient(circle at 35% 30%, #fff3d4, #d9b56a 55%, #8c6420); color: #231708; }
+@media (max-width: 379px) { .ms-seat small { display: none; } }
+.ms-seat small { font-size: 10px; font-weight: 600; color: rgba(255, 255, 255, 0.55); }
+.ms-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.ms-chip { min-height: 36px; padding: 0 12px; border-radius: 999px; font-size: 12.5px; font-weight: 700; color: rgba(255, 255, 255, 0.78); background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.12); }
+.ms-chip[aria-pressed='true'] { color: #fff; border-color: rgba(216, 178, 106, 0.8); background: rgba(216, 178, 106, 0.16); }
+.ms-online { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.ms-note { font-size: 12px; line-height: 1.45; color: rgba(255, 255, 255, 0.6); }
+
+/* ---------- room ---------- */
+.rm-code { display: flex; justify-content: center; gap: 6px; }
+.rm-code span { width: 46px; height: 58px; display: grid; place-items: center; border-radius: 12px; font-family: 'Plus Jakarta Sans', monospace; font-size: 26px; font-weight: 800; color: #fff; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.16); box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.3); }
+.rm-seat { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 8px 12px; border-radius: 14px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.1); }
+.rm-seat.is-waiting { border-style: dashed; color: rgba(255, 255, 255, 0.55); }
+.rm-dots i { display: inline-block; width: 5px; height: 5px; margin-left: 3px; border-radius: 50%; background: currentColor; animation: rm-dot 1.2s ease-in-out infinite; }
+.rm-dots i:nth-child(2) { animation-delay: 0.2s; } .rm-dots i:nth-child(3) { animation-delay: 0.4s; }
+@keyframes rm-dot { 0%, 100% { opacity: 0.25; } 50% { opacity: 1; } }
+.rm-input { width: 100%; min-height: 48px; padding: 0 14px; border-radius: 12px; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.16); color: #fff; font-size: 18px; font-weight: 800; letter-spacing: 0.3em; text-transform: uppercase; }
+.rm-input:focus { outline: 2px solid var(--cz-gold); outline-offset: 1px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hub-card, .hub-art, .hub-bounce, .screen-in, .rm-dots i { animation: none !important; transition: none !important; }
+}
+[data-motion='off'] .hub-bounce, [data-motion='off'] .screen-in, [data-motion='off'] .rm-dots i, [data-motion='off'] .hub-art { animation: none !important; transition: none !important; }

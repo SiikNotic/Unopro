@@ -13,10 +13,11 @@ import { useProfileName } from '@/settings/profile';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useViewport } from '@/hooks/useViewport';
 import type { Screen } from '@/types/navigation';
+import { GamesHub } from '@/games/shared/ui/GamesHub';
 
 interface GameEntry {
   id: LobbyGame;
-  /** Carta goes to its mode selection; casino games open directly. */
+  /** Casino games open directly (Carta lives in the games hub above). */
   screen: Screen;
 }
 
@@ -24,7 +25,6 @@ const GAMES: GameEntry[] = [
   { id: 'blackjack', screen: 'blackjack' },
   { id: 'roulette', screen: 'roulette' },
   { id: 'slots', screen: 'slotLobby' },
-  { id: 'carta', screen: 'gameModes' },
 ];
 
 const HERO_MS = 6500;
@@ -142,7 +142,7 @@ function GameTile({ game, onPlay }: { game: GameEntry; onPlay: () => void }) {
           <p className="font-display font-bold text-[15px] leading-tight text-white line-clamp-2">{t(`lobby.name.${game.id}`)}</p>
           <p className="text-[11px] text-[var(--cz-muted)] truncate">{t(`lobby.tag.${game.id}`)}</p>
         </div>
-        <span className="flex-none w-9 h-9 rounded-full bg-[var(--cz-gold)] text-[var(--cz-gold-ink)] flex items-center justify-center transition-transform group-active:scale-90" aria-hidden>
+        <span className="hidden sm:flex flex-none w-9 h-9 rounded-full bg-[var(--cz-gold)] text-[var(--cz-gold-ink)] items-center justify-center transition-transform group-active:scale-90" aria-hidden>
           <Play className="w-4 h-4 ml-0.5" fill="currentColor" />
         </span>
       </div>
@@ -205,21 +205,23 @@ export function HomeScreen() {
           <h1 className="font-display font-extrabold text-2xl sm:text-3xl text-white leading-tight">{t('lobby.headline')}</h1>
         </div>
 
-        <div className="lobby-rise" style={{ animationDelay: '60ms' }}>
-          <Hero onPlay={play} />
-        </div>
+        <section className="lobby-rise" style={{ animationDelay: '60ms' }} aria-labelledby="lobby-hub">
+          <div className="mb-3">
+            <h2 id="lobby-hub" className="font-display font-bold text-lg text-white">{t('hub.title')}</h2>
+            <p className="text-xs text-[var(--cz-muted)]">{t('hub.hint')}</p>
+          </div>
+          <GamesHub />
+        </section>
 
         <section className="lobby-rise" style={{ animationDelay: '120ms' }} aria-labelledby="lobby-games">
           <div className="flex items-end justify-between gap-3 mb-3">
             <div>
-              <h2 id="lobby-games" className="font-display font-bold text-lg text-white">{t('lobby.games')}</h2>
-              <p className="text-xs text-[var(--cz-muted)]">{t('lobby.gamesHint')}</p>
+              <h2 id="lobby-games" className="font-display font-bold text-lg text-white">{t('lobby.casino')}</h2>
+              <p className="text-xs text-[var(--cz-muted)]">{t('lobby.casinoHint')}</p>
             </div>
-            <button type="button" onClick={() => navigate('gameModes')} className="cz-btn cz-btn-quiet cz-btn-sm -mr-2 text-[var(--cz-gold)]">
-              {t('lobby.seeAll')} <ChevronRight className="w-4 h-4" />
-            </button>
           </div>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <Hero onPlay={play} />
+          <div className="grid grid-cols-3 gap-2.5 sm:gap-4 mt-3">
             {GAMES.map((g) => (
               <GameTile key={g.id} game={g} onPlay={() => play(g)} />
             ))}

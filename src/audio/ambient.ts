@@ -1,10 +1,13 @@
-// Each machine's ambient music, generated live (no files) at the Music volume. Only one runs at a time,
+// Each machine's (and Domino's / Bingo's) ambient music, generated live (no files) at the Music volume. Only one runs at a time,
 // it stays silent while the tab is hidden, and it replaces the lobby's background music while it plays.
 import type { MachineId } from '@/casino/premium/engine';
 import { withAudio } from './sfx';
 import { musicGain } from './music';
 import { bell, noise, note, pluck, tone } from './voices';
 import type { Voice } from './voices';
+
+/** Slot machines plus the table games that bring their own music. */
+export type AmbientId = MachineId | 'domino' | 'bingo';
 
 interface Pattern {
   /** Seconds per beat. */
@@ -15,7 +18,7 @@ interface Pattern {
 const chord = (v: Voice, t: number, notes: number[], dur: number, type: OscillatorType, gain: number, lowpass?: number) =>
   notes.forEach((n) => tone(v, t, note(n), dur, { type, gain, attack: dur * 0.35, lowpass }));
 
-export const AMBIENT: Record<MachineId, Pattern> = {
+export const AMBIENT: Record<AmbientId, Pattern> = {
   // Casino floor: a low murmur and far-off bells.
   lucky7s: {
     beat: 1,
@@ -86,12 +89,38 @@ export const AMBIENT: Record<MachineId, Pattern> = {
       if (r() < 0.35) pluck(v, t + 0.8, note(prog[i % 4][Math.floor(r() * 3)] + 12), 0.03, 1.2);
     },
   },
+  // Domino: an unhurried café trio. Warm ninth chords, a walking bass, brushes on the snare.
+  domino: {
+    beat: 0.72,
+    play: (v, t, i, r) => {
+      const bar = Math.floor(i / 4) % 4;
+      const roots = [-19, -14, -21, -16]; // D, G, B, E (ii–V–iii–vi in C, low register)
+      const chords = [[-7, -3, 0, 4], [-2, 2, 5, 9], [-5, -1, 2, 5], [-8, -4, -1, 3]];
+      if (i % 4 === 0) chord(v, t, chords[bar], 2.6, 'triangle', 0.01, 1400);
+      const walk = [0, 7, 12, 10][i % 4];
+      pluck(v, t, note(roots[bar] + walk - 12), 0.05, 0.6, 'sine');
+      noise(v, t + (i % 2 ? 0.02 : 0), 0.22, { type: 'highpass', freq: 5200, gain: i % 2 ? 0.014 : 0.006, attack: 0.08 });
+      if (r() < 0.22) pluck(v, t + 0.36, note(chords[bar][Math.floor(r() * 4)] + 12), 0.018, 0.7);
+    },
+  },
+  // Bingo: a bright, bouncy groove. Pumping bass, offbeat chords, handclaps on 2 and 4, glockenspiel hooks.
+  bingo: {
+    beat: 0.3,
+    play: (v, t, i, r) => {
+      const bar = Math.floor(i / 8) % 4;
+      const roots = [-9, -4, -2, -7]; // C, F, G, A-minor
+      if (i % 2 === 0) tone(v, t, note(roots[bar] - 12), 0.22, { type: 'triangle', gain: 0.06, lowpass: 900 });
+      if (i % 2 === 1) chord(v, t, [0, 4, 7].map((n) => roots[bar] + 12 + n), 0.18, 'square', 0.006, 2600);
+      if (i % 4 === 2) noise(v, t, 0.09, { freq: 1400, gain: 0.03, q: 1.2 });
+      if (i % 8 === 0 && r() < 0.6) [0, 4, 7, 12].forEach((n, k) => bell(v, t + k * 0.075, note(roots[bar] + 24 + n), 0.012, 0.5));
+    },
+  },
 };
 
-let active: { machine: MachineId; stop: () => void; setVolume: (v: number) => void } | null = null;
+let active: { machine: AmbientId; stop: () => void; setVolume: (v: number) => void } | null = null;
 
 /** Starts (or retargets) the machine's ambient music. Safe to call repeatedly. */
-export function startAmbient(machine: MachineId, volume: number): void {
+export function startAmbient(machine: AmbientId, volume: number): void {
   if (active?.machine === machine) {
     active.setVolume(volume);
     return;

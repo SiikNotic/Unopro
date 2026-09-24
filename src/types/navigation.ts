@@ -1,8 +1,11 @@
 import type { GameModeId } from '@/game/rules/modes';
 
-export type Screen = 'home' | 'gameModes' | 'settings' | 'tutorial' | 'play' | 'blackjack' | 'roulette' | 'slots' | 'profile' | 'slotLobby' | 'slotMachine';
+export type Screen = 'home' | 'gameModes' | 'settings' | 'tutorial' | 'play' | 'blackjack' | 'roulette' | 'slots' | 'profile' | 'slotLobby' | 'slotMachine' | 'dominoSetup' | 'domino' | 'bingoSetup' | 'bingo' | 'room';
 
-export const SCREENS: Screen[] = ['home', 'gameModes', 'settings', 'tutorial', 'play', 'blackjack', 'roulette', 'slots', 'profile', 'slotLobby', 'slotMachine'];
+export const SCREENS: Screen[] = ['home', 'gameModes', 'settings', 'tutorial', 'play', 'blackjack', 'roulette', 'slots', 'profile', 'slotLobby', 'slotMachine', 'dominoSetup', 'domino', 'bingoSetup', 'bingo', 'room'];
+
+/** Table games with their own setup, room and match screens. */
+export type TableGame = 'domino' | 'bingo';
 
 export interface ScreenParams {
   mode?: GameModeId;
@@ -10,6 +13,10 @@ export interface ScreenParams {
   topic?: string;
   /** Open slot machine (MachineId). */
   machine?: string;
+  /** Game of the room screen. */
+  game?: TableGame;
+  /** Room screen opened to join (with a code) rather than to create. */
+  join?: boolean;
 }
 
 export type ScreenChangeEvent = { from: Screen | null; to: Screen };

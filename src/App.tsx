@@ -17,6 +17,11 @@ import type { Screen } from '@/types/navigation';
 
 // The slot machines (engine, math, art, sounds) load only when a player opens them.
 const SlotLobbyScreen = lazy(() => import('@/screens/casino/SlotLobbyScreen').then((m) => ({ default: m.SlotLobbyScreen })));
+// Domino and Bingo (engines, tiles, balls, scenes) load when a player opens them.
+const MatchSetupScreen = lazy(() => import('@/games/shared/ui/MatchSetupScreen').then((m) => ({ default: m.MatchSetupScreen })));
+const RoomScreen = lazy(() => import('@/games/shared/ui/RoomScreen').then((m) => ({ default: m.RoomScreen })));
+const DominoScreen = lazy(() => import('@/games/domino/ui/DominoScreen').then((m) => ({ default: m.DominoScreen })));
+const BingoScreen = lazy(() => import('@/games/bingo/ui/BingoScreen').then((m) => ({ default: m.BingoScreen })));
 const PremiumSlotScreen = lazy(() => import('@/screens/casino/PremiumSlotScreen').then((m) => ({ default: m.PremiumSlotScreen })));
 
 function ScreenRouter() {
@@ -34,6 +39,11 @@ function ScreenRouter() {
     profile: <ProfileScreen />,
     slotLobby: <SlotLobbyScreen />,
     slotMachine: <PremiumSlotScreen />,
+    dominoSetup: <MatchSetupScreen key="domino" game="domino" />,
+    domino: <DominoScreen />,
+    bingoSetup: <MatchSetupScreen key="bingo" game="bingo" />,
+    bingo: <BingoScreen />,
+    room: <RoomScreen />,
   };
 
   return (
