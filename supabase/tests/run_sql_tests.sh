@@ -18,7 +18,7 @@ psql -q -d "$DB" -c "insert into auth.users (id) values ('00000000-0000-0000-000
 REPLAY=22222222-2222-4222-8222-222222222222
 for i in $(seq 1 40); do
   if [ "$i" -le 10 ]; then RID=$REPLAY; else RID=$(cat /proc/sys/kernel/random/uuid); fi
-  psql -q -d "$DB" -c "set role service_role; select * from public.slot_commit('00000000-0000-0000-0000-0000000000cc', '$RID', 'cosmic', 200, '{1,2,3,4,5}', 0)" >/dev/null 2>&1 &
+  psql -q -d "$DB" -c "set role service_role; select * from public.slot_commit('00000000-0000-0000-0000-0000000000cc', '$RID', 'cosmic', 200, '{\"base\":{\"stops\":[1,2,3,4,5]},\"free\":[],\"picks\":[]}', 0)" >/dev/null 2>&1 &
 done
 wait
 read -r SPINS BAL REPLAYS < <(psql -At -F ' ' -d "$DB" -c "select (select count(*) from public.slot_spins where user_id = '00000000-0000-0000-0000-0000000000cc'), (select balance from public.casino_wallets where user_id = '00000000-0000-0000-0000-0000000000cc'), (select count(*) from public.slot_spins where request_id = '$REPLAY')")

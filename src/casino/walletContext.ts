@@ -30,6 +30,10 @@ export interface WalletContextValue {
   ) => { ok: true; balance: number } | { ok: false; reason: InstantRefusal };
   /** True when a round with this id was booked and paid (recent rounds only). */
   wasSettled: (id: string) => boolean;
+  /** Only one tab may bet at a time; false here while another tab is the active one. */
+  activeHere: boolean;
+  /** Makes this tab the one that bets (the other tab pauses). */
+  playHere: () => void;
 }
 
 /** Fired by Settings → reset so the wallet drops its in-memory copy along with storage. */

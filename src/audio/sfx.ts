@@ -34,6 +34,8 @@ let enabled = true;
 const loops = new Map<string, () => void>();
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
+let sfxVolume = 1;
+const MASTER_GAIN = 0.45;
 let noiseBuffer: AudioBuffer | null = null;
 
 export function setSoundEnabled(value: boolean): void {
@@ -41,6 +43,28 @@ export function setSoundEnabled(value: boolean): void {
   if (!value) for (const stop of [...loops.values()]) stop();
   if (!value && ctx?.state === 'running') void ctx.suspend();
   if (value && ctx?.state === 'suspended') void ctx.resume();
+}
+
+/** Effects volume, 0–1 (the slot machines' volume slider). */
+export function setSfxVolume(value: number): void {
+  sfxVolume = Math.min(1, Math.max(0, Number.isFinite(value) ? value : 1));
+  if (ctx && master) master.gain.setTargetAtTime(MASTER_GAIN * sfxVolume, ctx.currentTime, 0.05);
+}
+
+/**
+ * For custom voices (machine sound profiles): runs `fn` with the shared context, the effects bus and a
+ * white-noise buffer, only when sound is on and the context is running. Returns whether it ran.
+ */
+export function withAudio(fn: (c: AudioContext, bus: AudioNode, noise: AudioBuffer, t: number) => void, delaySeconds = 0): boolean {
+  if (!enabled) return false;
+  const c = audio();
+  if (!c || c.state !== 'running' || !master || !noiseBuffer) return false;
+  try {
+    fn(c, master, noiseBuffer, c.currentTime + 0.01 + delaySeconds);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function isSoundEnabled(): boolean {
@@ -54,7 +78,7 @@ function audio(): AudioContext | null {
     if (!Ctor) return null;
     ctx = new Ctor();
     master = ctx.createGain();
-    master.gain.value = 0.45;
+    master.gain.value = MASTER_GAIN * sfxVolume;
     const compressor = ctx.createDynamicsCompressor();
     master.connect(compressor).connect(ctx.destination);
     noiseBuffer = ctx.createBuffer(1, ctx.sampleRate * 0.5, ctx.sampleRate);

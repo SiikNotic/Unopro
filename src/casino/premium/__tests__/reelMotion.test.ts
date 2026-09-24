@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { MOTION, ReelMotion } from '../reelMotion';
-import { REEL } from '../../slots';
+import type { MotionProfile } from '../reelMotion';
+
+const REEL = { length: 39 };
 
 /** Runs a reel with a fixed frame time until it rests; returns what happened. */
 function run(reel: ReelMotion, from: number, frame = 1 / 60, limit = 20) {
@@ -116,5 +118,26 @@ describe('reel motion', () => {
     expect(() => reel.requestStop(REEL.length, 0)).toThrow();
     expect(() => reel.requestStop(-1, 0)).toThrow();
     expect(() => reel.requestStop(1.5, 0)).toThrow();
+  });
+});
+
+describe('motion profiles', () => {
+  const profiles: MotionProfile[] = [
+    { vmax: 34, windupS: 0.06, windupCells: 0.1, accelS: 0.16, brakeCells: 6, overshootCells: 0.06, bounceS: 0.1 },
+    { vmax: 14, windupS: 0.2, windupCells: 0.4, accelS: 0.5, brakeCells: 8, overshootCells: 0.35, bounceS: 0.32 },
+  ];
+  it.each(profiles)('lands exactly with any profile and strip length (%o)', (p) => {
+    for (const n of [24, 31, 55]) {
+      for (let k = 0; k < 60; k++) {
+        const to = (k * 7) % n;
+        const reel = new ReelMotion(k % n, n, p);
+        reel.start(0);
+        reel.requestStop(to, 0.3 + (k % 5) * 0.2);
+        let t = 0;
+        while (!reel.step((t += 1 / 60)) && t < 20);
+        expect(reel.centre).toBe(to);
+      }
+      expect(() => new ReelMotion(0, n, p).requestStop(n, 0)).toThrow();
+    }
   });
 });

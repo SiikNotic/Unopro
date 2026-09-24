@@ -34,8 +34,8 @@ describe('wallet ledger', () => {
     expect(settleRound(w, 'b', 10 ** 12, now).credited).toBe(25);
     expect(openRound(emptyWallet(1000), { id: 'c', game: 'roulette', stake: 10, payout: 361, now }).ok).toBe(false);
     expect(openRound(emptyWallet(1000), { id: 'd', game: 'roulette', stake: 10, payout: 360, now }).ok).toBe(true);
-    expect(openRound(emptyWallet(1000), { id: 'e', game: 'slots', stake: 10, payout: 25_000, now }).ok).toBe(true);
-    expect(openRound(emptyWallet(1000), { id: 'f', game: 'slots', stake: 10, payout: 25_001, now }).ok).toBe(false);
+    expect(openRound(emptyWallet(1000), { id: 'e', game: 'slots', stake: 10, payout: 50_000, now }).ok).toBe(true);
+    expect(openRound(emptyWallet(1000), { id: 'f', game: 'slots', stake: 10, payout: 50_001, now }).ok).toBe(false);
   });
 
   it('raises the stake of an open blackjack round only', () => {
@@ -68,7 +68,7 @@ describe('wallet ledger', () => {
     expect(normalizeWallet({ balance: 'lots' }).balance).toBe(1000);
     const w = normalizeWallet({ balance: 10, open: [{ id: 'a', game: 'poker', stake: 5, payout: 0, at: 1 }, { id: 'b', game: 'slots', stake: 5, payout: 1e12, at: 1 }, { id: 'c', game: 'slots', stake: 5, payout: 10, at: 1 }, { id: 'c', game: 'slots', stake: 5, payout: 10, at: 1 }] });
     expect(w.open.map((o) => o.id)).toEqual(['b', 'c']);
-    expect(w.open[0].payout).toBe(5 * 2500);
+    expect(w.open[0].payout).toBe(5 * 5000);
   });
 
   it('offers a refill only when broke', () => {
@@ -91,7 +91,7 @@ describe('wallet ledger', () => {
     const w = emptyWallet(40);
     expect(playRound(w, { id: 'a', game: 'slots', stake: 50, payout: 0, now })).toMatchObject({ ok: false, reason: 'funds' });
     expect(playRound(w, { id: 'b', game: 'slots', stake: 0, payout: 0, now })).toMatchObject({ ok: false, reason: 'invalid' });
-    expect(playRound(w, { id: 'c', game: 'slots', stake: 10, payout: 25_001, now })).toMatchObject({ ok: false, reason: 'invalid' });
+    expect(playRound(w, { id: 'c', game: 'slots', stake: 10, payout: 50_001, now })).toMatchObject({ ok: false, reason: 'invalid' });
     expect(playRound(w, { id: 'd', game: 'slots', stake: 10, payout: -1, now })).toMatchObject({ ok: false, reason: 'invalid' });
   });
 });

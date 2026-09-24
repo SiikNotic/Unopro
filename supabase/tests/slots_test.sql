@@ -23,7 +23,7 @@ set role service_role;
 do $$
 declare r record;
 begin
-  select * into r from public.slot_commit('00000000-0000-0000-0000-00000000000a', '11111111-1111-4111-8111-111111111111', 'lucky7s', 100, '{1,2,3,4,5}', 40);
+  select * into r from public.slot_commit('00000000-0000-0000-0000-00000000000a', '11111111-1111-4111-8111-111111111111', 'lucky7s', 100, '{"base":{"stops":[1,2,3,4,5]},"free":[],"picks":[]}', 40);
   assert r.balance = 940, format('balance after first spin: %s', r.balance);
   assert not r.replayed;
 end $$;
@@ -32,25 +32,25 @@ end $$;
 do $$
 declare r record;
 begin
-  select * into r from public.slot_commit('00000000-0000-0000-0000-00000000000a', '11111111-1111-4111-8111-111111111111', 'lucky7s', 100, '{9,9,9,9,9}', 250000);
+  select * into r from public.slot_commit('00000000-0000-0000-0000-00000000000a', '11111111-1111-4111-8111-111111111111', 'lucky7s', 100, '{"base":{"stops":[9,9,9,9,9]},"free":[],"picks":[]}', 250000);
   assert r.replayed, 'second call must be a replay';
-  assert r.payout = 40 and r.stops = '{1,2,3,4,5}' and r.balance = 940, 'replay must return the original result';
+  assert r.payout = 40 and r.draws->'base'->'stops' = '[1,2,3,4,5]'::jsonb and r.balance = 940, 'replay must return the original result';
   assert (select balance from public.casino_wallets where user_id = '00000000-0000-0000-0000-00000000000a') = 940;
   assert (select count(*) from public.slot_spins) = 1;
 end $$;
 
 -- same request id with a different bet or machine: conflict
-select pg_temp.expect_error($q$select * from public.slot_commit('00000000-0000-0000-0000-00000000000a', '11111111-1111-4111-8111-111111111111', 'lucky7s', 200, '{1,2,3,4,5}', 0)$q$, 'P0409');
-select pg_temp.expect_error($q$select * from public.slot_commit('00000000-0000-0000-0000-00000000000a', '11111111-1111-4111-8111-111111111111', 'inferno', 100, '{1,2,3,4,5}', 0)$q$, 'P0409');
+select pg_temp.expect_error($q$select * from public.slot_commit('00000000-0000-0000-0000-00000000000a', '11111111-1111-4111-8111-111111111111', 'lucky7s', 200, '{"base":{"stops":[1,2,3,4,5]},"free":[],"picks":[]}', 0)$q$, 'P0409');
+select pg_temp.expect_error($q$select * from public.slot_commit('00000000-0000-0000-0000-00000000000a', '11111111-1111-4111-8111-111111111111', 'inferno', 100, '{"base":{"stops":[1,2,3,4,5]},"free":[],"picks":[]}', 0)$q$, 'P0409');
 
 -- invalid bets, impossible payouts, bad stops and unaffordable bets are refused without touching money
-select pg_temp.expect_error($q$select * from public.slot_commit('00000000-0000-0000-0000-00000000000a', gen_random_uuid(), 'lucky7s', 15, '{1,2,3,4,5}', 0)$q$, 'P0400');
-select pg_temp.expect_error($q$select * from public.slot_commit('00000000-0000-0000-0000-00000000000a', gen_random_uuid(), 'lucky7s', -10, '{1,2,3,4,5}', 0)$q$, 'P0400');
-select pg_temp.expect_error($q$select * from public.slot_commit('00000000-0000-0000-0000-00000000000a', gen_random_uuid(), 'lucky7s', 10, '{1,2,3,4,5}', 25001)$q$, 'P0400');
-select pg_temp.expect_error($q$select * from public.slot_commit('00000000-0000-0000-0000-00000000000a', gen_random_uuid(), 'lucky7s', 10, '{1,2,3,4,5}', -1)$q$, 'P0400');
-select pg_temp.expect_error($q$select * from public.slot_commit('00000000-0000-0000-0000-00000000000a', gen_random_uuid(), 'lucky7s', 10, '{1,2,3,4,39}', 0)$q$, '23514');
-select pg_temp.expect_error($q$select * from public.slot_commit('00000000-0000-0000-0000-00000000000a', gen_random_uuid(), 'hack', 10, '{1,2,3,4,5}', 0)$q$, '23514');
-select pg_temp.expect_error($q$select * from public.slot_commit('00000000-0000-0000-0000-00000000000a', gen_random_uuid(), 'lucky7s', 1000, '{1,2,3,4,5}', 0)$q$, 'P0402');
+select pg_temp.expect_error($q$select * from public.slot_commit('00000000-0000-0000-0000-00000000000a', gen_random_uuid(), 'lucky7s', 3000, '{"base":{"stops":[1,2,3,4,5]},"free":[],"picks":[]}', 0)$q$, 'P0400');
+select pg_temp.expect_error($q$select * from public.slot_commit('00000000-0000-0000-0000-00000000000a', gen_random_uuid(), 'lucky7s', -10, '{"base":{"stops":[1,2,3,4,5]},"free":[],"picks":[]}', 0)$q$, 'P0400');
+select pg_temp.expect_error($q$select * from public.slot_commit('00000000-0000-0000-0000-00000000000a', gen_random_uuid(), 'lucky7s', 10, '{"base":{"stops":[1,2,3,4,5]},"free":[],"picks":[]}', 50001)$q$, 'P0400');
+select pg_temp.expect_error($q$select * from public.slot_commit('00000000-0000-0000-0000-00000000000a', gen_random_uuid(), 'lucky7s', 10, '{"base":{"stops":[1,2,3,4,5]},"free":[],"picks":[]}', -1)$q$, 'P0400');
+select pg_temp.expect_error($q$select * from public.slot_commit('00000000-0000-0000-0000-00000000000a', gen_random_uuid(), 'lucky7s', 10, '[]', 0)$q$, '23514');
+select pg_temp.expect_error($q$select * from public.slot_commit('00000000-0000-0000-0000-00000000000a', gen_random_uuid(), 'hack', 10, '{"base":{"stops":[1,2,3,4,5]},"free":[],"picks":[]}', 0)$q$, '23514');
+select pg_temp.expect_error($q$select * from public.slot_commit('00000000-0000-0000-0000-00000000000a', gen_random_uuid(), 'lucky7s', 1000, '{"base":{"stops":[1,2,3,4,5]},"free":[],"picks":[]}', 0)$q$, 'P0402');
 do $$ begin
   assert (select balance from public.casino_wallets where user_id = '00000000-0000-0000-0000-00000000000a') = 940, 'refusals must not change the balance';
   assert (select count(*) from public.slot_spins) = 1;
@@ -86,21 +86,21 @@ end $$;
 select pg_temp.expect_error($q$update public.casino_wallets set balance = 999999$q$, '42501');
 select pg_temp.expect_error($q$insert into public.casino_wallets (user_id, balance) values ('00000000-0000-0000-0000-00000000000b', 5000)$q$, '42501');
 select pg_temp.expect_error($q$delete from public.slot_spins$q$, '42501');
-select pg_temp.expect_error($q$insert into public.slot_spins (user_id, request_id, machine, bet, stops, payout, balance_after) values ('00000000-0000-0000-0000-00000000000a', gen_random_uuid(), 'lucky7s', 10, '{1,2,3,4,5}', 25000, 25000)$q$, '42501');
-select pg_temp.expect_error($q$select * from public.slot_commit('00000000-0000-0000-0000-00000000000a', gen_random_uuid(), 'lucky7s', 10, '{1,2,3,4,5}', 25000)$q$, '42501');
+select pg_temp.expect_error($q$insert into public.slot_spins (user_id, request_id, machine, bet, draws, payout, balance_after) values ('00000000-0000-0000-0000-00000000000a', gen_random_uuid(), 'lucky7s', 10, '{"base":{"stops":[1,2,3,4,5]},"free":[],"picks":[]}', 25000, 25000)$q$, '42501');
+select pg_temp.expect_error($q$select * from public.slot_commit('00000000-0000-0000-0000-00000000000a', gen_random_uuid(), 'lucky7s', 10, '{"base":{"stops":[1,2,3,4,5]},"free":[],"picks":[]}', 25000)$q$, '42501');
 select pg_temp.expect_error($q$select public.slot_balance('00000000-0000-0000-0000-00000000000b')$q$, '42501');
 reset role;
 
 set role anon;
 select pg_temp.expect_error($q$select * from public.slot_spins$q$, '42501');
-select pg_temp.expect_error($q$select * from public.slot_commit('00000000-0000-0000-0000-00000000000a', gen_random_uuid(), 'lucky7s', 10, '{1,2,3,4,5}', 25000)$q$, '42501');
+select pg_temp.expect_error($q$select * from public.slot_commit('00000000-0000-0000-0000-00000000000a', gen_random_uuid(), 'lucky7s', 10, '{"base":{"stops":[1,2,3,4,5]},"free":[],"picks":[]}', 25000)$q$, '42501');
 reset role;
 
 -- the balance can never exceed the cap
 set role service_role;
 update public.casino_wallets set balance = 999999990 where user_id = '00000000-0000-0000-0000-00000000000a';
 do $$ declare r record; begin
-  select * into r from public.slot_commit('00000000-0000-0000-0000-00000000000a', gen_random_uuid(), 'royal', 1000, '{5,5,5,5,5}', 2500000);
+  select * into r from public.slot_commit('00000000-0000-0000-0000-00000000000a', gen_random_uuid(), 'royal', 1000, '{"base":{"stops":[1,2,3,4,5]},"free":[],"picks":[]}', 2500000);
   assert r.balance = 1000000000, format('cap: %s', r.balance);
 end $$;
 reset role;

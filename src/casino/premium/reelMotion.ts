@@ -4,12 +4,20 @@
 // The reel only shows 5 recycled cells. Cell index i shows reel stop `i + offset`. When a result arrives,
 // indices at and below the landing cell switch to the result's offset; those cells are still off-screen
 // (above the window), so the switch is never seen, and the reel lands exactly on the decided stop.
-import { REEL } from '../slots';
-
 export type ReelPhase = 'idle' | 'windup' | 'accel' | 'cruise' | 'decel' | 'bounce';
 
-const N = REEL.length;
-export const MOTION = {
+/** How a machine's reels move. Each machine has its own (see presentation.ts). */
+export interface MotionProfile {
+  vmax: number;
+  windupS: number;
+  windupCells: number;
+  accelS: number;
+  brakeCells: number;
+  overshootCells: number;
+  bounceS: number;
+}
+
+export const MOTION: MotionProfile = {
   /** Top speed, cells per second. */
   vmax: 22,
   windupS: 0.1,
@@ -27,6 +35,8 @@ const easeInOutSine = (p: number) => -(Math.cos(Math.PI * p) - 1) / 2;
 
 export class ReelMotion {
   phase: ReelPhase = 'idle';
+  private readonly n: number;
+  private readonly mp: MotionProfile;
   /** Position in cells; decreasing = symbols travel down. */
   pos = 0;
   private offset: number;
@@ -38,18 +48,22 @@ export class ReelMotion {
   private startAt = 0;
   private stopAt = Infinity;
   private target = 0;
-  private brake = MOTION.brakeCells;
+  private brake: number;
   private decelS = 0;
   private stop: number | null = null;
 
-  constructor(stop: number) {
+  /** `n` = stops on this reel's strip. */
+  constructor(stop: number, n = 39, profile: MotionProfile = MOTION) {
+    this.n = n;
+    this.mp = { ...profile, brakeCells: Math.max(5.5, profile.brakeCells) };
+    this.brake = this.mp.brakeCells;
     this.offset = stop;
     this.nextOffset = stop;
   }
 
   /** Reel stop shown by cell index i. */
   stopAtCell(i: number): number {
-    return mod(i + (i <= this.seam ? this.nextOffset : this.offset), N);
+    return mod(i + (i <= this.seam ? this.nextOffset : this.offset), this.n);
   }
 
   /** Stop currently centred (only meaningful when idle). */
@@ -77,19 +91,19 @@ export class ReelMotion {
    * Asks the reel to land on `stop`, braking no earlier than `at`. `brakeCells` longer = a slower,
    * more dramatic stop (anticipation). Calling it again before braking starts replaces the request.
    */
-  requestStop(stop: number, at: number, brakeCells = MOTION.brakeCells): void {
-    if (!Number.isInteger(stop) || stop < 0 || stop >= N) throw new Error('bad stop');
+  requestStop(stop: number, at: number, brakeCells = this.mp.brakeCells): void {
+    if (!Number.isInteger(stop) || stop < 0 || stop >= this.n) throw new Error('bad stop');
     if (this.phase === 'decel' || this.phase === 'bounce') return;
     this.stop = stop;
     this.stopAt = at;
-    this.brake = Math.max(MOTION.brakeCells, brakeCells);
+    this.brake = Math.max(this.mp.brakeCells, brakeCells);
   }
 
   /** Slam stop: brake as soon as possible (the result is already known). */
   hurry(now: number): void {
     if (this.stop !== null && this.phase !== 'decel' && this.phase !== 'bounce') {
       this.stopAt = Math.min(this.stopAt, now);
-      this.brake = MOTION.brakeCells;
+      this.brake = this.mp.brakeCells;
     }
   }
 
@@ -107,7 +121,7 @@ export class ReelMotion {
 
   /** Advances to time `now` (seconds). Returns true on the frame the reel comes to rest. */
   step(now: number): boolean {
-    const { vmax, windupS, windupCells, accelS, overshootCells, bounceS } = MOTION;
+    const { vmax, windupS, windupCells, accelS, overshootCells, bounceS } = this.mp;
     if (this.phase === 'idle') return false;
     if (this.phase === 'windup') {
       const p = Math.min(1, (now - this.t0) / windupS);
@@ -162,14 +176,9 @@ export class ReelMotion {
     return false;
   }
 
-  /** Time (s) the reel will come to rest if braking starts at `brakeAt`: for scheduling sounds and tests. */
-  static restDuration(brakeCells = MOTION.brakeCells): number {
-    return (3 * (brakeCells + 0.5 + MOTION.overshootCells)) / MOTION.vmax + MOTION.bounceS;
-  }
-
   /** Keeps positions small after many spins (float precision), without changing what is shown. */
   private normalise(): void {
-    const shift = Math.round(this.pos / N) * N;
+    const shift = Math.round(this.pos / this.n) * this.n;
     if (shift === 0) return;
     const i = Math.round(this.pos);
     const shown = this.stopAtCell(i);

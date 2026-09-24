@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import en from '../locales/en.json';
 import es from '../locales/es.json';
 import { MACHINE_IDS } from '@/casino/premium/engine';
-import { THEMES } from '@/components/slots/themes';
+import { PRESENTATION } from '@/components/slots/presentation';
+import { MACHINES } from '@/casino/premium/machines';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- walking arbitrary JSON
 type Dict = Record<string, any>;
@@ -20,7 +21,8 @@ describe('locales', () => {
       for (const id of MACHINE_IDS) {
         expect(dict.slotsPremium.machines[id].name).toBeTruthy();
         expect(dict.slotsPremium.machines[id].tag).toBeTruthy();
-        for (const skin of Object.values(THEMES[id].symbols)) expect(dict.slotsPremium.sym[skin.label], `${id}:${skin.label}`).toBeTruthy();
+        for (const skin of Object.values(PRESENTATION[id].symbols)) expect(dict.slotsPremium.sym[skin.label], `${id}:${skin.label}`).toBeTruthy();
+        for (const k of ['about', 'featureRule', 'cheer', 'ready', ...(MACHINES[id].features.freeSpins ? ['freeRule'] : [])]) expect(dict.slotsPremium.machines[id][k], `${id}.${k}`).toBeTruthy();
       }
     }
   });

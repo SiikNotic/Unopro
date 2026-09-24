@@ -1,14 +1,15 @@
 // Contract between the slot machine screen and whoever decides spins (the "house"). The screen only
 // sends what the player wants to bet and draws the receipt it gets back: it never picks symbols, never
 // computes a payout it trusts and never changes a balance.
-import { isMachineId, isRequestId, isValidBet, isValidStops, MAX_WIN_MULTIPLE, resolveSpin } from './engine';
-import type { MachineId } from './engine';
+import { isMachineId, isRequestId, isValidBetFor, isValidDraws, settleRound } from './engine';
+import type { MachineId, RoundDraws } from './engine';
+import { MACHINES } from './machines';
 
 export interface SpinRequest {
   /** Idempotency key: retrying with the same id never charges or pays twice. */
   requestId: string;
   machine: MachineId;
-  /** Total bet (one of BET_LEVELS). */
+  /** Total bet (one of the machine's bet levels). */
   bet: number;
 }
 
@@ -17,7 +18,8 @@ export interface SpinReceipt {
   requestId: string;
   machine: MachineId;
   bet: number;
-  stops: number[];
+  /** Every random draw of the round (reel stops, multipliers, free spins, bonus picks). */
+  draws: RoundDraws;
   payout: number;
   /** Balance after this spin (stake taken, payout credited). */
   balance: number;
@@ -30,6 +32,8 @@ export type SpinErrorCode =
   | 'invalid_machine'
   /** The request id was already used for a different bet. */
   | 'conflict'
+  /** Another tab of this browser is the one playing (local mode). */
+  | 'other_tab'
   | 'unauthorized'
   | 'rate_limited'
   | 'offline'
@@ -75,13 +79,22 @@ export interface SlotService {
 export function parseReceipt(raw: unknown, expect?: SpinRequest): SpinReceipt {
   if (!raw || typeof raw !== 'object') throw new SpinError('bad_response', 'not an object');
   const r = raw as Record<string, unknown>;
-  const { requestId, machine, bet, stops, payout, balance, at } = r;
-  if (!isRequestId(requestId) || !isMachineId(machine) || !isValidBet(bet) || !isValidStops(stops)) throw new SpinError('bad_response', 'bad fields');
-  if (typeof payout !== 'number' || !Number.isInteger(payout) || payout < 0 || payout > bet * MAX_WIN_MULTIPLE) throw new SpinError('bad_response', 'bad payout');
+  const { requestId, machine, bet, draws, payout, balance, at } = r;
+  if (!isRequestId(requestId) || !isMachineId(machine)) throw new SpinError('bad_response', 'bad fields');
+  const m = MACHINES[machine];
+  if (!isValidBetFor(m, bet) || !isValidDraws(m, draws)) throw new SpinError('bad_response', 'bad round');
+  if (typeof payout !== 'number' || !Number.isInteger(payout) || payout < 0 || payout > bet * m.maxWin) throw new SpinError('bad_response', 'bad payout');
   if (typeof balance !== 'number' || !Number.isInteger(balance) || balance < 0) throw new SpinError('bad_response', 'bad balance');
-  if (resolveSpin(stops, bet).payout !== payout) throw new SpinError('bad_response', 'payout does not match stops');
+  let settled: number;
+  try {
+    settled = settleRound(m, bet, draws).payout;
+  } catch {
+    throw new SpinError('bad_response', 'inconsistent round');
+  }
+  if (settled !== payout) throw new SpinError('bad_response', 'payout does not match the round');
   if (expect && (expect.requestId.toLowerCase() !== requestId.toLowerCase() || expect.machine !== machine || expect.bet !== bet)) throw new SpinError('bad_response', 'receipt for another request');
-  return { requestId, machine, bet, stops: [...stops], payout, balance, at: typeof at === 'number' && Number.isFinite(at) ? at : Date.now() };
+  const copy: RoundDraws = JSON.parse(JSON.stringify(draws));
+  return { requestId, machine, bet, draws: copy, payout, balance, at: typeof at === 'number' && Number.isFinite(at) ? at : Date.now() };
 }
 
 /** RFC 4122 v4 id from the crypto generator (randomUUID is missing on older browsers and insecure origins). */

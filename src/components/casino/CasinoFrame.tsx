@@ -41,7 +41,7 @@ interface CasinoFrameProps {
 export function CasinoFrame({ title, subtitle, back, scenario, backdrop, onHelp, dock, maxWidth = 'max-w-3xl', balanceOverride, allowRefill = true, children }: CasinoFrameProps) {
   const { back: goBack } = useNavigation();
   const { t } = useI18n();
-  const { balance, canRefill, refill } = useWallet();
+  const { balance, canRefill, refill, activeHere, playHere } = useWallet();
 
   useEffect(() => {
     const unlock = () => unlockAudio();
@@ -78,7 +78,15 @@ export function CasinoFrame({ title, subtitle, back, scenario, backdrop, onHelp,
       </header>
 
       <main className={`relative flex-1 mx-auto w-full ${maxWidth} cz-safe-x py-3 sm:py-5 flex flex-col gap-3 sm:gap-4`}>
-        {canRefill && allowRefill && (
+        {!activeHere && (
+          <div className="cz-panel p-3 flex items-center gap-3 cz-fade-in" role="status">
+            <p className="text-sm text-[var(--cz-ivory)] flex-1 min-w-0">{t('casino.otherTab')}</p>
+            <button type="button" className="cz-btn cz-btn-primary cz-btn-sm shrink-0" onClick={playHere}>
+              {t('casino.playHere')}
+            </button>
+          </div>
+        )}
+        {canRefill && allowRefill && activeHere && (
           <div className="cz-panel p-3 flex items-center gap-3 cz-fade-in" role="status">
             <p className="text-sm text-[var(--cz-ivory)] flex-1 min-w-0">{t('casino.broke')}</p>
             <button

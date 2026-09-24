@@ -1,16 +1,17 @@
 // The slot server's request logic, free of any platform API so it runs (and is tested) anywhere.
-// Flow for a spin: authenticated player -> validate input -> replay check -> draw reels (crypto RNG) ->
-// compute payout (shared engine) -> commit atomically in the database (balance check, debit, credit,
+// Flow for a spin: authenticated player -> validate input -> replay check -> draw the whole round with a
+// crypto RNG and the machine's own math (shared engine) -> commit atomically in the database (balance check, debit, credit,
 // record, idempotent on request id) -> answer with the receipt. The client never sends a result, a
 // payout or a balance, and there is no parameter, header or account that changes any of this.
-import { cryptoUint32, drawStops, isMachineId, isRequestId, isValidBet, resolveSpin } from '../../../src/casino/premium/engine.ts';
-import type { MachineId } from '../../../src/casino/premium/engine.ts';
+import { cryptoUint32, isMachineId, isRequestId, isValidBetFor, playRound } from '../../../src/casino/premium/engine.ts';
+import type { MachineId, RoundDraws } from '../../../src/casino/premium/engine.ts';
+import { MACHINES } from '../../../src/casino/premium/machines.ts';
 
 export interface Receipt {
   requestId: string;
   machine: MachineId;
   bet: number;
-  stops: number[];
+  draws: RoundDraws;
   payout: number;
   balance: number;
   at: number;
@@ -26,7 +27,7 @@ export class StoreError extends Error {
 
 /** Database operations; `commit` must be atomic and idempotent on (userId, requestId). */
 export interface SlotStore {
-  commit(c: { userId: string; requestId: string; machine: MachineId; bet: number; stops: number[]; payout: number }): Promise<Receipt>;
+  commit(c: { userId: string; requestId: string; machine: MachineId; bet: number; draws: RoundDraws; payout: number }): Promise<Receipt>;
   find(userId: string, requestId: string): Promise<Receipt | null>;
   balance(userId: string): Promise<number>;
 }
@@ -74,16 +75,17 @@ export async function handleSlotRequest(req: SlotRequest, deps: HandlerDeps): Pr
     const { requestId, machine, bet } = b;
     if (!isRequestId(requestId)) return err(400, 'invalid_bet');
     if (!isMachineId(machine)) return err(400, 'invalid_machine');
-    if (!isValidBet(bet)) return err(400, 'invalid_bet');
+    if (!isValidBetFor(MACHINES[machine], bet)) return err(400, 'invalid_bet');
     const id = requestId.toLowerCase();
 
     // A replay gets the original booking back without a new draw.
     const existing = await deps.store.find(userId, id);
     if (existing) return existing.machine === machine && existing.bet === bet ? { status: 200, body: existing } : err(409, 'conflict');
 
-    const result = resolveSpin(drawStops(deps.random ?? cryptoUint32), bet);
+    // The whole round (base spin, free spins, bonus) is decided here, in one go.
+    const round = playRound(MACHINES[machine], bet, deps.random ?? cryptoUint32);
     // If a concurrent duplicate won the race, commit returns ITS booking (same request id, one result).
-    const receipt = await deps.store.commit({ userId, requestId: id, machine, bet, stops: result.stops, payout: result.payout });
+    const receipt = await deps.store.commit({ userId, requestId: id, machine, bet, draws: round.draws, payout: round.payout });
     return { status: 200, body: receipt };
   } catch (e) {
     if (e instanceof StoreError) return err(e.code === 'insufficient_funds' ? 402 : e.code === 'conflict' ? 409 : 400, e.code);

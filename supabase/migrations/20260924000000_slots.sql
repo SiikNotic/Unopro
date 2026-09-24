@@ -17,9 +17,11 @@ create table if not exists public.slot_spins (
   user_id uuid not null references auth.users (id) on delete cascade,
   request_id uuid not null,
   machine text not null check (machine in ('lucky7s', 'diamondRoyale', 'goldenFortune', 'inferno', 'tropical', 'pirates', 'cosmic', 'royal')),
-  bet integer not null check (bet in (10, 20, 50, 100, 200, 500, 1000)),
-  stops smallint[] not null check (array_length(stops, 1) = 5 and 0 <= all (stops) and 38 >= all (stops)),
-  payout bigint not null check (payout >= 0 and payout <= bet::bigint * 2500),
+  bet integer not null check (bet > 0 and bet <= 2500),
+  -- Every random draw of the round (reel stops, multipliers, free spins, bonus picks), as decided by
+  -- the edge function. Kept so any round can be re-checked with the shared engine.
+  draws jsonb not null check (jsonb_typeof(draws) = 'object' and pg_column_size(draws) < 65536),
+  payout bigint not null check (payout >= 0 and payout <= bet::bigint * 5000),
   balance_after bigint not null check (balance_after >= 0),
   created_at timestamptz not null default now(),
   -- A request id is booked at most once per player: replays and double submits can't charge twice.
@@ -42,17 +44,17 @@ revoke all on public.slot_spins from anon, authenticated;
 grant select on public.casino_wallets to authenticated;
 grant select on public.slot_spins to authenticated;
 
--- Books one spin atomically. The payout is computed by the edge function from reel stops it drew with a
--- cryptographic RNG; this function re-checks everything it can (bet level, bounds) and owns the money.
+-- Books one round atomically. The round and its payout are decided by the edge function with a
+-- cryptographic RNG and the machine's math; this function re-checks everything it can (bet level, bounds) and owns the money.
 create or replace function public.slot_commit(
   p_user uuid,
   p_request uuid,
   p_machine text,
   p_bet integer,
-  p_stops smallint[],
+  p_draws jsonb,
   p_payout bigint
 )
-returns table (request_id uuid, machine text, bet integer, stops smallint[], payout bigint, balance bigint, created_at timestamptz, replayed boolean)
+returns table (request_id uuid, machine text, bet integer, draws jsonb, payout bigint, balance bigint, created_at timestamptz, replayed boolean)
 language plpgsql
 security definer
 set search_path = ''
@@ -74,14 +76,15 @@ begin
     if v_spin.machine <> p_machine or v_spin.bet <> p_bet then
       raise exception 'conflict' using errcode = 'P0409';
     end if;
-    return query select v_spin.request_id, v_spin.machine, v_spin.bet, v_spin.stops, v_spin.payout, v_spin.balance_after, v_spin.created_at, true;
+    return query select v_spin.request_id, v_spin.machine, v_spin.bet, v_spin.draws, v_spin.payout, v_spin.balance_after, v_spin.created_at, true;
     return;
   end if;
 
-  if p_bet not in (10, 20, 50, 100, 200, 500, 1000) then
+  -- Bet levels per machine (a multiple of its line count); the edge function checks the exact list.
+  if p_bet is null or p_bet <= 0 or p_bet > 2500 then
     raise exception 'invalid_bet' using errcode = 'P0400';
   end if;
-  if p_payout < 0 or p_payout > p_bet::bigint * 2500 then
+  if p_payout < 0 or p_payout > p_bet::bigint * 5000 then
     raise exception 'invalid_payout' using errcode = 'P0400';
   end if;
   if v_balance < p_bet then
@@ -93,22 +96,22 @@ begin
    where w.user_id = p_user
   returning w.balance into v_balance;
 
-  insert into public.slot_spins (user_id, request_id, machine, bet, stops, payout, balance_after)
-  values (p_user, p_request, p_machine, p_bet, p_stops, p_payout, v_balance)
+  insert into public.slot_spins (user_id, request_id, machine, bet, draws, payout, balance_after)
+  values (p_user, p_request, p_machine, p_bet, p_draws, p_payout, v_balance)
   returning * into v_spin;
 
-  return query select v_spin.request_id, v_spin.machine, v_spin.bet, v_spin.stops, v_spin.payout, v_spin.balance_after, v_spin.created_at, false;
+  return query select v_spin.request_id, v_spin.machine, v_spin.bet, v_spin.draws, v_spin.payout, v_spin.balance_after, v_spin.created_at, false;
 end;
 $$;
 
 create or replace function public.slot_find(p_user uuid, p_request uuid)
-returns table (request_id uuid, machine text, bet integer, stops smallint[], payout bigint, balance bigint, created_at timestamptz)
+returns table (request_id uuid, machine text, bet integer, draws jsonb, payout bigint, balance bigint, created_at timestamptz)
 language sql
 stable
 security definer
 set search_path = ''
 as $$
-  select s.request_id, s.machine, s.bet, s.stops, s.payout, s.balance_after, s.created_at
+  select s.request_id, s.machine, s.bet, s.draws, s.payout, s.balance_after, s.created_at
     from public.slot_spins s
    where s.user_id = p_user and s.request_id = p_request;
 $$;
@@ -123,9 +126,9 @@ as $$
   select coalesce((select w.balance from public.casino_wallets w where w.user_id = p_user), 1000);
 $$;
 
-revoke all on function public.slot_commit(uuid, uuid, text, integer, smallint[], bigint) from public, anon, authenticated;
+revoke all on function public.slot_commit(uuid, uuid, text, integer, jsonb, bigint) from public, anon, authenticated;
 revoke all on function public.slot_find(uuid, uuid) from public, anon, authenticated;
 revoke all on function public.slot_balance(uuid) from public, anon, authenticated;
-grant execute on function public.slot_commit(uuid, uuid, text, integer, smallint[], bigint) to service_role;
+grant execute on function public.slot_commit(uuid, uuid, text, integer, jsonb, bigint) to service_role;
 grant execute on function public.slot_find(uuid, uuid) to service_role;
 grant execute on function public.slot_balance(uuid) to service_role;

@@ -2,17 +2,22 @@
 // and the same guarantees as the server (validated bet, idempotent request id, stake and payout booked
 // atomically in the wallet ledger). It is NOT authoritative: anyone controlling this device controls it.
 // See supabase/ for the server version, which the screen uses instead when it is configured.
-import { cryptoUint32, drawStops, isMachineId, isRequestId, isValidBet, resolveSpin } from './engine';
+import { cryptoUint32, isMachineId, isRequestId, isValidBetFor, playRound } from './engine';
+import type { RoundDraws } from './engine';
+import { MACHINES } from './machines';
 import type { SlotService, SpinReceipt, SpinRequest } from './service';
 import { parseReceipt, SpinError } from './service';
 import type { WalletContextValue } from '../walletContext';
 
-export const RECEIPTS_KEY = 'carta.slots.receipts';
+/** Each receipt lives under its own key, so two tabs booking at once never overwrite each other. */
+export const RECEIPT_PREFIX = 'carta.slots.r.';
 export const RECEIPTS_KEPT = 50;
 
 export interface ReceiptStore {
-  get(): unknown;
-  set(value: SpinReceipt[]): boolean;
+  /** Every stored receipt (any order, unvalidated). */
+  all(): unknown[];
+  put(requestId: string, value: SpinReceipt): boolean;
+  remove(requestId: string): void;
 }
 
 export interface LocalHouseDeps {
@@ -24,18 +29,23 @@ export interface LocalHouseDeps {
   now?: () => number;
 }
 
+/** Valid receipts, newest first. Malformed or edited ones are ignored. */
 export function readReceipts(store: ReceiptStore): SpinReceipt[] {
-  const raw = store.get();
-  if (!Array.isArray(raw)) return [];
   const out: SpinReceipt[] = [];
-  for (const r of raw.slice(0, RECEIPTS_KEPT)) {
+  for (const r of store.all()) {
     try {
       out.push(parseReceipt(r));
     } catch {
       // drop anything malformed or edited into an inconsistent state
     }
   }
-  return out;
+  return out.sort((a, b) => b.at - a.at);
+}
+
+/** Keeps the newest RECEIPTS_KEPT receipts. */
+function prune(store: ReceiptStore) {
+  const all = readReceipts(store);
+  for (const old of all.slice(RECEIPTS_KEPT)) store.remove(old.requestId.toLowerCase());
 }
 
 export function createLocalSlotService(deps: LocalHouseDeps): SlotService {
@@ -54,7 +64,8 @@ export function createLocalSlotService(deps: LocalHouseDeps): SlotService {
     async spin(req: SpinRequest) {
       if (!isRequestId(req.requestId)) throw new SpinError('invalid_bet', 'bad request id');
       if (!isMachineId(req.machine)) throw new SpinError('invalid_machine');
-      if (!isValidBet(req.bet)) throw new SpinError('invalid_bet');
+      const m = MACHINES[req.machine];
+      if (!isValidBetFor(m, req.bet)) throw new SpinError('invalid_bet');
 
       // Replay of a request already booked: same answer, nothing charged or paid again.
       const existing = booked(req.requestId);
@@ -64,14 +75,15 @@ export function createLocalSlotService(deps: LocalHouseDeps): SlotService {
       }
       if (deps.wasSettled(req.requestId)) throw new SpinError('conflict', 'request id already used');
 
-      const result = resolveSpin(drawStops(random), req.bet);
+      const round = playRound(m, req.bet, random);
+      const draws: RoundDraws = round.draws;
       let receipt: SpinReceipt | null = null;
-      const r = deps.book(req.requestId, 'slots', req.bet, result.payout, (balance) => {
-        receipt = { requestId: req.requestId, machine: req.machine, bet: req.bet, stops: result.stops, payout: result.payout, balance, at: now() };
-        const kept = readReceipts(deps.store).filter((x) => !same(x.requestId, req.requestId));
-        deps.store.set([receipt, ...kept].slice(0, RECEIPTS_KEPT));
+      const r = deps.book(req.requestId, 'slots', req.bet, round.payout, (balance) => {
+        receipt = { requestId: req.requestId, machine: req.machine, bet: req.bet, draws, payout: round.payout, balance, at: now() };
+        deps.store.put(req.requestId.toLowerCase(), receipt);
       });
-      if (!r.ok) throw new SpinError(r.reason === 'funds' ? 'insufficient_funds' : r.reason === 'duplicate' ? 'conflict' : 'invalid_bet');
+      if (!r.ok) throw new SpinError(r.reason === 'funds' ? 'insufficient_funds' : r.reason === 'duplicate' ? 'conflict' : r.reason === 'elsewhere' ? 'other_tab' : 'invalid_bet');
+      prune(deps.store);
       return receipt!;
     },
     async lookup(requestId: string) {

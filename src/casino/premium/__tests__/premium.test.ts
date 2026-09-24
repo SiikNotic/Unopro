@@ -1,21 +1,25 @@
 import { describe, expect, it, vi } from 'vitest';
-import { BET_LEVELS, drawStops, isValidBet, MACHINE_IDS, resolveSpin, tierFor } from '../engine';
+import { isValidBetFor, MACHINE_IDS, playRound, settleRound, tierFor, uniform } from '../engine';
+import { MACHINES } from '../machines';
 import { createLocalSlotService, readReceipts } from '../localHouse';
 import { createRemoteSlotService } from '../remoteHouse';
 import { newRequestId, parseReceipt, SpinError, spinWithRecovery } from '../service';
 import type { SlotService, SpinReceipt, SpinRequest } from '../service';
-import { emptyWallet, playRound } from '../../ledger';
+import { emptyWallet, playRound as bookRound } from '../../ledger';
 import type { WalletData } from '../../ledger';
-import { REEL, returnToPlayer } from '../../slots';
 
 /** A wallet + receipt store in memory, wired exactly like WalletProvider wires the real one. */
 function fakeHouse(balance = 1000, random?: () => number) {
   let wallet: WalletData = emptyWallet(balance);
-  let stored: unknown = null;
-  const store = { get: () => stored, set: (v: SpinReceipt[]) => ((stored = JSON.parse(JSON.stringify(v))), true) };
+  const stored = new Map<string, unknown>();
+  const store = {
+    all: () => [...stored.values()],
+    put: (id: string, v: SpinReceipt) => (stored.set(id, JSON.parse(JSON.stringify(v))), true),
+    remove: (id: string) => void stored.delete(id),
+  };
   const service = createLocalSlotService({
     book: (id, game, stake, payout, journal) => {
-      const r = playRound(wallet, { id, game, stake, payout, now: 1 });
+      const r = bookRound(wallet, { id, game, stake, payout, now: 1 });
       if (!r.ok) return { ok: false, reason: r.reason };
       journal?.(r.wallet.balance);
       wallet = r.wallet;
@@ -26,39 +30,30 @@ function fakeHouse(balance = 1000, random?: () => number) {
     store,
     random,
   });
-  return { service, get wallet() { return wallet; }, set wallet(w: WalletData) { wallet = w; }, store, get stored() { return stored; }, set stored(v: unknown) { stored = v; } };
+  return { service, get wallet() { return wallet; }, set wallet(w: WalletData) { wallet = w; }, store, stored };
 }
 
 const req = (over: Partial<SpinRequest> = {}): SpinRequest => ({ requestId: newRequestId(), machine: 'lucky7s', bet: 10, ...over });
 
 describe('premium slot engine', () => {
-  it('only accepts the listed bet levels', () => {
-    for (const b of BET_LEVELS) expect(isValidBet(b)).toBe(true);
-    for (const b of [0, -10, 5, 15, 10.5, NaN, Infinity, '10', null, 2000]) expect(isValidBet(b)).toBe(false);
-  });
-
-  it('pays whole chips: the bet splits evenly across the 10 lines', () => {
-    for (let i = 0; i < 2000; i++) {
-      const stops = drawStops(() => Math.floor(Math.random() * 2 ** 32));
-      for (const bet of BET_LEVELS) expect(Number.isInteger(resolveSpin(stops, bet).payout)).toBe(true);
+  it('each machine only accepts its own bet levels (whole chips per line)', () => {
+    for (const m of Object.values(MACHINES)) {
+      for (const b of m.betLevels) {
+        expect(isValidBetFor(m, b)).toBe(true);
+        expect(b % m.lines.length).toBe(0);
+      }
+      for (const b of [0, -10, 5.5, NaN, Infinity, '10', null, 999999]) expect(isValidBetFor(m, b)).toBe(false);
     }
   });
 
-  it('draws uniform stops in range and rejects the biased top of the uint32 range', () => {
-    const counts = new Array(REEL.length).fill(0);
+  it('draws uniform integers and rejects the biased top of the uint32 range', () => {
+    const counts = new Array(39).fill(0);
     let x = 0;
     const seq = () => (x = (x + 2654435761) >>> 0);
-    for (let i = 0; i < 39000; i++) for (const s of drawStops(seq)) counts[s]++;
+    for (let i = 0; i < 39000 * 5; i++) counts[uniform(39, seq)]++;
     for (const c of counts) expect(Math.abs(c - 5000)).toBeLessThan(500);
-    // values at/above the largest multiple of 39 are re-drawn, never folded back in
-    const values = [0xffffffff, 0xfffffffe, 5, 6, 7, 8, 9];
-    expect(drawStops(() => values.shift()!)).toEqual([5, 6, 7, 8, 9]);
-  });
-
-  it('keeps the audited return (~94.9%) for every machine', () => {
-    expect(returnToPlayer()).toBeGreaterThan(0.94);
-    expect(returnToPlayer()).toBeLessThan(0.96);
-    expect(MACHINE_IDS).toHaveLength(8);
+    const values = [0xffffffff, 0xfffffffe, 7];
+    expect(uniform(39, () => values.shift()!)).toBe(7);
   });
 
   it('never celebrates getting part of the stake back', () => {
@@ -68,35 +63,32 @@ describe('premium slot engine', () => {
     expect(tierFor(101, 100, false)).toBe('small');
     expect(tierFor(1000, 100, false)).toBe('big');
     expect(tierFor(4000, 100, false)).toBe('mega');
-    expect(tierFor(25000, 100, true)).toBe('jackpot');
+    expect(tierFor(10, 100, true)).toBe('jackpot');
   });
 
-  it('five sevens on a line is the jackpot', () => {
-    const seven = REEL.indexOf('seven');
-    const r = resolveSpin([seven, seven, seven, seven, seven], 10);
-    expect(r.tier).toBe('jackpot');
-    expect(r.payout).toBeGreaterThanOrEqual(2500);
-  });
+  it('there are eight machines', () => expect(MACHINE_IDS).toHaveLength(8));
 });
 
 describe('receipt validation', () => {
   const good = (): SpinReceipt => {
-    const stops = [0, 1, 2, 3, 4];
-    return { requestId: newRequestId(), machine: 'inferno', bet: 20, stops, payout: resolveSpin(stops, 20).payout, balance: 500, at: 1 };
+    const r = playRound(MACHINES.inferno, 20);
+    return { requestId: newRequestId(), machine: 'inferno', bet: 20, draws: r.draws, payout: r.payout, balance: 500, at: 1 };
   };
   it('accepts a consistent receipt', () => {
     const r = good();
     expect(parseReceipt(r, { requestId: r.requestId, machine: 'inferno', bet: 20 })).toEqual(r);
   });
   it.each([
-    ['missing stops', (r: SpinReceipt) => ({ ...r, stops: undefined })],
-    ['four reels', (r: SpinReceipt) => ({ ...r, stops: [1, 2, 3, 4] })],
-    ['stop out of range', (r: SpinReceipt) => ({ ...r, stops: [1, 2, 3, 4, 39] })],
-    ['payout not matching the stops', (r: SpinReceipt) => ({ ...r, payout: r.payout + 10 })],
+    ['missing draws', (r: SpinReceipt) => ({ ...r, draws: undefined })],
+    ['four reels', (r: SpinReceipt) => ({ ...r, draws: { ...r.draws, base: { stops: [1, 2, 3, 4] } } })],
+    ['stop out of range', (r: SpinReceipt) => ({ ...r, draws: { ...r.draws, base: { stops: [1, 2, 3, 4, 999] } } })],
+    ['payout not matching the round', (r: SpinReceipt) => ({ ...r, payout: r.payout + 20 })],
+    ['free spins nobody won', (r: SpinReceipt) => ({ ...r, draws: { ...r.draws, free: [...r.draws.free, ...r.draws.free, { stops: [0, 0, 0, 0, 0] }] } })],
+    ['unknown extra fields in a spin', (r: SpinReceipt) => ({ ...r, draws: { ...r.draws, base: { ...r.draws.base, payout: 1e6 } } })],
     ['negative balance', (r: SpinReceipt) => ({ ...r, balance: -1 })],
     ['fractional balance', (r: SpinReceipt) => ({ ...r, balance: 1.5 })],
     ['unknown machine', (r: SpinReceipt) => ({ ...r, machine: 'hack' })],
-    ['off-list bet', (r: SpinReceipt) => ({ ...r, bet: 15 })],
+    ['off-list bet', (r: SpinReceipt) => ({ ...r, bet: 30 })],
     ['not an object', () => 'ok'],
     ['null', () => null],
   ])('rejects %s', (_, mutate) => {
@@ -118,7 +110,7 @@ describe('local house', () => {
       const r = await h.service.spin(req());
       expect(r.balance).toBe(before - 10 + r.payout);
       expect(h.wallet.balance).toBe(r.balance);
-      expect(r.payout).toBe(resolveSpin(r.stops, 10).payout);
+      expect(r.payout).toBe(settleRound(MACHINES.lucky7s, 10, r.draws).payout);
     }
     expect(h.wallet.open).toHaveLength(0);
   });
@@ -139,19 +131,20 @@ describe('local house', () => {
     const q = req();
     await h.service.spin(q);
     await expect(h.service.spin({ ...q, bet: 20 })).rejects.toMatchObject({ code: 'conflict' });
-    await expect(h.service.spin({ ...q, machine: 'cosmic' })).rejects.toMatchObject({ code: 'conflict' });
+    await expect(h.service.spin({ ...q, machine: 'diamondRoyale' })).rejects.toMatchObject({ code: 'conflict' });
   });
 
   it('refuses unaffordable, invalid and malformed bets without touching the wallet', async () => {
     const h = fakeHouse(15);
     await expect(h.service.spin(req({ bet: 20 }))).rejects.toMatchObject({ code: 'insufficient_funds' });
+    await expect(h.service.spin(req({ bet: 15 }))).rejects.toMatchObject({ code: 'invalid_bet' });
     await expect(h.service.spin(req({ bet: -10 }))).rejects.toMatchObject({ code: 'invalid_bet' });
     await expect(h.service.spin(req({ bet: 10.5 }))).rejects.toMatchObject({ code: 'invalid_bet' });
     await expect(h.service.spin(req({ bet: 0 }))).rejects.toMatchObject({ code: 'invalid_bet' });
     await expect(h.service.spin(req({ machine: 'x' as never }))).rejects.toMatchObject({ code: 'invalid_machine' });
     await expect(h.service.spin(req({ requestId: 'not-a-uuid' }))).rejects.toMatchObject({ code: 'invalid_bet' });
     expect(h.wallet.balance).toBe(15);
-    expect(h.stored).toBeNull();
+    expect(h.stored.size).toBe(0);
   });
 
   it('never lets the balance go negative, however many spins race', async () => {
@@ -171,28 +164,26 @@ describe('local house', () => {
     expect(await h.service.lookup(newRequestId())).toBeNull();
     // A forged receipt that the wallet never booked is ignored.
     const forged = { ...r, requestId: newRequestId() };
-    h.stored = [forged, ...(h.stored as SpinReceipt[])];
+    h.stored.set(forged.requestId, forged);
     expect(await h.service.lookup(forged.requestId)).toBeNull();
-    // An edited payout that no longer matches the stops is dropped.
-    h.stored = [{ ...r, payout: r.payout + 1000 }];
-    expect(readReceipts(h.store)).toHaveLength(0);
+    // An edited payout that no longer matches the round is dropped.
+    h.stored.set(r.requestId.toLowerCase(), { ...r, payout: r.payout + 1000 });
+    expect(readReceipts(h.store).find((x) => x.requestId === r.requestId)).toBeUndefined();
   });
 
   it('a request id the wallet booked but whose receipt was lost is not booked again', async () => {
     const h = fakeHouse(1000);
     const q = req();
     await h.service.spin(q);
-    h.stored = null;
+    h.stored.clear();
     await expect(h.service.spin(q)).rejects.toMatchObject({ code: 'conflict' });
     expect(h.wallet.stats.rounds).toBe(1);
   });
 });
 
 describe('spinWithRecovery', () => {
-  const receiptFor = (q: SpinRequest): SpinReceipt => {
-    const stops = [3, 3, 3, 3, 3];
-    return { ...q, stops, payout: resolveSpin(stops, q.bet).payout, balance: 990, at: 1 };
-  };
+  const round = playRound(MACHINES.lucky7s, 10);
+  const receiptFor = (q: SpinRequest): SpinReceipt => ({ ...q, draws: round.draws, payout: round.payout, balance: 990, at: 1 });
   const quick = { backoffMs: () => 1 };
 
   it('recovers a spin whose answer was lost instead of spinning again', async () => {
@@ -237,7 +228,7 @@ describe('spinWithRecovery', () => {
     const q = req();
     const service: SlotService = {
       mode: 'remote',
-      spin: vi.fn().mockResolvedValueOnce({ requestId: q.requestId, stops: [1, 2] }),
+      spin: vi.fn().mockResolvedValueOnce({ requestId: q.requestId, draws: { base: { stops: [1, 2] } } }),
       lookup: vi.fn().mockResolvedValue(receiptFor(q)),
       balance: vi.fn(),
     };
@@ -250,8 +241,8 @@ describe('remote house', () => {
 
   it('sends only request id, machine and bet, with the bearer token', async () => {
     const q = req();
-    const stops = [0, 0, 0, 0, 0];
-    const fetchImpl = vi.fn().mockResolvedValue(json(200, { ...q, stops, payout: resolveSpin(stops, 10).payout, balance: 5, at: 1 }));
+    const r = playRound(MACHINES.lucky7s, 10);
+    const fetchImpl = vi.fn().mockResolvedValue(json(200, { ...q, draws: r.draws, payout: r.payout, balance: 5, at: 1 }));
     const s = createRemoteSlotService({ url: 'https://api.test/spin', getToken: async () => 'tok', fetchImpl });
     await s.spin(q);
     const [url, init] = fetchImpl.mock.calls[0];
@@ -295,5 +286,14 @@ describe('remote house', () => {
   it('lookup: 404 means not booked', async () => {
     const s = createRemoteSlotService({ url: 'https://x', getToken: async () => 't', fetchImpl: vi.fn().mockResolvedValue(json(404, { found: false })) });
     await expect(s.lookup(newRequestId())).resolves.toBeNull();
+  });
+});
+
+describe('receipt journal', () => {
+  it('keeps only the newest receipts, and each booking has its own entry', async () => {
+    const h = fakeHouse(1_000_000);
+    for (let i = 0; i < 60; i++) await h.service.spin(req());
+    expect(h.stored.size).toBe(50);
+    expect(readReceipts(h.store)).toHaveLength(50);
   });
 });

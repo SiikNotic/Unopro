@@ -2,7 +2,8 @@
 // real result after a reload, a closed tab or a lost connection) and a short display-only history.
 // Neither decides anything: balances and results always come from the house.
 import { storage } from '@/storage';
-import { isMachineId, isRequestId, isValidBet } from './engine';
+import { isMachineId, isRequestId, isValidBetFor } from './engine';
+import { MACHINES } from './machines';
 import type { MachineId } from './engine';
 import type { SpinReceipt } from './service';
 
@@ -19,7 +20,7 @@ export interface PendingSpin {
 
 export function loadPending(): PendingSpin | null {
   const raw = storage.get<Partial<PendingSpin>>(PENDING_KEY);
-  if (!raw || !isRequestId(raw.requestId) || !isMachineId(raw.machine) || !isValidBet(raw.bet) || typeof raw.at !== 'number') return null;
+  if (!raw || !isRequestId(raw.requestId) || !isMachineId(raw.machine) || !isValidBetFor(MACHINES[raw.machine], raw.bet) || typeof raw.at !== 'number') return null;
   return { requestId: raw.requestId, machine: raw.machine, bet: raw.bet, at: raw.at };
 }
 
@@ -42,7 +43,10 @@ export function loadHistory(): HistoryItem[] {
   const raw = storage.get<unknown>(HISTORY_KEY);
   if (!Array.isArray(raw)) return [];
   return raw
-    .filter((h): h is HistoryItem => !!h && isRequestId(h.requestId) && isMachineId(h.machine) && isValidBet(h.bet) && Number.isInteger(h.payout) && h.payout >= 0 && typeof h.at === 'number')
+    .filter((h: Partial<HistoryItem> | null): h is HistoryItem => {
+      if (!h || !isRequestId(h.requestId) || !isMachineId(h.machine)) return false;
+      return isValidBetFor(MACHINES[h.machine], h.bet) && Number.isInteger(h.payout) && (h.payout as number) >= 0 && typeof h.at === 'number';
+    })
     .slice(0, HISTORY_KEPT);
 }
 

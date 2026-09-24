@@ -9,7 +9,7 @@ describe('Preferences', () => {
   });
 
   it('keeps valid stored values', () => {
-    const stored = { sound: false, music: false, musicVolume: 0.6, haptics: false, animations: false, difficulty: 'hard', scenario: 'forest' };
+    const stored = { sound: false, music: false, musicVolume: 0.6, sfxVolume: 0.3, haptics: false, animations: false, difficulty: 'hard', scenario: 'forest' };
     expect(normalizePreferences(stored)).toEqual(stored);
   });
 
@@ -19,6 +19,12 @@ describe('Preferences', () => {
     expect(normalizePreferences({ musicVolume: 0.456 }).musicVolume).toBe(0.46);
     expect(normalizePreferences({ musicVolume: 'loud' }).musicVolume).toBe(DEFAULT_PREFERENCES.musicVolume);
     expect(normalizePreferences({ music: 'no' }).music).toBe(true);
+  });
+
+  it('clamps the effects volume the same way', () => {
+    expect(normalizePreferences({ sfxVolume: 9 }).sfxVolume).toBe(1);
+    expect(normalizePreferences({ sfxVolume: -2 }).sfxVolume).toBe(0);
+    expect(normalizePreferences({ sfxVolume: null }).sfxVolume).toBe(DEFAULT_PREFERENCES.sfxVolume);
   });
 
   it('uses the existing bot difficulties', () => {

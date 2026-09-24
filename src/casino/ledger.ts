@@ -13,9 +13,9 @@ export const CASINO_GAMES: CasinoGame[] = ['blackjack', 'roulette', 'slots'];
 export const MAX_BALANCE = 1_000_000_000;
 /**
  * Most a round can ever pay back, as a multiple of its stake (stake included):
- * blackjack 2.5× (a natural), roulette 36× (straight up), slots 2500× (five sevens on every line).
+ * blackjack 2.5× (a natural), roulette 36× (straight up), slots 5000× (the highest machine win cap).
  */
-export const MAX_PAYOUT_MULTIPLE: Record<CasinoGame, number> = { blackjack: 2.5, roulette: 36, slots: 2500 };
+export const MAX_PAYOUT_MULTIPLE: Record<CasinoGame, number> = { blackjack: 2.5, roulette: 36, slots: 5000 };
 const maxPayout = (game: CasinoGame, stake: number) => Math.floor(stake * MAX_PAYOUT_MULTIPLE[game]);
 export const HISTORY_SIZE = 50;
 const PAID_MEMORY = 200;
@@ -202,7 +202,7 @@ export function refillWallet(w: WalletData): { wallet: WalletData; ok: boolean }
 }
 
 
-export type InstantRefusal = 'funds' | 'duplicate' | 'invalid';
+export type InstantRefusal = 'funds' | 'duplicate' | 'invalid' | 'elsewhere';
 
 /**
  * A round decided and paid in one step (the house already knows the result): takes the stake and credits

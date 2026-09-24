@@ -25,10 +25,12 @@ export interface AnonAuthOptions {
   now?: () => number;
 }
 
+/** One sign-in in flight per auth server, shared by every client (a second one would create a second player). */
+const inflightByServer = new Map<string, Promise<string | null>>();
+
 export function createAnonAuth(opts: AnonAuthOptions): () => Promise<string | null> {
   const doFetch = opts.fetchImpl ?? ((...a: Parameters<typeof fetch>) => fetch(...a));
   const now = () => Math.floor((opts.now ?? Date.now)() / 1000);
-  let inflight: Promise<string | null> | null = null;
 
   async function request(path: string, body: unknown): Promise<Session | null> {
     const res = await doFetch(`${opts.authUrl}${path}`, {
@@ -59,5 +61,11 @@ export function createAnonAuth(opts: AnonAuthOptions): () => Promise<string | nu
     return next.access_token;
   }
 
-  return () => (inflight ??= obtain().finally(() => (inflight = null)));
+  return () => {
+    const running = inflightByServer.get(opts.authUrl);
+    if (running) return running;
+    const p = obtain().finally(() => inflightByServer.delete(opts.authUrl));
+    inflightByServer.set(opts.authUrl, p);
+    return p;
+  };
 }

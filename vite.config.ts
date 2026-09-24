@@ -9,7 +9,7 @@ const cspFor = (apiOrigins: string[]) => [
   "default-src 'self'",
   "script-src 'self'",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "font-src https://fonts.gstatic.com",
+  "font-src 'self' https://fonts.gstatic.com",
   "img-src 'self' data:",
   "media-src 'self'",
   // The slot server's origin, only when one is configured at build time (VITE_SUPABASE_URL).

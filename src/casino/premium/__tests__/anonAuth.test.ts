@@ -24,6 +24,14 @@ describe('anonymous auth', () => {
     expect(fetchImpl.mock.calls[0][0]).toBe('https://p/auth/v1/signup');
   });
 
+  it('two separate clients starting together still sign in only once', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(ok({ access_token: 'a2', refresh_token: 'r2', expires_in: 3600 }));
+    const a = createAnonAuth({ authUrl: 'https://q/auth/v1', apiKey: 'pub', fetchImpl, now: () => 1_000_000 });
+    const b = createAnonAuth({ authUrl: 'https://q/auth/v1', apiKey: 'pub', fetchImpl, now: () => 1_000_000 });
+    expect(await Promise.all([a(), b()])).toEqual(['a2', 'a2']);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
   it('refreshes an expired session and never silently replaces the player', async () => {
     store.set('carta.slots.session', JSON.stringify({ access_token: 'old', refresh_token: 'r', expires_at: 10 }));
     const fetchImpl = vi.fn().mockResolvedValue(new Response('{}', { status: 400 }));

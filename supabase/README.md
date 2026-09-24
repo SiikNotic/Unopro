@@ -9,11 +9,14 @@ Con este servidor, el resultado y el saldo pasan a decidirse fuera del navegador
 
 1. El jugador obtiene una sesión anónima de Supabase Auth (JWT).
 2. El navegador envía solo `{ requestId, machine, bet }` a la función `slot-spin`.
-3. La función verifica el JWT, valida la apuesta, sortea los rodillos con `crypto.getRandomValues`,
-   calcula el premio con el mismo motor que usa la web (`src/casino/premium/engine.ts`) y llama a
-   `slot_commit`, que en **una transacción** bloquea el monedero, comprueba si ese `requestId` ya se
-   registró (idempotencia), comprueba el saldo, descuenta la apuesta, abona el premio y guarda la tirada.
-4. La web recibe el recibo, lo valida y solo entonces anima los rodillos hasta ese resultado.
+3. La función verifica el JWT, valida la apuesta contra los niveles de esa máquina y decide la **ronda
+   completa** (giro base, multiplicadores, giros gratis y bonus) con `crypto.getRandomValues` y la
+   matemática de esa máquina (`src/casino/premium/machines.ts`, el mismo motor que usa la web). Luego
+   llama a `slot_commit`, que en **una transacción** bloquea el monedero, comprueba si ese `requestId`
+   ya se registró (idempotencia), comprueba el saldo, descuenta la apuesta, abona el premio y guarda
+   todos los sorteos de la ronda.
+4. La web recibe el recibo, lo recalcula a partir de los sorteos y solo si cuadra lo reproduce
+   (rodillos, giros gratis, bonus). Elegir monedas o cofres solo revela premios ya decididos.
 
 Los jugadores solo pueden **leer** sus propias filas (RLS). No pueden escribir saldos ni llamar a
 `slot_commit`. No hay cuentas de administración, parámetros ocultos ni atajos.
@@ -41,6 +44,9 @@ Los jugadores solo pueden **leer** sus propias filas (RLS). No pueden escribir s
   idempotencia, conflictos, límites, RLS/IDOR, permisos y 40 tiradas concurrentes.
 
 ## Límites conocidos
+
+- En modo local, solo una pestaña del navegador puede apostar a la vez (Web Locks); las demás muestran
+  un aviso y un botón «Jugar aquí». En navegadores sin Web Locks se mantiene el comportamiento anterior.
 
 - El resto del casino (Blackjack, Ruleta, Fiebre del Oro) sigue usando el monedero local; en modo
   servidor las 8 máquinas premium usan el saldo del servidor, que es independiente.

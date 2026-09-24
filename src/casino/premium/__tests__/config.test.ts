@@ -23,11 +23,11 @@ describe('postgrest store', () => {
   it('maps database refusals to store errors', async () => {
     for (const [code, expected] of [['P0402', 'insufficient_funds'], ['P0409', 'conflict'], ['P0400', 'invalid_bet']]) {
       const s = postgrestStore('https://p', 'k', vi.fn().mockResolvedValue(res(400, { code })));
-      await expect(s.commit({ userId: 'u', requestId: 'r', machine: 'royal', bet: 10, stops: [1, 2, 3, 4, 5], payout: 0 })).rejects.toEqual(new StoreError(expected as never));
+      await expect(s.commit({ userId: 'u', requestId: 'r', machine: 'royal', bet: 10, draws: { base: { stops: [1, 2, 3, 4, 5] }, free: [], picks: [] }, payout: 0 })).rejects.toEqual(new StoreError(expected as never));
     }
   });
   it('converts rows to receipts', async () => {
-    const row = { request_id: 'r', machine: 'royal', bet: 10, stops: [1, 2, 3, 4, 5], payout: '40', balance: '1030', created_at: '2026-01-01T00:00:00Z' };
+    const row = { request_id: 'r', machine: 'royal', bet: 10, draws: { base: { stops: [1, 2, 3, 4, 5] }, free: [], picks: [] }, payout: '40', balance: '1030', created_at: '2026-01-01T00:00:00Z' };
     const s = postgrestStore('https://p', 'k', vi.fn().mockResolvedValue(res(200, [row])));
     await expect(s.find('u', 'r')).resolves.toMatchObject({ requestId: 'r', payout: 40, balance: 1030 });
   });

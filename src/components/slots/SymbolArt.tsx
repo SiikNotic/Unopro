@@ -1,32 +1,49 @@
 import { memo } from 'react';
-import type { SymbolSkin } from './themes';
+import type { SymbolKind } from '@/casino/premium/engine';
+import { GLYPHS } from './glyphs';
+import type { SymbolArtDef, SymbolStyle } from './presentation';
 
-/** One symbol, drawn to fill its box. Pure decoration: the cell carries the accessible name. */
-export const SymbolArt = memo(function SymbolArt({ skin, wild }: { skin: SymbolSkin; wild?: boolean }) {
-  const grad = `linear-gradient(160deg, ${skin.c1}, ${skin.c2})`;
-  if (skin.bars) {
-    return (
-      <span className="ps-sym ps-sym-bars" aria-hidden>
-        {Array.from({ length: skin.bars }, (_, i) => (
-          <span key={i} className="ps-bar">BAR</span>
-        ))}
+interface SymbolArtProps {
+  def: SymbolArtDef;
+  style: SymbolStyle;
+  kind: SymbolKind;
+}
+
+/**
+ * One symbol drawn in its machine's style (printed ink, cut gems, struck coins, embers, candy bubbles,
+ * sepia ink, neon, black enamel). Decorative: the reel window carries the accessible description.
+ */
+export const SymbolArt = memo(function SymbolArt({ def, style, kind }: SymbolArtProps) {
+  const vars = { '--c1': def.c1, '--c2': def.c2, '--ink': def.ink ?? 'transparent' } as React.CSSProperties;
+  let body: React.ReactNode;
+  let shape = 'art';
+  if (def.bars) {
+    shape = 'bars';
+    body = Array.from({ length: def.bars }, (_, i) => (
+      <span key={i} className="ps-bar">
+        BAR
+      </span>
+    ));
+  } else if (def.glyph) {
+    shape = 'glyph';
+    const Glyph = GLYPHS[def.glyph];
+    body = <Glyph c1={def.c1} c2={def.c2} ink={def.ink} />;
+  } else if (def.icon) {
+    shape = 'icon';
+    const Icon = def.icon;
+    body = (
+      <span className="ps-plate">
+        <Icon className="ps-icon" strokeWidth={style === 'neon' || style === 'ink' ? 1.8 : 2.2} />
       </span>
     );
+  } else {
+    shape = 'letter';
+    body = <span className="ps-letter">{def.text}</span>;
   }
-  if (skin.text) {
-    return (
-      <span className={`ps-sym ps-sym-text ${skin.text === '7' ? 'ps-sym-seven' : ''}`} aria-hidden>
-        <span style={{ backgroundImage: grad }}>{skin.text}</span>
-      </span>
-    );
-  }
-  const Icon = skin.icon!;
   return (
-    <span className="ps-sym" aria-hidden>
-      <span className="ps-plate" style={{ background: `radial-gradient(120% 120% at 30% 20%, ${skin.c1} 0%, ${skin.c2} 70%)` }}>
-        <Icon className="ps-icon" strokeWidth={2.1} />
-      </span>
-      {wild && <span className="ps-wild">WILD</span>}
+    <span className={`ps-sym ps-s-${style} ps-${shape} ps-k-${kind}`} style={vars} aria-hidden>
+      {body}
+      {kind === 'wild' && <span className="ps-tag ps-tag-wild">WILD</span>}
     </span>
   );
 });

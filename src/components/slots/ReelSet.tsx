@@ -1,10 +1,10 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef } from 'react';
-import { REEL, REELS } from '@/casino/slots';
+import { REELS, stripsOf } from '@/casino/premium/engine';
+import type { MachineMath } from '@/casino/premium/engine';
 import { ReelMotion } from '@/casino/premium/reelMotion';
 import { SymbolArt } from './SymbolArt';
-import { SYMBOL_ORDER } from './themes';
-import type { MachineTheme } from './themes';
-const KEY_OF_STOP = REEL.map((s) => SYMBOL_ORDER.indexOf(s));
+import type { MachinePresentation } from './presentation';
+
 const CELLS = 5;
 
 export interface ReelSetHandle {
@@ -20,7 +20,8 @@ export interface ReelSetHandle {
 }
 
 interface ReelSetProps {
-  theme: MachineTheme;
+  math: MachineMath;
+  look: MachinePresentation;
   initialStops: number[];
   cellHeight: number;
   reduced: boolean;
@@ -36,8 +37,11 @@ const now = () => performance.now() / 1000;
  * loop only moves them and swaps which symbol each recycled cell shows. The loop runs only while a reel
  * moves and is cancelled on unmount.
  */
-export const ReelSet = forwardRef<ReelSetHandle, ReelSetProps>(function ReelSet({ theme, initialStops, cellHeight, reduced, highlight, onReelLand }, ref) {
-  const motions = useRef<ReelMotion[]>(initialStops.map((s) => new ReelMotion(s)));
+export const ReelSet = forwardRef<ReelSetHandle, ReelSetProps>(function ReelSet({ math, look, initialStops, cellHeight, reduced, highlight, onReelLand }, ref) {
+  // Every symbol of the machine is rendered once per recycled cell; `data-k` picks the visible one.
+  const order = useRef(Object.keys(math.symbols)).current;
+  const keyOfStop = useRef(stripsOf(math).map((strip) => strip.map((sym) => order.indexOf(sym)))).current;
+  const motions = useRef<ReelMotion[]>(initialStops.map((s, r) => new ReelMotion(s, keyOfStop[r].length, look.motion)));
   const strips = useRef<(HTMLDivElement | null)[]>([]);
   const reels = useRef<(HTMLDivElement | null)[]>([]);
   const cells = useRef<(HTMLDivElement | null)[][]>(Array.from({ length: REELS }, () => []));
@@ -52,6 +56,7 @@ export const ReelSet = forwardRef<ReelSetHandle, ReelSetProps>(function ReelSet(
   onLandRef.current = onReelLand;
 
   const draw = useCallback((r: number) => {
+    // (keyOfStop is fixed for the machine; the screen remounts per machine)
     const m = motions.current[r];
     const strip = strips.current[r];
     if (!strip) return;
@@ -61,12 +66,12 @@ export const ReelSet = forwardRef<ReelSetHandle, ReelSetProps>(function ReelSet(
     for (let j = 0; j < CELLS; j++) {
       const el = cells.current[r][j];
       if (!el) continue;
-      const k = String(KEY_OF_STOP[m.stopAtCell(base - 2 + j)]);
+      const k = String(keyOfStop[r][m.stopAtCell(base - 2 + j)]);
       if (el.dataset.k !== k) el.dataset.k = k;
     }
     const fast = m.phase === 'cruise' || m.phase === 'accel';
     reels.current[r]?.classList.toggle('is-fast', fast);
-  }, []);
+  }, [keyOfStop]);
 
   const tick = useCallback(() => {
     const t = now();
@@ -117,7 +122,7 @@ export const ReelSet = forwardRef<ReelSetHandle, ReelSetProps>(function ReelSet(
         if (reducedRef.current) return;
         const t = now();
         spinStart.current = t;
-        motions.current.forEach((m, r) => m.start(t + r * 0.055));
+        motions.current.forEach((m, r) => m.start(t + r * 0.05));
         loop();
       },
       land(stops, { tease }) {
@@ -137,10 +142,10 @@ export const ReelSet = forwardRef<ReelSetHandle, ReelSetProps>(function ReelSet(
             done?.();
             return;
           }
-          // Reels stop left to right; with a tease the last two hold back and brake slowly.
-          const base = Math.max(now(), spinStart.current + 0.6);
-          const extra = [0, 0, 0, tease ? 0.55 : 0, tease ? 1.35 : 0];
-          motions.current.forEach((m, r) => m.requestStop(stops[r], base + r * 0.21 + extra[r], tease && r >= 3 ? 10 : undefined));
+          // Reels stop left to right at the machine's pace; with a tease the last two hold back.
+          const base = Math.max(now(), spinStart.current + 0.55);
+          const extra = [0, 0, 0, tease ? look.tease[0] : 0, tease ? look.tease[1] : 0];
+          motions.current.forEach((m, r) => m.requestStop(stops[r], base + r * look.stagger + extra[r], tease && r >= 3 ? look.motion.brakeCells + 4 : undefined));
           loop();
         });
       },
@@ -154,7 +159,7 @@ export const ReelSet = forwardRef<ReelSetHandle, ReelSetProps>(function ReelSet(
       },
       isMoving: () => motions.current.some((m) => m.moving),
     }),
-    [draw, loop]
+    [draw, loop, look]
   );
 
   // Winning cells light up, the rest dim. Visible rows are cells 1–3 once the reels rest.
@@ -178,8 +183,8 @@ export const ReelSet = forwardRef<ReelSetHandle, ReelSetProps>(function ReelSet(
           <div ref={(el) => (strips.current[r] = el)} className="ps-strip">
             {Array.from({ length: CELLS }, (_, j) => (
               <div key={j} ref={(el) => (cells.current[r][j] = el)} className="ps-cell" style={{ height: cellHeight }}>
-                {SYMBOL_ORDER.map((sym) => (
-                  <SymbolArt key={sym} skin={theme.symbols[sym]} wild={sym === 'star'} />
+                {order.map((sym) => (
+                  <SymbolArt key={sym} def={look.symbols[sym]} style={look.style} kind={math.symbols[sym].kind} />
                 ))}
               </div>
             ))}

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { handleSlotRequest, StoreError } from '../slotHandler';
 import type { Receipt, SlotStore } from '../slotHandler';
-import { resolveSpin } from '../../../../src/casino/premium/engine';
+import { settleRound } from '../../../../src/casino/premium/engine';
+import { MACHINES } from '../../../../src/casino/premium/machines';
 
 /** In-memory twin of the SQL functions: per-player serialisation, idempotent on request id. */
 function memoryStore(start = 1000) {
@@ -26,7 +27,7 @@ function memoryStore(start = 1000) {
         if (bal < c.bet) throw new StoreError('insufficient_funds');
         const next = bal - c.bet + c.payout;
         wallets.set(c.userId, next);
-        const r: Receipt = { requestId: c.requestId, machine: c.machine, bet: c.bet, stops: c.stops, payout: c.payout, balance: next, at: 1 };
+        const r: Receipt = { requestId: c.requestId, machine: c.machine, bet: c.bet, draws: c.draws, payout: c.payout, balance: next, at: 1 };
         spins.set(key, r);
         return r;
       }),
@@ -43,21 +44,21 @@ const post = (userId: string | null, body: unknown) => ({ method: 'POST', url: U
 describe('slot server handler', () => {
   it('decides the spin on the server and books it: the payout matches the stops', async () => {
     const m = memoryStore();
-    const res = await handleSlotRequest(post('A', { requestId: uuid(), machine: 'inferno', bet: 50 }), { store: m.store });
+    const res = await handleSlotRequest(post('A', { requestId: uuid(), machine: 'inferno', bet: 40 }), { store: m.store });
     expect(res.status).toBe(200);
     const r = res.body as Receipt;
-    expect(r.payout).toBe(resolveSpin(r.stops, 50).payout);
-    expect(r.balance).toBe(1000 - 50 + r.payout);
+    expect(r.payout).toBe(settleRound(MACHINES.inferno, 40, r.draws).payout);
+    expect(r.balance).toBe(1000 - 40 + r.payout);
     expect(m.wallets.get('A')).toBe(r.balance);
   });
 
   it('ignores any result, payout or balance the client tries to send', async () => {
     const m = memoryStore();
-    const res = await handleSlotRequest(post('A', { requestId: uuid(), machine: 'lucky7s', bet: 10, stops: [5, 5, 5, 5, 5], payout: 25000, balance: 1e9, userId: 'B' }), { store: m.store, random: () => 0 });
+    const res = await handleSlotRequest(post('A', { requestId: uuid(), machine: 'lucky7s', bet: 10, draws: { base: { stops: [5, 5, 5, 5, 5] }, free: [], picks: [] }, payout: 10000, balance: 1e9, userId: 'B' }), { store: m.store, random: () => 0 });
     const r = res.body as Receipt;
-    expect(r.stops).toEqual([0, 0, 0, 0, 0]);
+    expect(r.draws.base.stops).toEqual([0, 0, 0, 0, 0]);
     expect(m.wallets.has('B')).toBe(false);
-    expect(r.payout).toBe(resolveSpin([0, 0, 0, 0, 0], 10).payout);
+    expect(r.payout).toBe(settleRound(MACHINES.lucky7s, 10, r.draws).payout);
   });
 
   it('requires a verified player', async () => {
@@ -71,6 +72,7 @@ describe('slot server handler', () => {
       [{ requestId: 'x', machine: 'lucky7s', bet: 10 }, 'invalid_bet'],
       [{ requestId: uuid(), machine: 'nope', bet: 10 }, 'invalid_machine'],
       [{ requestId: uuid(), machine: 'lucky7s', bet: 11 }, 'invalid_bet'],
+      [{ requestId: uuid(), machine: 'lucky7s', bet: 15 }, 'invalid_bet'],
       [{ requestId: uuid(), machine: 'lucky7s', bet: -10 }, 'invalid_bet'],
       [{ requestId: uuid(), machine: 'lucky7s', bet: '10' }, 'invalid_bet'],
       [null, 'invalid_bet'],
@@ -80,7 +82,7 @@ describe('slot server handler', () => {
 
   it('a replayed or concurrently duplicated request is booked once and answered identically', async () => {
     const m = memoryStore();
-    const body = { requestId: uuid(), machine: 'cosmic', bet: 100 };
+    const body = { requestId: uuid(), machine: 'royal', bet: 100 };
     const answers = await Promise.all(Array.from({ length: 10 }, () => handleSlotRequest(post('A', body), { store: m.store })));
     const first = answers[0].body as Receipt;
     for (const a of answers) expect(a.body).toEqual(first);
@@ -90,11 +92,15 @@ describe('slot server handler', () => {
 
   it('never spends chips the player does not have, whatever the concurrency', async () => {
     const m = memoryStore(500);
-    // A losing position, so exactly five 100-chip bets fit in 500.
+    // A losing position (royal, all reels at a stop whose line pays nothing), so exactly five 100-chip bets fit.
     let losing: number[] = [];
-    for (let a = 0; a < 39 && !losing.length; a++) {
-      const stops = [a, (a + 7) % 39, (a + 15) % 39, (a + 22) % 39, (a + 30) % 39];
-      if (resolveSpin(stops, 100).payout === 0) losing = stops;
+    for (let a = 0; a < 40 && !losing.length; a++) {
+      const stops = [a, (a + 7) % 40, (a + 15) % 40, (a + 22) % 40, (a + 30) % 40];
+      try {
+        if (settleRound(MACHINES.royal, 100, { base: { stops }, free: [], picks: [] }).payout === 0) losing = stops;
+      } catch {
+        // stops that trigger a feature need more draws; skip them
+      }
     }
     let k = 0;
     const random = () => losing[k++ % 5];
@@ -108,14 +114,14 @@ describe('slot server handler', () => {
   it('refuses reusing a request id for another bet (409)', async () => {
     const m = memoryStore();
     const id = uuid();
-    await handleSlotRequest(post('A', { requestId: id, machine: 'cosmic', bet: 100 }), { store: m.store });
-    expect((await handleSlotRequest(post('A', { requestId: id, machine: 'cosmic', bet: 200 }), { store: m.store })).status).toBe(409);
+    await handleSlotRequest(post('A', { requestId: id, machine: 'royal', bet: 100 }), { store: m.store });
+    expect((await handleSlotRequest(post('A', { requestId: id, machine: 'royal', bet: 200 }), { store: m.store })).status).toBe(409);
   });
 
   it('lookup only returns the calling player’s spins (no IDOR)', async () => {
     const m = memoryStore();
     const id = uuid();
-    await handleSlotRequest(post('A', { requestId: id, machine: 'pirates', bet: 10 }), { store: m.store });
+    await handleSlotRequest(post('A', { requestId: id, machine: 'pirates', bet: 20 }), { store: m.store });
     const mine = await handleSlotRequest({ method: 'GET', url: `${URL_}?requestId=${id}`, userId: 'A', body: null }, { store: m.store });
     const theirs = await handleSlotRequest({ method: 'GET', url: `${URL_}?requestId=${id}`, userId: 'B', body: null }, { store: m.store });
     expect(mine.status).toBe(200);

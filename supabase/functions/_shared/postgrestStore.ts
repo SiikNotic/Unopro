@@ -2,13 +2,13 @@
 // the service role key (server side only; never shipped to the browser).
 import { StoreError } from './slotHandler.ts';
 import type { Receipt, SlotStore } from './slotHandler.ts';
-import type { MachineId } from '../../../src/casino/premium/engine.ts';
+import type { MachineId, RoundDraws } from '../../../src/casino/premium/engine.ts';
 
 interface Row {
   request_id: string;
   machine: MachineId;
   bet: number;
-  stops: number[];
+  draws: RoundDraws;
   payout: number | string;
   balance: number | string;
   created_at: string;
@@ -18,7 +18,7 @@ const toReceipt = (r: Row): Receipt => ({
   requestId: r.request_id,
   machine: r.machine,
   bet: r.bet,
-  stops: r.stops,
+  draws: r.draws,
   payout: Number(r.payout),
   balance: Number(r.balance),
   at: Date.parse(r.created_at),
@@ -43,7 +43,7 @@ export function postgrestStore(supabaseUrl: string, serviceKey: string, fetchImp
   }
   return {
     async commit(c) {
-      const rows = await rpc<Row[]>('slot_commit', { p_user: c.userId, p_request: c.requestId, p_machine: c.machine, p_bet: c.bet, p_stops: c.stops, p_payout: c.payout });
+      const rows = await rpc<Row[]>('slot_commit', { p_user: c.userId, p_request: c.requestId, p_machine: c.machine, p_bet: c.bet, p_draws: c.draws, p_payout: c.payout });
       if (!rows?.length) throw new Error('empty commit');
       return toReceipt(rows[0]);
     },
