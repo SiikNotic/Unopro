@@ -72,10 +72,28 @@ Puesta en marcha (proyecto `unopro-juegos`):
    `https://mdwkigzorhvktgqlffck.supabase.co/auth/v1/callback`.
 4. Recomendado: SMTP propio (el correo integrado de Supabase envía muy pocos mensajes por hora).
 
+## Perfiles, roles, baneos y panel del equipo (`20260927000000_profiles_staff.sql`)
+
+- **Perfil** (`profiles`): `user_id` (identidad real, UUID) + `username` (solo nombre visible, 3–16
+  `A-Z a-z 0-9 _`, único sin distinguir mayúsculas por índice `lower(username)`) + `role`.
+- **Roles**: `user` < `staff` < `admin` < `owner` (un solo owner, índice único parcial).
+  staff: ver panel, banear/desbanear rangos inferiores · admin: + añadir/quitar monedas a rangos inferiores ·
+  owner: + cambiar roles (user/staff/admin) y ajustar sus propias monedas. Nadie puede actuar sobre el owner
+  ni asignar el rol owner desde ninguna función.
+- **Invitado → cuenta** (`account_register`): en una transacción mueve las fichas del invitado (tope 25,000,
+  una vez por cuenta y una vez por guest id) y da el bono de 1,000 (una vez por cuenta). Reintentos: sin cambios.
+- **Baneos** (`account_bans`): temporal o permanente, motivo obligatorio; bloquea las jugadas con monedas en la
+  base de datos y además pone `auth.users.banned_until` (sin nuevas sesiones ni refresco de token).
+- **Registro de auditoría** (`admin_audit`): solo inserción; un trigger rechaza UPDATE, DELETE y TRUNCATE
+  (incluso con service role).
+- Todas las funciones leen al que llama de `auth.uid()` y comprueban su rol en la base de datos.
+- Realtime: `account_wallets`, `account_ledger`, `account_bans`, `admin_audit` (RLS decide quién recibe qué).
+- El owner se asignó con una operación SQL del operador (no hay ninguna vía pública para hacerlo).
+
 ## Pruebas
 
 - `npm test` incluye el manejador del servidor (`functions/_shared/__tests__`).
-- `tests/run_sql_tests.sh` prueba las migraciones (tragamonedas, salas y cuentas) contra un Postgres **local y desechable**
+- `tests/run_sql_tests.sh` prueba las migraciones (tragamonedas, salas, cuentas, perfiles/staff: migración invitado, usernames, roles, monedas, baneos, auditoría y carreras) contra un Postgres **local y desechable**
   (`tests/00_supabase_stub.sql` imita el esquema `auth` de Supabase; no lo apliques a un proyecto real):
   idempotencia, conflictos, límites, RLS/IDOR, permisos y 40 tiradas concurrentes.
 

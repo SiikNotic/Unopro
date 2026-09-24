@@ -7,6 +7,7 @@ import { MusicButton } from '@/components/ui/MusicButton';
 import { useI18n } from '@/i18n';
 import { useWallet } from '@/casino/useWallet';
 import { useAccount } from '@/account/useAccount';
+import { BanNotice } from '@/account/BanNotice';
 import { REFILL_CHIPS } from '@/casino/wallet';
 import { scenarioStyle } from '@/game/scenarios/scenarios';
 import type { ScenarioId } from '@/game/scenarios/scenarios';
@@ -94,6 +95,7 @@ export function CasinoFrame({ title, subtitle, back, scenario, backdrop, onHelp,
             </button>
           </div>
         )}
+        {mode === 'account' && <BanNotice />}
         {mode === 'account' && account.coinsError && (
           <div className="cz-panel p-3 flex items-center gap-3 cz-fade-in" role="alert">
             <p className="text-sm text-[var(--cz-ivory)] flex-1 min-w-0">{t('account.coinsError')}</p>

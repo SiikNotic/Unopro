@@ -41,8 +41,16 @@ export function AccountOverlay() {
   const text = !notice
     ? ''
     : notice.kind === 'bonus'
-      ? t('account.notice.bonus', { amount: notice.amount.toLocaleString() })
-      : notice.kind === 'welcome'
+      ? notice.migrated > 0
+        ? t(notice.capped ? 'account.notice.bonusMigratedCapped' : 'account.notice.bonusMigrated', { amount: notice.amount.toLocaleString(), migrated: notice.migrated.toLocaleString() })
+        : t('account.notice.bonus', { amount: notice.amount.toLocaleString() })
+      : notice.kind === 'migrated'
+        ? t(notice.capped ? 'account.notice.migratedCapped' : 'account.notice.migrated', { migrated: notice.migrated.toLocaleString() })
+        : notice.kind === 'coinsAdjusted'
+          ? t(notice.amount > 0 ? 'account.notice.coinsAdded' : 'account.notice.coinsRemoved', { amount: Math.abs(notice.amount).toLocaleString() })
+          : notice.kind === 'usernameChanged'
+            ? t('account.notice.usernameChanged', { name: notice.username })
+            : notice.kind === 'welcome'
         ? t('account.notice.welcome')
         : notice.kind === 'error'
           ? t(`account.errors.${notice.code}`)
@@ -53,7 +61,7 @@ export function AccountOverlay() {
       {notice && (
         <div className="ac-toast" role="status" aria-live="polite">
           {notice.kind === 'bonus' ? <Gift className="w-6 h-6 shrink-0 text-[var(--cz-gold)]" aria-hidden /> : <CheckCircle2 className={`w-6 h-6 shrink-0 ${notice.kind === 'error' ? 'text-[#ffb3b3]' : 'text-emerald-300'}`} aria-hidden />}
-          <p className="text-sm text-[var(--cz-ivory)] flex-1">{text}</p>
+          <p className="text-sm text-[var(--cz-ivory)] flex-1 basis-[200px] min-w-0">{text}</p>
           {notice.kind === 'bonus' && (
             <button
               type="button"

@@ -51,7 +51,8 @@ function RoomEntry({ game, cfg, joining }: { game: TableGame; cfg: OnlineConfig;
   const { back, navigate } = useNavigation();
   const [profileName, saveName] = useProfileName();
   const account = useAccount();
-  const [name, setName] = useState(profileName || account.user?.name || '');
+  const signedIn = account.status === 'user' && !!account.profile?.username;
+  const [name, setName] = useState((signedIn ? account.profile?.username : profileName) || account.user?.name || '');
   const [seats, setSeats] = useState(4);
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
@@ -65,7 +66,7 @@ function RoomEntry({ game, cfg, joining }: { game: TableGame; cfg: OnlineConfig;
     if (joining && !joinCode) return setError('bad_code');
     setBusy(true);
     setError(null);
-    saveName(clean);
+    if (!signedIn) saveName(clean);
     const d = loadDominoSetup();
     const b = loadBingoSetup();
     const res = joining
@@ -82,7 +83,8 @@ function RoomEntry({ game, cfg, joining }: { game: TableGame; cfg: OnlineConfig;
         <label className="ms-label" htmlFor="room-name">
           {t('room.yourName')}
         </label>
-        <input id="room-name" className="rm-input !tracking-normal !normal-case" maxLength={16} autoComplete="nickname" value={name} onChange={(e) => setName(e.target.value)} placeholder={t('room.namePlaceholder')} />
+        <input id="room-name" className="rm-input !tracking-normal !normal-case" maxLength={16} autoComplete="nickname" value={name} onChange={(e) => setName(e.target.value)} placeholder={t('room.namePlaceholder')} readOnly={signedIn} aria-readonly={signedIn} />
+        {signedIn && <p className="ms-note mt-1">{t('room.accountName')}</p>}
         {joining ? (
           <>
             <label className="ms-label mt-4" htmlFor="room-code">

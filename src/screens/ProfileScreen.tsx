@@ -9,6 +9,8 @@ import { NAME_MAX, useProfileName } from '@/settings/profile';
 import { useNavigation } from '@/components/Navigation';
 import { useAccount } from '@/account/useAccount';
 import { useAccountHistory } from '@/account/history';
+import { UsernameEditor } from '@/account/UsernameEditor';
+import { BanNotice } from '@/account/BanNotice';
 
 function Stat({ label, value, tone = '' }: { label: string; value: string; tone?: string }) {
   return (
@@ -29,7 +31,7 @@ export function ProfileScreen() {
   const ledger = useAccountHistory(accountMode);
   const history = accountMode ? (ledger.entries ?? []) : localHistory;
   const [name, setName] = useProfileName();
-  const shown = (accountMode && account.user?.name) || name || t('profile.guest');
+  const shown = (accountMode && account.profile?.username) || name || t('profile.guest');
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(name);
 
@@ -44,7 +46,9 @@ export function ProfileScreen() {
             {shown.slice(0, 1).toUpperCase()}
           </div>
           <div className="min-w-0 flex-1">
-            {editing ? (
+            {accountMode ? (
+              <h2 className="font-display font-extrabold text-xl text-white truncate">{shown}</h2>
+            ) : editing ? (
               <form
                 className="flex items-center gap-2"
                 onSubmit={(e) => {
@@ -84,6 +88,9 @@ export function ProfileScreen() {
             <p className="text-xs text-[var(--cz-muted)] mt-1">{t(accountMode ? 'profile.accountName' : 'profile.local')}</p>
           </div>
         </section>
+
+        {accountMode && <BanNotice />}
+        {accountMode && account.profile && <UsernameEditor />}
 
         {account.status !== 'off' && (
           <button type="button" onClick={() => navigate('account')} className="cz-panel p-4 flex items-center gap-3 text-left hover:border-[var(--cz-line-strong)]">

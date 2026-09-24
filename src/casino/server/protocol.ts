@@ -20,6 +20,8 @@ export interface AccountInfo {
   balance: number;
   bonusClaimed: boolean;
   registered: boolean;
+  /** The guest wallet was already moved into this account (or the chance was used). */
+  migrated?: boolean;
 }
 
 export interface RouletteResult {

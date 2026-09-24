@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { onlineConfig, tokenFor } from '@/games/online/client';
-import { newId } from '@/casino/random';
 import { SESSION_KEY } from '@/casino/premium/anonAuth';
 import { storage } from '@/storage';
 import type { AccountInfo } from '@/casino/server/protocol';
@@ -9,7 +8,31 @@ import { appReturnUrl, AuthError, createAuthApi, decodeJwt, readAuthReturn, read
 import type { AccountUser, OAuthProvider } from './authApi';
 import { AccountContext } from './accountContext';
 import type { AccountContextValue, AccountNotice, AccountStatus } from './accountContext';
-import { casinoCall } from './casinoApi';
+import { rpc } from './rpc';
+import type { RpcResult } from './rpc';
+import { registerWithGuest } from './guest';
+import type { RegisterResult } from './guest';
+import { subscribeLive } from './live';
+import type { AccountBan, AccountProfile, Role } from './accountContext';
+
+interface MyAccount {
+  userId: string;
+  registered: boolean;
+  username: string | null;
+  role: Role;
+  balance: number;
+  bonusClaimed: boolean;
+  migrated: boolean;
+  ban: AccountBan | null;
+}
+
+/** The name a new profile starts from: the guest's local name, else the Google / Discord name. */
+function suggestedName(user: AccountUser | null): string | null {
+  const local = storage.get<{ name?: unknown }>('carta.profile')?.name;
+  return (typeof local === 'string' && local.trim()) || user?.name || null;
+}
+
+const HEARTBEAT_MS = 2 * 60 * 1000;
 
 const asAuthError = (e: unknown) => (e instanceof AuthError ? e : new AuthError('unknown'));
 
@@ -27,22 +50,46 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   const [coinsError, setCoinsError] = useState(false);
   const [notice, setNotice] = useState<AccountNotice | null>(null);
   const [recovering, setRecovering] = useState(false);
+  const [profile, setProfile] = useState<AccountProfile | null>(null);
+  const [ban, setBan] = useState<AccountBan | null>(null);
   const loadSeq = useRef(0);
 
-  const refreshCoins = useCallback(async () => {
-    const res = await casinoCall<AccountInfo>({ op: 'account' }, cfg);
-    if (res.ok) {
-      setCoins(res.data);
-      setCoinsError(false);
-    } else setCoinsError(true);
+  /** Reads balance, username, role and ban from the database (the only source of truth for them). */
+  const readAccount = useCallback(async (): Promise<MyAccount | null> => {
+    const res = await rpc<MyAccount | null>('my_account', {}, cfg);
+    if (!res.ok || !res.data) {
+      setCoinsError(true);
+      return null;
+    }
+    const me = res.data;
+    setCoins({ balance: me.balance, bonusClaimed: me.bonusClaimed, registered: me.registered, migrated: me.migrated });
+    setProfile({ userId: me.userId, username: me.username, role: me.role });
+    setBan(me.ban);
+    setCoinsError(false);
+    return me;
   }, [cfg]);
 
+  const refreshCoins = useCallback(async () => {
+    await readAccount();
+  }, [readAccount]);
+
+  /**
+   * First sign-in of an account: moves this browser's guest chips in and grants the welcome credit,
+   * in one database transaction. Safe to repeat: the database does each part at most once.
+   */
   const claimBonus = useCallback(async () => {
-    const res = await casinoCall<{ balance: number; granted: boolean }>({ op: 'claim', requestId: newId() }, cfg);
-    if (!res.ok) return;
-    setCoins((c) => ({ balance: res.data.balance, bonusClaimed: true, registered: c?.registered ?? true }));
-    if (res.data.granted) setNotice({ kind: 'bonus', amount: 1000 });
-  }, [cfg]);
+    const r = await registerWithGuest((args) => rpc<RegisterResult[]>('account_register', args, cfg));
+    if (!r) {
+      // Nothing moved: the guest chips are still here; the next sign-in tries again.
+      await readAccount();
+      return;
+    }
+    const migrated = r.guest_status === 'already' ? 0 : Number(r.migrated);
+    const capped = r.guest_status === 'capped';
+    if (r.bonus_granted) setNotice({ kind: 'bonus', amount: 1000, migrated, capped });
+    else if (migrated > 0) setNotice({ kind: 'migrated', migrated, capped });
+    await readAccount();
+  }, [cfg, readAccount]);
 
   // Stable, and a no-op when nothing changed (games call it from effects).
   const setBalance = useCallback((balance: number) => setCoins((c) => (c && c.balance !== balance ? { ...c, balance } : c)), []);
@@ -56,6 +103,8 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     if (!saved || claims?.is_anonymous === true) {
       setUser(null);
       setCoins(null);
+      setProfile(null);
+      setBan(null);
       setStatus('guest');
       return;
     }
@@ -98,21 +147,20 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       if (!u) saveSession(null);
       setUser(null);
       setCoins(null);
+      setProfile(null);
+      setBan(null);
       setStatus('guest');
       return;
     }
     setUser(u);
     setStatus('user');
-    const res = await casinoCall<AccountInfo>({ op: 'account' }, cfg);
+    if (!u.confirmed) return;
+    await rpc('ensure_profile', { p_suggested: suggestedName(u) }, cfg);
     if (seq !== loadSeq.current) return;
-    if (!res.ok) {
-      setCoinsError(true);
-      return;
-    }
-    setCoins(res.data);
-    setCoinsError(false);
-    if (res.data.registered && !res.data.bonusClaimed) await claimBonus();
-  }, [cfg, api, claimBonus]);
+    const me = await readAccount();
+    if (seq !== loadSeq.current || !me) return;
+    if (me.registered && !me.ban && (!me.bonusClaimed || !me.migrated)) await claimBonus();
+  }, [cfg, api, claimBonus, readAccount]);
 
   // Coming back from Google / Discord, an email confirmation or a password-reset link.
   useEffect(() => {
@@ -161,6 +209,63 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     };
   }, [cfg, load]);
 
+  // Presence: "seen recently" for the staff overview, while the app is open and visible.
+  const userId = profile?.userId ?? null;
+  useEffect(() => {
+    if (!cfg || status !== 'user' || !userId) return;
+    const id = window.setInterval(() => {
+      if (!document.hidden) void rpc('touch_presence', {}, cfg);
+    }, HEARTBEAT_MS);
+    return () => window.clearInterval(id);
+  }, [cfg, status, userId]);
+
+  // Live: coins staff add / remove, and a ban or unban, reach the player without a reload.
+  useEffect(() => {
+    if (!cfg || status !== 'user' || !userId) return;
+    let stop: (() => void) | null = null;
+    let cancelled = false;
+    const seen = new Set<string>();
+    subscribeLive(
+      cfg,
+      `me-${userId}`,
+      [
+        { table: 'account_ledger', event: 'INSERT', filter: `user_id=eq.${userId}` },
+        { table: 'account_bans', filter: `user_id=eq.${userId}` },
+      ],
+      (c) => {
+        if (c.table === 'account_ledger' && c.row) {
+          const id = String(c.row.id);
+          if (seen.has(id)) return;
+          seen.add(id);
+          const game = c.row.game;
+          // Game rounds are shown by the game itself when its animation ends.
+          if (game === 'admin_add' || game === 'admin_remove') {
+            setBalance(Number(c.row.balance_after));
+            setNotice({ kind: 'coinsAdjusted', amount: Number(c.row.payout) - Number(c.row.stake) });
+          }
+        } else if (c.table === 'account_bans') void readAccount();
+      }
+    )
+      .then((s) => (cancelled ? s() : (stop = s)))
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+      stop?.();
+    };
+  }, [cfg, status, userId, setBalance, readAccount]);
+
+  const setUsername = useCallback(
+    async (name: string): Promise<RpcResult<string>> => {
+      const res = await rpc<string>('set_username', { p_name: name.trim() }, cfg);
+      if (res.ok) {
+        setProfile((p) => (p ? { ...p, username: res.data } : p));
+        setNotice({ kind: 'usernameChanged', username: res.data });
+      }
+      return res;
+    },
+    [cfg]
+  );
+
   const value = useMemo<AccountContextValue>(() => {
     const need = () => {
       if (!api) throw new AuthError('unknown');
@@ -171,6 +276,9 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       user,
       coins,
       coinsError,
+      profile,
+      ban,
+      setUsername,
       notice,
       recovering,
       dismissNotice: () => setNotice(null),
@@ -190,6 +298,8 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         const s = readSession();
         if (s && api) await api.signOut(s.access_token);
         saveSession(null);
+        setProfile(null);
+        setBan(null);
         setNotice({ kind: 'signedOut' });
       },
       resendConfirmation: (email) => need().resendConfirmation(email.trim()),
@@ -206,7 +316,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       setBalance,
       claimBonus,
     };
-  }, [api, cfg, status, user, coins, coinsError, notice, recovering, refreshCoins, claimBonus, setBalance]);
+  }, [api, cfg, status, user, coins, coinsError, profile, ban, setUsername, notice, recovering, refreshCoins, claimBonus, setBalance]);
 
   return <AccountContext.Provider value={value}>{children}</AccountContext.Provider>;
 }

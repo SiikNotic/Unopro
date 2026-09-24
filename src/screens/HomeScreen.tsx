@@ -9,12 +9,12 @@ import type { LobbyGame } from '@/components/lobby/lobbyMoods';
 import { useI18n } from '@/i18n';
 import { useWallet } from '@/casino/useWallet';
 import { formatChips } from '@/casino/chipValues';
-import { useProfileName } from '@/settings/profile';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useViewport } from '@/hooks/useViewport';
 import type { Screen } from '@/types/navigation';
 import { GamesHub } from '@/games/shared/ui/GamesHub';
 import { useAccount } from '@/account/useAccount';
+import { usePlayerName } from '@/account/usePlayerName';
 
 interface GameEntry {
   id: LobbyGame;
@@ -172,8 +172,7 @@ export function HomeScreen() {
   const { t } = useI18n();
   const { balance } = useWallet();
   const account = useAccount();
-  const [profileName] = useProfileName();
-  const name = account.user?.name || profileName;
+  const name = usePlayerName();
   const play = (g: GameEntry) => navigate(g.screen);
 
   return (

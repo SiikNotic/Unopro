@@ -64,6 +64,7 @@
   z-index: 80;
   width: min(420px, calc(100vw - 32px));
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 12px;
   padding: 12px 12px 12px 14px;

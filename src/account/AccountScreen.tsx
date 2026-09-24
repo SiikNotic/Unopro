@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { Coins, Eye, EyeOff, Gift, LogOut, Mail, ShieldCheck, UserRound } from 'lucide-react';
+import { Coins, Eye, EyeOff, Gift, LayoutDashboard, LogOut, Mail, ShieldCheck, UserRound } from 'lucide-react';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { useNavigation } from '@/components/Navigation';
 import { useI18n } from '@/i18n';
@@ -8,6 +8,9 @@ import { formatChips } from '@/casino/chipValues';
 import { useAccount } from './useAccount';
 import { AuthError, PASSWORD_MIN } from './authApi';
 import type { AuthErrorCode, OAuthProvider } from './authApi';
+import { UsernameEditor } from './UsernameEditor';
+import { BanNotice } from './BanNotice';
+import { ROLE_RANK } from './accountContext';
 import './account.css';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -218,7 +221,8 @@ function AccountPanel() {
   const u = account.user;
   const [busy, setBusy] = useState(false);
   const [avatarOk, setAvatarOk] = useState(true);
-  const shown = u?.name || u?.email || t('profile.guest');
+  const shown = account.profile?.username || u?.name || u?.email || t('profile.guest');
+  const role = account.profile?.role ?? 'user';
   const providerLabel = u?.provider === 'google' ? 'Google' : u?.provider === 'discord' ? 'Discord' : t('account.email');
 
   return (
@@ -234,9 +238,14 @@ function AccountPanel() {
         <div className="min-w-0 flex-1">
           <h2 className="font-display font-extrabold text-xl text-white truncate">{shown}</h2>
           {u?.email && u.email !== shown && <p className="text-xs text-white/70 truncate">{u.email}</p>}
-          <p className="text-xs text-[var(--cz-muted)] mt-0.5">{t('account.via', { provider: providerLabel })}</p>
+          <p className="text-xs text-[var(--cz-muted)] mt-0.5">
+            {t('account.via', { provider: providerLabel })}
+            {role !== 'user' && <span className="ml-2 cz-pill !min-h-0 !py-0.5 !px-2 !text-[10px] uppercase tracking-wider text-[var(--cz-gold)]">{t(`account.roleLabel.${role}`)}</span>}
+          </p>
         </div>
       </div>
+
+      <BanNotice />
 
       <div className="ac-hero">
         <span className="cz-label !text-[var(--cz-gold-hover)]">{t('account.coins')}</span>
@@ -259,6 +268,14 @@ function AccountPanel() {
         )}
         <p className="mt-3 text-xs text-white/60">{t('account.coinsNote')}</p>
       </div>
+
+      {account.profile && <UsernameEditor />}
+
+      {ROLE_RANK[role] >= 1 && (
+        <button type="button" className="cz-btn cz-btn-secondary w-full !border-[rgba(216,178,106,0.5)]" onClick={() => navigate('staff')}>
+          <LayoutDashboard className="w-4 h-4 text-[var(--cz-gold)]" /> {t('account.staffDashboard')}
+        </button>
+      )}
 
       <button type="button" className="cz-btn cz-btn-primary cz-btn-lg w-full" onClick={() => navigate('home')}>
         {t('account.play')}

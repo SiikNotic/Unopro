@@ -18,6 +18,22 @@ psql -q -v ON_ERROR_STOP=1 -d "$DB" -f game_rooms_test.sql
 psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20260926000000_accounts.sql
 psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20260926000000_accounts.sql
 psql -q -v ON_ERROR_STOP=1 -d "$DB" -f accounts_test.sql
+psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20260927000000_profiles_staff.sql
+psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20260927000000_profiles_staff.sql
+psql -q -v ON_ERROR_STOP=1 -d "$DB" -f profiles_staff_test.sql
+
+# Two players ask for the same username at the same instant: exactly one gets it.
+for u in 21 22 23 24 25 26; do
+  psql -q -d "$DB" -c "insert into auth.users (id, email, email_confirmed_at) values ('00000000-0000-0000-0002-0000000000$u', 'r$u@t.dev', now())"
+  psql -q -d "$DB" -c "set role authenticated; select set_config('request.jwt.claim.sub', '00000000-0000-0000-0002-0000000000$u', false); select public.ensure_profile(null)" >/dev/null
+done
+for u in 21 22 23 24 25 26; do
+  psql -q -d "$DB" -c "set role authenticated; select set_config('request.jwt.claim.sub', '00000000-0000-0000-0002-0000000000$u', false); select public.set_username('RaceName')" >/dev/null 2>&1 &
+done
+wait
+TAKEN=$(psql -At -d "$DB" -c "select count(*) from public.profiles where lower(username) = 'racename'")
+echo "username race: holders=$TAKEN"
+[ "$TAKEN" = 1 ] || { echo "USERNAME RACE TEST FAILED"; exit 1; }
 
 # Concurrency: 40 parallel commits for one player who can afford only 5 bets of 200 (balance 1000),
 # 10 of them replaying the same request id. Exactly 5 distinct spins may be booked, never a negative balance.

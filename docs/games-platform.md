@@ -64,6 +64,14 @@ Guests keep the browser's practice chips. Registered players (confirmed email, G
 database; the screens only animate what it answered. Sign-in uses Supabase Auth over plain fetch (PKCE for
 Google / Discord and email links), stored in the same session slot the online rooms use.
 
+### Profiles and staff
+
+Usernames, roles (user / staff / admin / owner), guest → account migration, bans and an append-only audit
+log live in the database (`supabase/migrations/20260927000000_profiles_staff.sql`); every function checks
+the caller's role there. The app reads them through `my_account()`; the Staff dashboard (`src/staff`,
+screen `staff`) calls the `staff_*` functions and listens to Realtime changes of balances, bans and the
+audit log. A player who opens the dashboard gets "access denied" from the server.
+
 ## Domino rules (as implemented)
 
 - **Tiles and deal:** a double-six set of 28 tiles. Every player gets 7. The rest is the boneyard: 14 tiles

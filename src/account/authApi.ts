@@ -39,6 +39,7 @@ export type AuthErrorCode =
   | 'rate_limited'
   | 'provider_disabled'
   | 'signups_disabled'
+  | 'banned'
   | 'network'
   | 'unknown';
 
@@ -79,6 +80,7 @@ export function authErrorOf(status: number, body: unknown): AuthError {
   const b = (body ?? {}) as Record<string, unknown>;
   const code = String(b.error_code ?? b.code ?? b.error ?? '');
   const msg = String(b.msg ?? b.message ?? b.error_description ?? '').toLowerCase();
+  if (code === 'user_banned' || msg.includes('banned')) return new AuthError('banned');
   if (status === 429 || code === 'over_request_rate_limit' || code === 'over_email_send_rate_limit') return new AuthError('rate_limited');
   if (code === 'email_not_confirmed' || msg.includes('not confirmed')) return new AuthError('email_not_confirmed');
   if (code === 'user_already_exists' || code === 'email_exists' || msg.includes('already registered')) return new AuthError('user_exists');

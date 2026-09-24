@@ -1,11 +1,32 @@
 import { createContext } from 'react';
 import type { AccountUser, AuthErrorCode, OAuthProvider } from './authApi';
 import type { AccountInfo } from '@/casino/server/protocol';
+import type { RpcResult } from './rpc';
+
+export type Role = 'user' | 'staff' | 'admin' | 'owner';
+export const ROLE_RANK: Record<Role, number> = { user: 0, staff: 1, admin: 2, owner: 3 };
+
+export interface AccountProfile {
+  userId: string;
+  username: string | null;
+  /** As stored in the database. The screens use it only to decide what to show; the server checks it again. */
+  role: Role;
+}
+
+export interface AccountBan {
+  reason: string;
+  kind: 'temporary' | 'permanent';
+  expiresAt: string | null;
+  since: string;
+}
 
 export type AccountStatus = 'off' | 'loading' | 'guest' | 'user';
 
 export type AccountNotice =
-  | { kind: 'bonus'; amount: number }
+  | { kind: 'bonus'; amount: number; migrated: number; capped: boolean }
+  | { kind: 'migrated'; migrated: number; capped: boolean }
+  | { kind: 'coinsAdjusted'; amount: number }
+  | { kind: 'usernameChanged'; username: string }
   | { kind: 'welcome'; name: string | null }
   | { kind: 'confirmed' }
   | { kind: 'signedOut' }
@@ -19,6 +40,11 @@ export interface AccountContextValue {
   /** The signed-in player's account coins (null while loading or if the server can't be reached). */
   coins: AccountInfo | null;
   coinsError: boolean;
+  profile: AccountProfile | null;
+  /** Set while the account is suspended (read from the server). */
+  ban: AccountBan | null;
+  /** Changes the display name (unique, checked by the database). */
+  setUsername: (name: string) => Promise<RpcResult<string>>;
   notice: AccountNotice | null;
   dismissNotice: () => void;
   /** True after following a password-reset link: the app asks for the new password. */

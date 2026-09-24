@@ -21,3 +21,8 @@ alter default privileges in schema public grant all on sequences to anon, authen
 -- Columns of the real auth.users that the accounts migration reads.
 alter table auth.users add column if not exists is_anonymous boolean not null default false;
 alter table auth.users add column if not exists email_confirmed_at timestamptz;
+alter table auth.users add column if not exists email text;
+alter table auth.users add column if not exists raw_app_meta_data jsonb not null default '{}';
+alter table auth.users add column if not exists created_at timestamptz not null default now();
+alter table auth.users add column if not exists last_sign_in_at timestamptz;
+alter table auth.users add column if not exists banned_until timestamptz;
