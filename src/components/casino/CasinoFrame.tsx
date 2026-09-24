@@ -19,11 +19,13 @@ interface CasinoFrameProps {
   subtitle?: string;
   back: Screen;
   scenario: ScenarioId;
+  /** Replaces the animated scene with a custom backdrop. */
+  backdrop?: ReactNode;
   children: ReactNode;
 }
 
 /** Shared shell for the casino: animated scene, header with the chip balance, refill offer and the virtual-chips notice. */
-export function CasinoFrame({ title, subtitle, back, scenario, children }: CasinoFrameProps) {
+export function CasinoFrame({ title, subtitle, back, scenario, backdrop, children }: CasinoFrameProps) {
   const { navigate } = useNavigation();
   const { t } = useI18n();
   const { balance, canRefill, refill } = useWallet();
@@ -37,7 +39,7 @@ export function CasinoFrame({ title, subtitle, back, scenario, children }: Casin
   return (
     <div className="relative min-h-[100dvh] w-full overflow-x-hidden" style={scenarioStyle(scenario) as React.CSSProperties}>
       <div className="fixed inset-0">
-        <SceneBackground scenario={scenario} />
+        {backdrop ?? <SceneBackground scenario={scenario} />}
       </div>
       <div className="relative w-full max-w-3xl mx-auto px-3 sm:px-6 pt-4 pb-8 flex flex-col gap-4">
         <header className="flex items-center gap-3">

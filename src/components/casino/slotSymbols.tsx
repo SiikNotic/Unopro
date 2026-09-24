@@ -151,32 +151,137 @@ function Wagon() {
   );
 }
 
-function Horse() {
+function SheriffStar() {
+  const points = Array.from({ length: 6 }, (_, i) => {
+    const a = ((i * 60 - 90) * Math.PI) / 180;
+    return [24 + Math.cos(a) * 20.5, 24 + Math.sin(a) * 20.5];
+  });
+  const d = points
+    .map(([x, y], i) => {
+      const a = (((i * 60 + 30) - 90) * Math.PI) / 180;
+      return `${i ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}L${(24 + Math.cos(a) * 12).toFixed(1)} ${(24 + Math.sin(a) * 12).toFixed(1)}`;
+    })
+    .join('') + 'Z';
   return (
     <>
       <defs>
-        <linearGradient id="ss-horse" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#b8672c" />
-          <stop offset="1" stopColor="#6a3413" />
+        <linearGradient id="ss-badge" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#fff3b8" />
+          <stop offset="0.5" stopColor="#f0b72f" />
+          <stop offset="1" stopColor="#9a6106" />
         </linearGradient>
       </defs>
-      <path
-        d="M29 4l3.5 7.5c6 2.5 10 9 10 17.5V45H23c.4-5.5-1.5-10-5.5-12.5-3.5-.4-7 .6-9.6-1C5 29.8 4.6 25.6 7 22.8c3.2-4 7-7.4 12-10.3L25 4.5l1.8 5z"
-        fill="url(#ss-horse)"
-        stroke="#3a1a07"
-        strokeWidth="1.2"
-        strokeLinejoin="round"
-      />
-      {/* mane */}
-      <path d="M32.5 11.5c6 2.5 10 9 10 17.5V42h-3.2c0-10.5-2.3-18.7-8.8-25.3z" fill="#2b170c" />
-      <path d="M31 11.5l2.6-3.4M34 13.5l3.2-2.4M37 16.5l3.4-1.4" stroke="#2b170c" strokeWidth="2" strokeLinecap="round" />
-      {/* white blaze */}
-      <path d="M20.5 13.5c-4 3-7.5 7-9.4 11.2l2.2 1c2-3.9 4.8-7.4 8.4-9.7z" fill="#fbf6ea" />
-      {/* eye, nostril, mouth */}
-      <circle cx="22.5" cy="17" r="1.5" fill="#1a0c04" />
-      <circle cx="22.1" cy="16.5" r="0.45" fill="#fff" />
-      <ellipse cx="8.7" cy="26.4" rx="1.2" ry="0.8" fill="#2a1206" />
-      <path d="M8.5 30.5c2 .6 4 .5 6-.3" stroke="#3a1a07" strokeWidth="1" fill="none" strokeLinecap="round" />
+      <path d={d} fill="url(#ss-badge)" stroke="#6b4300" strokeWidth="1.6" strokeLinejoin="round" />
+      {points.map(([x, y], i) => (
+        <circle key={i} cx={x} cy={y} r="2.8" fill="url(#ss-badge)" stroke="#6b4300" strokeWidth="1.2" />
+      ))}
+      <circle cx="24" cy="24" r="11" fill="#f7cf5a" stroke="#6b4300" strokeWidth="1.3" />
+      <text x="24" y="26.6" textAnchor="middle" fontSize="7.2" fontWeight="900" fill="#6b1a0a" style={{ fontFamily: 'Plus Jakarta Sans, system-ui, sans-serif' }}>
+        WILD
+      </text>
+    </>
+  );
+}
+
+function Revolver() {
+  return (
+    <>
+      <defs>
+        <linearGradient id="ss-gun" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#c9d3de" />
+          <stop offset="1" stopColor="#4d5866" />
+        </linearGradient>
+        <linearGradient id="ss-grip" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#b5652a" />
+          <stop offset="1" stopColor="#5a2a0c" />
+        </linearGradient>
+      </defs>
+      {/* barrel */}
+      <path d="M4 15.5h25v5.5H4z" fill="url(#ss-gun)" stroke="#27303a" strokeWidth="1.3" strokeLinejoin="round" />
+      <path d="M4 15.5h2.5v-2.5H4z" fill="#27303a" />
+      <path d="M6 17.2h21" stroke="rgba(255,255,255,0.7)" strokeWidth="1" />
+      {/* frame + cylinder */}
+      <path d="M26 13h11l3 4.5v8H27.5l-2.5-4z" fill="url(#ss-gun)" stroke="#27303a" strokeWidth="1.3" strokeLinejoin="round" />
+      <rect x="27" y="17" width="9" height="7" rx="2.2" fill="#6b7785" stroke="#27303a" strokeWidth="1.1" />
+      <path d="M30 17v7M33 17v7" stroke="#3b444f" strokeWidth="0.9" />
+      {/* hammer */}
+      <path d="M37 13l4.5-3.5 1.5 2-3 3.5z" fill="#4d5866" stroke="#27303a" strokeWidth="1" />
+      {/* trigger guard */}
+      <path d="M29 25.5c0 4 2 6 5 6" fill="none" stroke="#27303a" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M32.5 25.5l-.6 3.5" stroke="#27303a" strokeWidth="1.3" strokeLinecap="round" />
+      {/* wooden grip */}
+      <path d="M36 25.5h4.5c1.5 5 3 10 3.5 15l-7 2.5c-1.2-5.5-2-11-1-17.5z" fill="url(#ss-grip)" stroke="#3a1a07" strokeWidth="1.3" strokeLinejoin="round" />
+      <circle cx="39.8" cy="33.5" r="1.1" fill="#e6c77a" />
+    </>
+  );
+}
+
+function MoneyBag() {
+  return (
+    <>
+      <defs>
+        <radialGradient id="ss-sack" cx="0.4" cy="0.35" r="0.75">
+          <stop offset="0" stopColor="#f7df9a" />
+          <stop offset="0.6" stopColor="#d9a441" />
+          <stop offset="1" stopColor="#8a5a14" />
+        </radialGradient>
+      </defs>
+      <path d="M18 13c-1.5-3-2.8-6-1.6-7.6 1.6-1.9 4 .2 7.6.2s6-2.1 7.6-.2c1.2 1.6-.1 4.6-1.6 7.6z" fill="url(#ss-sack)" stroke="#5e3a09" strokeWidth="1.4" strokeLinejoin="round" />
+      <path d="M17 14.5c-8 5-12 12-11 19 1 7 8 10.5 18 10.5s17-3.5 18-10.5c1-7-3-14-11-19z" fill="url(#ss-sack)" stroke="#5e3a09" strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M16 13.5h16" stroke="#7a2e10" strokeWidth="3" strokeLinecap="round" />
+      <text x="24" y="36" textAnchor="middle" fontSize="16" fontWeight="900" fill="#5e3a09" style={{ fontFamily: 'Plus Jakarta Sans, system-ui, sans-serif' }}>
+        $
+      </text>
+      <path d="M11 26c-1 3-1 6 .5 8.5" stroke="rgba(255,255,255,0.6)" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+      {/* spilled coins */}
+      <ellipse cx="40" cy="42.5" rx="4.2" ry="2" fill="#f5c451" stroke="#7a4e00" strokeWidth="0.9" />
+      <ellipse cx="8" cy="43" rx="3.6" ry="1.7" fill="#f5c451" stroke="#7a4e00" strokeWidth="0.9" />
+    </>
+  );
+}
+
+function CowboyHat() {
+  return (
+    <>
+      <defs>
+        <linearGradient id="ss-hat" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#a8703f" />
+          <stop offset="1" stopColor="#4e2c12" />
+        </linearGradient>
+      </defs>
+      {/* brim */}
+      <path d="M3 29c3 5 10 8.5 21 8.5S42 34 45 29c-3 1.5-8 2.3-12 2.3H15c-4 0-9-.8-12-2.3z" fill="url(#ss-hat)" stroke="#2e1707" strokeWidth="1.4" strokeLinejoin="round" />
+      {/* crown with pinch */}
+      <path d="M13.5 31c-1-8 0-15 3.5-19 2-2.2 4.5-1 7.5.8 3-1.8 5.5-3 7.5-.8 3.5 4 4.5 11 3.5 19z" fill="url(#ss-hat)" stroke="#2e1707" strokeWidth="1.4" strokeLinejoin="round" />
+      <path d="M24 13v8" stroke="#3a1d08" strokeWidth="1.3" strokeLinecap="round" />
+      {/* band */}
+      <path d="M13.6 26.5h20.8l-.2 4.5H13.8z" fill="#b51d22" stroke="#5e0b0e" strokeWidth="1" />
+      <circle cx="30" cy="28.7" r="1.4" fill="#e6c77a" />
+      <path d="M17 16c-1.2 3-1.6 6-1.3 9" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+    </>
+  );
+}
+
+function Cactus() {
+  return (
+    <>
+      <defs>
+        <linearGradient id="ss-cactus" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stopColor="#2f8a3d" />
+          <stop offset="0.5" stopColor="#56c25e" />
+          <stop offset="1" stopColor="#1f6a2c" />
+        </linearGradient>
+      </defs>
+      <ellipse cx="24" cy="44" rx="13" ry="2.2" fill="rgba(0,0,0,0.2)" />
+      <path d="M19 44V9c0-3 2.2-5 5-5s5 2 5 5v35z" fill="url(#ss-cactus)" stroke="#124a1d" strokeWidth="1.4" />
+      <path d="M19 30h-5c-3.3 0-5-2-5-5V15c0-2 1.3-3.2 3-3.2s3 1.2 3 3.2v9h4z" fill="url(#ss-cactus)" stroke="#124a1d" strokeWidth="1.4" strokeLinejoin="round" />
+      <path d="M29 25h4.5V12.5c0-2 1.3-3.2 3-3.2s3 1.2 3 3.2V22c0 4-2.5 7-6.5 7H29z" fill="url(#ss-cactus)" stroke="#124a1d" strokeWidth="1.4" strokeLinejoin="round" />
+      <path d="M24 7v36" stroke="#1f6a2c" strokeWidth="1.1" />
+      {[12, 18, 24, 30, 36].map((y) => (
+        <path key={y} d={`M20.5 ${y}l-1.8-.8M27.5 ${y + 3}l1.8-.8`} stroke="#e8f5d0" strokeWidth="0.9" strokeLinecap="round" />
+      ))}
+      <circle cx="24" cy="4.6" r="2.2" fill="#ff5d8f" />
+      <circle cx="24" cy="4.6" r="0.9" fill="#ffd166" />
     </>
   );
 }
@@ -220,8 +325,12 @@ const ART: Record<SlotSymbol, () => JSX.Element> = {
   eagle: Eagle,
   bison: Bison,
   wagon: Wagon,
-  horse: Horse,
+  revolver: Revolver,
+  moneybag: MoneyBag,
+  hat: CowboyHat,
   horseshoe: Horseshoe,
+  cactus: Cactus,
+  star: SheriffStar,
 };
 
 export function SlotSymbolIcon({ symbol, className }: { symbol: SlotSymbol; className?: string }) {

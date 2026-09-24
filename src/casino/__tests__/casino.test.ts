@@ -161,23 +161,37 @@ describe('roulette', () => {
   });
 });
 
-describe('slots', () => {
-  it('scores paylines', () => {
-    expect(slots.lineWin(['seven', 'seven', 'seven'])).toEqual({ multiplier: 200, kind: 'three' });
-    expect(slots.lineWin(['eagle', 'eagle', 'eagle'])).toEqual({ multiplier: 30, kind: 'three' });
-    expect(slots.lineWin(['gold', 'horse', 'gold'])).toEqual({ multiplier: 5, kind: 'twoGold' });
-    expect(slots.lineWin(['bison', 'wagon', 'horseshoe'])).toEqual({ multiplier: 1, kind: 'mixedFrontier' });
-    expect(slots.lineWin(['bison', 'bison', 'horse']).kind).toBe('none');
-    expect(slots.lineWin(['eagle', 'gold', 'seven'])).toEqual({ multiplier: 1, kind: 'oneGold' });
-    expect(slots.lineWin(['eagle', 'seven', 'horse']).multiplier).toBe(0);
+describe('slots (5 reels)', () => {
+  it('uses a 39-stop strip with the intended weights', () => {
+    const count = (sym: slots.SlotSymbol) => slots.REEL.filter((x) => x === sym).length;
+    expect(slots.REEL).toHaveLength(39);
+    expect([count('seven'), count('gold'), count('eagle'), count('star'), count('cactus')]).toEqual([1, 2, 2, 3, 6]);
+    expect(slots.LINES).toHaveLength(10);
+    for (const line of slots.LINES) expect(line.every((r) => r >= 0 && r < 3)).toBe(true);
   });
 
-  it('marks the reels that make up a win', () => {
-    expect(slots.winningReels(['seven', 'seven', 'seven'])).toEqual([0, 1, 2]);
-    expect(slots.winningReels(['gold', 'horse', 'gold'])).toEqual([0, 2]);
-    expect(slots.winningReels(['eagle', 'gold', 'seven'])).toEqual([1]);
-    expect(slots.winningReels(['bison', 'wagon', 'horse'])).toEqual([0, 1, 2]);
-    expect(slots.winningReels(['eagle', 'seven', 'horse'])).toEqual([]);
+  it('pays left to right with wilds substituting', () => {
+    expect(slots.evaluateLine(['seven', 'seven', 'seven', 'seven', 'seven'])).toEqual({ symbol: 'seven', count: 5, multiplier: 2500 });
+    expect(slots.evaluateLine(['cactus', 'cactus', 'cactus', 'hat', 'cactus'])).toEqual({ symbol: 'cactus', count: 3, multiplier: 4 });
+    expect(slots.evaluateLine(['star', 'eagle', 'star', 'eagle', 'hat'])).toEqual({ symbol: 'eagle', count: 4, multiplier: 100 });
+    expect(slots.evaluateLine(['hat', 'cactus', 'cactus', 'cactus', 'cactus'])).toBeNull();
+    expect(slots.evaluateLine(['bison', 'bison', 'hat', 'bison', 'bison'])).toBeNull();
+    // A wild run pays as itself when that is worth more.
+    expect(slots.evaluateLine(['star', 'star', 'star', 'cactus', 'hat'])).toEqual({ symbol: 'star', count: 3, multiplier: 40 });
+    expect(slots.evaluateLine(['star', 'star', 'star', 'star', 'star'])).toEqual({ symbol: 'star', count: 5, multiplier: 1000 });
+  });
+
+  it('only pays active lines and multiplies by the bet per line', () => {
+    const stop = slots.REEL.indexOf('seven');
+    const allSevens = [stop, stop, stop, stop, stop];
+    const one = slots.evaluateSpin(allSevens, 1, 2);
+    expect(one.wins).toHaveLength(1);
+    expect(one.total).toBe(5000);
+    expect(one.jackpot).toBe(true);
+    expect(slots.winCells(one.wins[0])).toEqual([[0, 1], [1, 1], [2, 1], [3, 1], [4, 1]]);
+    const ten = slots.evaluateSpin(allSevens, 10, 1);
+    expect(ten.wins.length).toBeGreaterThanOrEqual(1);
+    expect(ten.wins.every((w) => w.line < 10)).toBe(true);
   });
 
   it('returns between 90% and 100% to the player', () => {
@@ -186,11 +200,23 @@ describe('slots', () => {
     expect(rtp).toBeLessThan(1);
   });
 
-  it('wraps reel positions', () => {
-    expect(slots.symbolAt(0, -1)).toBe(slots.REEL[slots.REEL.length - 1]);
-    expect(slots.symbolAt(slots.REEL.length - 1, 1)).toBe(slots.REEL[0]);
-    const stops = slots.spinReels(createRng(3));
-    expect(slots.payline(stops)).toHaveLength(3);
+  it('keeps long-run results close to the exact return', () => {
+    const rng = createRng(2024);
+    let bet = 0;
+    let back = 0;
+    for (let i = 0; i < 60000; i++) {
+      back += slots.evaluateSpin(slots.spinReels(rng), 10, 1).total;
+      bet += 10;
+    }
+    expect(back / bet).toBeGreaterThan(0.8);
+    expect(back / bet).toBeLessThan(1.1);
+  });
+
+  it('shows three rows per reel and wraps the strip', () => {
+    const grid = slots.visibleGrid([0, 1, 2, 3, 38]);
+    expect(grid).toHaveLength(5);
+    expect(grid[0]).toEqual([slots.REEL[38], slots.REEL[0], slots.REEL[1]]);
+    expect(grid[4][2]).toBe(slots.REEL[0]);
   });
 });
 

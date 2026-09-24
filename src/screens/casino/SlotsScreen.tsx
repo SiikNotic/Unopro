@@ -1,81 +1,117 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Trophy } from 'lucide-react';
+import { HelpCircle, Minus, Plus, Trophy, X } from 'lucide-react';
 import { CasinoFrame } from '@/components/casino/CasinoFrame';
-import { ChipSelector } from '@/components/casino/chips';
 import { CoinShower } from '@/components/casino/CoinShower';
+import { SaloonBackdrop } from '@/components/casino/SaloonBackdrop';
 import { SlotReel } from '@/components/casino/SlotReel';
 import { SlotSymbolIcon } from '@/components/casino/slotSymbols';
-import { Button } from '@/components/ui/Button';
 import { useI18n } from '@/i18n';
 import { useWallet } from '@/casino/useWallet';
-import type { SlotSymbol } from '@/casino/slots';
-import { lineWin, MIXED_FRONTIER, ONE_GOLD, payline, returnToPlayer, spinReels, THREE_OF_A_KIND, TWO_GOLD, winningReels } from '@/casino/slots';
+import type { LineWin, SlotSymbol } from '@/casino/slots';
+import { BET_PER_LINE, evaluateSpin, LINE_OPTIONS, LINES, lineSymbols, PAYTABLE, REELS, returnToPlayer, spinReels, visibleGrid, WILD, winCells } from '@/casino/slots';
 import { createRng, randomSeed } from '@/game/engine';
 import { useCountUp } from '@/hooks/useCountUp';
+import { useElementWidth } from '@/hooks/useViewport';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
-import { useViewport } from '@/hooks/useViewport';
 import { storage } from '@/storage';
 import { playSfx } from '@/audio/sfx';
 
 const rng = createRng(randomSeed());
-const BETS = [10, 25, 50, 100] as const;
-const DURATIONS = [1150, 1600, 2050];
-/** Extra time the last reel keeps turning when the first two already match a top symbol. */
-const SUSPENSE_MS = 1400;
-const LOOPS = [2, 3, 4];
-const TEASE_SYMBOLS = new Set<SlotSymbol>(['seven', 'gold', 'eagle']);
+const BASE_DURATIONS = [900, 1150, 1400, 1650, 1900];
+const LOOPS = [2, 2, 3, 3, 4];
+/** Top symbols that make the last reels hold back once three of them line up. */
+const TEASE_SYMBOLS = new Set<SlotSymbol>(['seven', 'gold', 'eagle', WILD]);
+const AUTO_SPINS = 10;
 const BEST_KEY = 'carta.slotsBest';
+const LINE_COLORS = ['#ffd24a', '#ff5d5d', '#4ade80', '#60a5fa', '#f472b6', '#fb923c', '#a78bfa', '#2dd4bf', '#facc15', '#f87171'];
+const PAY_ORDER: SlotSymbol[] = ['star', 'seven', 'gold', 'eagle', 'bison', 'wagon', 'revolver', 'moneybag', 'hat', 'horseshoe', 'cactus'];
 let savedStops = spinReels(createRng(randomSeed()));
+/** Exact return over every combination: computed lazily once (it walks 161k line combinations). */
+let rtpText: string | null = null;
+const rtpLabel = () => (rtpText ??= (returnToPlayer() * 100).toFixed(1));
 
-type Tier = 'none' | 'back' | 'small' | 'big' | 'mega';
+type Tier = 'none' | 'partial' | 'win' | 'big' | 'jackpot';
 
-function tierFor(multiplier: number): Tier {
-  if (multiplier <= 0) return 'none';
-  if (multiplier === 1) return 'back';
-  if (multiplier < 15) return 'small';
-  if (multiplier < 60) return 'big';
-  return 'mega';
+function tierFor(total: number, bet: number, jackpot: boolean): Tier {
+  if (jackpot || total >= bet * 50) return 'jackpot';
+  if (total >= bet * 10) return 'big';
+  if (total > bet) return 'win';
+  if (total > 0) return 'partial';
+  return 'none';
 }
 
-const COINS: Record<Tier, number> = { none: 0, back: 0, small: 16, big: 40, mega: 80 };
-const ROLL_MS: Record<Tier, number> = { none: 0, back: 0, small: 900, big: 1800, mega: 2600 };
-const PAY_ORDER: SlotSymbol[] = ['seven', 'gold', 'eagle', 'bison', 'wagon', 'horse', 'horseshoe'];
+const COINS: Record<Tier, number> = { none: 0, partial: 0, win: 14, big: 40, jackpot: 90 };
+const ROLL_MS: Record<Tier, number> = { none: 0, partial: 0, win: 900, big: 1800, jackpot: 2800 };
 
-interface SpinResult {
+interface Outcome {
   id: number;
-  amount: number;
+  total: number;
   bet: number;
   tier: Tier;
-  reels: number[];
-}
-
-/** Desert sunset behind the marquee title. */
-function MarqueeArt() {
-  return (
-    <svg viewBox="0 0 320 80" preserveAspectRatio="xMidYMax slice" className="absolute inset-0 w-full h-full" aria-hidden>
-      <defs>
-        <linearGradient id="gr-sky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#3b1450" />
-          <stop offset="0.5" stopColor="#c2410c" />
-          <stop offset="1" stopColor="#fbbf24" />
-        </linearGradient>
-      </defs>
-      <rect width="320" height="80" fill="url(#gr-sky)" />
-      <circle cx="160" cy="70" r="26" fill="#ffe08a" opacity="0.9" />
-      <path d="M0 62h28l6-16h30l5 16h36l4-10h22l4 10h95l6-20h34l6 20h48v18H0z" fill="#5a1f0e" />
-      <path d="M0 72c40-6 80-6 120-2s90 5 130 0 50-3 70-1v11H0z" fill="#2a0e06" />
-      <path d="M268 72v-18m0 6h-6v-6m6 10h5v-7" stroke="#2a0e06" strokeWidth="4" strokeLinecap="round" fill="none" />
-      <path d="M44 74v-12m0 5h-4v-4m4 6h4v-5" stroke="#2a0e06" strokeWidth="3" strokeLinecap="round" fill="none" />
-    </svg>
-  );
+  wins: LineWin[];
 }
 
 function Bulbs({ count }: { count: number }) {
   return (
-    <div className="gr-bulbs w-full px-2" aria-hidden>
+    <div className="gr-bulbs w-full px-3" aria-hidden>
       {Array.from({ length: count }, (_, i) => (
         <span key={i} className="gr-bulb" style={{ '--i': i } as React.CSSProperties} />
       ))}
+    </div>
+  );
+}
+
+function HelpSheet({ onClose, rtp }: { onClose: () => void; rtp: string }) {
+  const { t } = useI18n();
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+  return (
+    <div className="gr5-help-backdrop" onClick={onClose}>
+      <div className="gr5-help p-4 sm:p-5" role="dialog" aria-modal="true" aria-labelledby="gr5-help-title" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-3">
+          <h2 id="gr5-help-title" className="gr-title text-xl">{t('casino.slots.helpTitle')}</h2>
+          <button type="button" className="gr5-btn w-10 h-10 p-0" onClick={onClose} aria-label={t('common.close')}>
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <p className="text-sm text-white/85 mb-2">{t('casino.slots.howToWin')}</p>
+        <p className="text-sm text-white/85 mb-4 flex items-center gap-2">
+          <SlotSymbolIcon symbol="star" className="w-8 h-8 shrink-0" />
+          {t('casino.slots.wildRule')}
+        </p>
+        <h3 className="font-display font-bold text-gold-400 text-sm mb-2">{t('casino.slots.paytable')}</h3>
+        <div className="grid grid-cols-[auto_1fr_1fr_1fr] gap-x-3 gap-y-1 items-center text-sm mb-4">
+          <span />
+          {[3, 4, 5].map((n) => (
+            <span key={n} className="text-[11px] text-white/60 font-bold text-center">×{n}</span>
+          ))}
+          {PAY_ORDER.map((s) => (
+            <div key={s} className="contents">
+              <span className="rounded-lg bg-[#fffaf0] p-0.5" title={t(`casino.slots.symbols.${s}`)}>
+                <SlotSymbolIcon symbol={s} className="w-8 h-8" />
+              </span>
+              {PAYTABLE[s].map((m, i) => (
+                <span key={i} className="text-center font-extrabold text-gold-400 tabular-nums">{m}</span>
+              ))}
+            </div>
+          ))}
+        </div>
+        <h3 className="font-display font-bold text-gold-400 text-sm mb-2">{t('casino.slots.paylines')}</h3>
+        <div className="grid grid-cols-5 gap-2 mb-4">
+          {LINES.map((rows, i) => (
+            <div key={i} className="flex flex-col items-center gap-1">
+              <div className="gr5-mini-line" aria-hidden>
+                {[0, 1, 2].map((r) => rows.map((row, c) => <span key={`${r}-${c}`} className={row === r ? 'on' : ''} />))}
+              </div>
+              <span className="text-[10px] text-white/60">{i + 1}</span>
+            </div>
+          ))}
+        </div>
+        <p className="text-[11px] text-white/60">{t('casino.slots.payNote', { rtp })}</p>
+      </div>
     </div>
   );
 }
@@ -84,37 +120,48 @@ export function SlotsScreen() {
   const { t } = useI18n();
   const { balance, spend, credit } = useWallet();
   const reduced = useReducedMotion();
-  const vw = useViewport().width;
-  const [bet, setBet] = useState(10);
+  const windowRef = useRef<HTMLDivElement>(null);
+  const windowWidth = useElementWidth(windowRef);
+  const [lines, setLines] = useState<number>(10);
+  const [bplIndex, setBplIndex] = useState(0);
   const [stops, setStops] = useState(savedStops);
   const [from, setFrom] = useState(savedStops);
   const [spinId, setSpinId] = useState(0);
-  const [durations, setDurations] = useState(DURATIONS);
+  const [durations, setDurations] = useState(BASE_DURATIONS);
   const [suspense, setSuspense] = useState(false);
   const [spinning, setSpinning] = useState(false);
   const [pulled, setPulled] = useState(false);
-  const [result, setResult] = useState<SpinResult | null>(null);
+  const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [banner, setBanner] = useState(false);
+  const [previewLines, setPreviewLines] = useState(false);
+  const [autoLeft, setAutoLeft] = useState(0);
+  const [help, setHelp] = useState(false);
   const [best, setBest] = useState(() => {
     const raw = storage.get<number>(BEST_KEY);
     return typeof raw === 'number' && Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : 0;
   });
   const pendingPayout = useRef(0);
   const timers = useRef<number[]>([]);
+  const autoTimer = useRef(0);
+  const previewTimer = useRef(0);
   const lastCoinSound = useRef(0);
+
+  const betPerLine = BET_PER_LINE[bplIndex];
+  const totalBet = lines * betPerLine;
 
   useEffect(
     () => () => {
       timers.current.forEach((id) => window.clearTimeout(id));
+      window.clearTimeout(autoTimer.current);
+      window.clearTimeout(previewTimer.current);
       if (pendingPayout.current > 0) credit(pendingPayout.current);
     },
     [credit]
   );
 
-  const tier = result?.tier ?? 'none';
-  const celebrating = !spinning && (tier === 'small' || tier === 'big' || tier === 'mega');
-  const rolled = useCountUp(result?.amount ?? 0, ROLL_MS[tier], result?.id, reduced, (v) => {
-    // A coin clink every so often while the counter rolls.
+  const tier = outcome?.tier ?? 'none';
+  const celebrating = !spinning && (tier === 'win' || tier === 'big' || tier === 'jackpot');
+  const rolled = useCountUp(outcome?.total ?? 0, ROLL_MS[tier], outcome?.id, reduced, (v) => {
     const now = performance.now();
     if (v > 0 && now - lastCoinSound.current > 90) {
       lastCoinSound.current = now;
@@ -123,20 +170,26 @@ export function SlotsScreen() {
   });
 
   const doSpin = useCallback(() => {
-    if (spinning || !spend(bet)) {
+    if (spinning || !spend(totalBet)) {
       playSfx('error');
+      setAutoLeft(0);
       return;
     }
     const next = spinReels(rng);
-    const line = payline(next);
-    const { multiplier } = lineWin(line);
-    const payout = bet * multiplier;
-    const nextTier = tierFor(multiplier);
-    const tease = !reduced && line[0] === line[1] && TEASE_SYMBOLS.has(line[0]);
-    const plan = reduced ? [0, 0, 0] : [DURATIONS[0], DURATIONS[1], DURATIONS[2] + (tease ? SUSPENSE_MS : 0)];
+    const result = evaluateSpin(next, lines, betPerLine);
+    const nextTier = tierFor(result.total, totalBet, result.jackpot);
+    const grid = visibleGrid(next);
+    // Hold the last reels back only when three top symbols already line up on an active line.
+    const tease =
+      !reduced &&
+      Array.from({ length: lines }, (_, l) => lineSymbols(grid, l).slice(0, 3)).some((first) => {
+        const base = first.find((s) => s !== WILD) ?? WILD;
+        return TEASE_SYMBOLS.has(base) && first.every((s) => s === base || s === WILD);
+      });
+    const plan = reduced ? BASE_DURATIONS.map(() => 0) : BASE_DURATIONS.map((d, i) => d + (tease && i === 3 ? 700 : 0) + (tease && i === 4 ? 1500 : 0));
 
     timers.current.forEach((id) => window.clearTimeout(id));
-    pendingPayout.current = payout;
+    pendingPayout.current = result.total;
     savedStops = next;
     setFrom(stops);
     setStops(next);
@@ -144,168 +197,256 @@ export function SlotsScreen() {
     setSuspense(tease);
     setSpinId((id) => id + 1);
     setSpinning(true);
-    setResult(null);
+    setOutcome(null);
     setBanner(false);
+    setPreviewLines(false);
     setPulled(true);
     playSfx('lever');
-    if (!reduced) playSfx('reelSpin', 0.15);
+    if (!reduced) playSfx('reelSpin', 0.1);
 
     const later = (ms: number, fn: () => void) => timers.current.push(window.setTimeout(fn, ms));
     later(320, () => setPulled(false));
     plan.forEach((d) => later(d, () => playSfx('reelStop')));
-    if (tease) later(plan[1], () => playSfx('anticipation'));
-    later(plan[2] + 180, () => {
+    if (tease) later(plan[2], () => playSfx('anticipation'));
+    const end = Math.max(...plan) + 180;
+    later(end, () => {
       credit(pendingPayout.current);
       pendingPayout.current = 0;
       setSpinning(false);
-      setResult({ id: Date.now(), amount: payout, bet, tier: nextTier, reels: winningReels(line) });
-      if (nextTier === 'big' || nextTier === 'mega') {
+      setOutcome({ id: Date.now(), total: result.total, bet: totalBet, tier: nextTier, wins: result.wins });
+      if (nextTier === 'win' || nextTier === 'big' || nextTier === 'jackpot') {
         setBanner(true);
-        playSfx('bigWin');
-        later(reduced ? 1800 : 3600, () => setBanner(false));
-      } else if (nextTier === 'small') {
-        playSfx('cashIn');
+        playSfx(nextTier === 'win' ? 'cashIn' : 'bigWin');
+        later(nextTier === 'win' ? 1600 : reduced ? 2000 : 3800, () => setBanner(false));
       }
-      if (payout > bet) {
+      if (result.total > totalBet) {
         setBest((b) => {
-          if (payout <= b) return b;
-          storage.set(BEST_KEY, payout);
-          return payout;
+          if (result.total <= b) return b;
+          storage.set(BEST_KEY, result.total);
+          return result.total;
         });
       }
     });
-  }, [spinning, spend, bet, reduced, stops, credit]);
+  }, [spinning, spend, totalBet, lines, betPerLine, reduced, stops, credit]);
 
-  // Space bar pulls the lever (when nothing else has focus).
+  // Auto spin: keeps going while there are spins left and chips to cover the bet; a big win pauses it.
+  const spinRef = useRef(doSpin);
+  spinRef.current = doSpin;
+  useEffect(() => {
+    if (spinning || autoLeft <= 0 || !outcome) return;
+    if (tier === 'big' || tier === 'jackpot' || balance < totalBet) {
+      setAutoLeft(0);
+      return;
+    }
+    autoTimer.current = window.setTimeout(() => {
+      setAutoLeft((n) => n - 1);
+      spinRef.current();
+    }, tier === 'win' ? 1500 : 650);
+    return () => window.clearTimeout(autoTimer.current);
+  }, [outcome, spinning, autoLeft, tier, balance, totalBet]);
+
+  const toggleAuto = () => {
+    if (autoLeft > 0) {
+      setAutoLeft(0);
+      window.clearTimeout(autoTimer.current);
+      return;
+    }
+    setAutoLeft(AUTO_SPINS - 1);
+    doSpin();
+  };
+
+  // Space bar spins (when nothing else has focus).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.code !== 'Space' || e.repeat || e.target !== document.body) return;
+      if (e.code !== 'Space' || e.repeat || e.target !== document.body || help) return;
       e.preventDefault();
-      doSpin();
+      spinRef.current();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [doSpin]);
+  }, [help]);
 
-  const cellHeight = Math.round(Math.min(100, Math.max(62, (Math.min(vw, 540) - 132) / 3)));
-  const lineLabel = t('casino.slots.line', { symbols: payline(stops).map((s) => t(`casino.slots.symbols.${s}`)).join(', ') });
+  const showLines = (count: number) => {
+    setLines(count);
+    playSfx('chip');
+    setOutcome(null);
+    setPreviewLines(true);
+    window.clearTimeout(previewTimer.current);
+    previewTimer.current = window.setTimeout(() => setPreviewLines(false), 1400);
+  };
 
-  let message = '';
-  if (result && !spinning) {
-    if (tier === 'none') message = t('casino.noWin');
-    else if (tier === 'back') message = t('casino.slots.betBack');
-    else message = t('casino.slots.win', { amount: rolled });
+  const betMax = () => {
+    let index = BET_PER_LINE.length - 1;
+    while (index > 0 && BET_PER_LINE[index] * 10 > balance) index--;
+    setBplIndex(index);
+    showLines(10);
+  };
+
+  const reelWidth = windowWidth > 0 ? (windowWidth - 10 - 4 * (REELS - 1)) / REELS : 60;
+  const cellHeight = Math.round(Math.min(104, Math.max(44, reelWidth * 0.94)));
+
+  // Winning cells per reel, and the lines to draw over the reels.
+  const rowsByReel: number[][] = Array.from({ length: REELS }, () => []);
+  if (outcome && !spinning) for (const w of outcome.wins) for (const [reel, row] of winCells(w)) rowsByReel[reel].push(row);
+  const drawnLines = !spinning && outcome && outcome.tier !== 'none' ? outcome.wins.map((w) => w.line) : previewLines ? Array.from({ length: lines }, (_, i) => i) : [];
+
+  let status = t('casino.slots.good');
+  if (spinning) status = suspense ? t('casino.slots.suspense') : t('casino.slots.spinning');
+  else if (outcome) {
+    if (tier === 'none') status = t('casino.noWin');
+    else if (tier === 'partial') status = t('casino.slots.partial', { amount: outcome.total });
+    else status = t('casino.slots.win', { amount: rolled });
   }
-
-  const payRows: { icons: React.ReactNode; label?: string; mult: number }[] = [
-    ...PAY_ORDER.map((s) => ({
-      icons: [0, 1, 2].map((i) => <SlotSymbolIcon key={i} symbol={s} className="w-7 h-7" />),
-      mult: THREE_OF_A_KIND[s],
-    })),
-    { icons: [0, 1].map((i) => <SlotSymbolIcon key={i} symbol="gold" className="w-7 h-7" />), label: t('casino.slots.twoGold'), mult: TWO_GOLD },
-    {
-      icons: (['bison', 'wagon', 'horse'] as SlotSymbol[]).map((x) => <SlotSymbolIcon key={x} symbol={x} className="w-7 h-7" />),
-      label: t('casino.slots.mixedFrontier'),
-      mult: MIXED_FRONTIER,
-    },
-    { icons: <SlotSymbolIcon symbol="gold" className="w-7 h-7" />, label: t('casino.slots.oneGold'), mult: ONE_GOLD },
-  ];
+  const bigBanner = banner && outcome && (tier === 'big' || tier === 'jackpot');
 
   return (
-    <CasinoFrame title={t('casino.slots.name')} subtitle={t('casino.slots.rules')} back="casino" scenario="volcano">
-      {celebrating && !reduced && result && <CoinShower key={result.id} id={result.id} count={COINS[tier]} />}
+    <CasinoFrame title={t('casino.slots.name')} subtitle={t('casino.slots.rules')} back="casino" scenario="lounge" backdrop={<SaloonBackdrop />}>
+      {celebrating && !reduced && outcome && <CoinShower key={outcome.id} id={outcome.id} count={COINS[tier]} />}
+      {help && <HelpSheet onClose={() => setHelp(false)} rtp={rtpLabel()} />}
 
       <section
-        className={`gr-cabinet mx-auto w-full max-w-[540px] px-3 py-3 sm:px-5 sm:py-4 flex flex-col items-center gap-3 ${spinning ? 'gr-spinning' : ''} ${celebrating ? 'gr-win' : ''} ${
-          tier === 'mega' && !spinning && !reduced ? 'gr-cabinet-shake' : ''
+        className={`gr5-machine mx-auto w-full max-w-[640px] px-3 pt-4 pb-4 sm:px-6 flex flex-col gap-3 ${spinning ? 'gr-spinning' : ''} ${celebrating ? 'gr-win' : ''} ${
+          tier === 'jackpot' && !spinning && !reduced ? 'gr-cabinet-shake' : ''
         }`}
         aria-label={t('casino.slots.machine')}
       >
-        <Bulbs count={14} />
+        <span className="gr5-corner gr5-corner-tl" />
+        <span className="gr5-corner gr5-corner-tr" />
+        <span className="gr5-corner gr5-corner-bl" />
+        <span className="gr5-corner gr5-corner-br" />
 
-        <div className="gr-marquee w-full h-[68px] sm:h-[80px] flex items-center justify-center">
-          <MarqueeArt />
-          <span className={`gr-title relative text-2xl sm:text-3xl ${celebrating ? 'gr-title-win' : ''}`}>{t('casino.slots.marquee')}</span>
-        </div>
-
-        <div className="w-full flex items-stretch gap-2">
-          <div className="slot-window flex-1 flex" role="img" aria-label={lineLabel}>
-            {[0, 1, 2].map((r) => (
-              <SlotReel
-                key={`${r}-${spinId}`}
-                from={from[r]}
-                to={stops[r]}
-                loops={spinId === 0 ? 0 : LOOPS[r]}
-                durationMs={durations[r]}
-                cellHeight={cellHeight}
-                highlight={celebrating && !!result && result.reels.includes(r)}
-                anticipate={suspense && r === 2}
-              />
-            ))}
-            <div className="slot-shade" />
-            <div className={`slot-payline ${celebrating ? 'slot-payline-win' : ''}`} />
-            {banner && result && (
-              <button type="button" className="gr-bigwin" onClick={() => setBanner(false)} aria-label={t('common.close')}>
-                <span className="gr-title text-3xl sm:text-4xl text-center px-2 casino-pop">{t(tier === 'mega' ? 'casino.slots.megaWin' : 'casino.slots.bigWin')}</span>
-                <span className="gr-bigwin-amount gr-title text-4xl sm:text-5xl mt-1">{rolled.toLocaleString()}</span>
-                <span className="text-xs text-white/80 mt-1 font-bold uppercase tracking-widest">{t('casino.slots.chips')}</span>
-              </button>
-            )}
+        <div className="relative flex items-center justify-center pt-1">
+          <div className="gr5-plaque text-center mx-11 max-w-full">
+            <div className={`gr-title text-[clamp(17px,5.6vw,36px)] leading-none whitespace-nowrap ${celebrating ? 'gr-title-win' : ''}`}>{t('casino.slots.marquee')}</div>
+            <span className="gr5-ribbon mt-1">{t('casino.slots.slotWord')}</span>
           </div>
-          <button
-            type="button"
-            className={`gr-lever ${pulled ? 'gr-lever-pulled' : ''}`}
-            onClick={doSpin}
-            disabled={spinning || bet > balance}
-            aria-label={t('casino.slots.pullLever')}
-            title={t('casino.slots.pullLever')}
-          >
-            <span className="gr-lever-base" />
-            <span className="gr-lever-arm">
-              <span className="gr-lever-knob" />
-            </span>
+          <button type="button" className="gr5-btn absolute right-0 top-1/2 -translate-y-1/2 w-9 h-9 min-h-0 p-0" onClick={() => setHelp(true)} aria-label={t('casino.slots.help')} title={t('casino.slots.help')}>
+            <HelpCircle className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="w-full grid grid-cols-[1fr_auto] gap-2 items-stretch">
-          <div className="gr-readout rounded-xl px-3 py-1.5 flex items-center justify-center min-h-[40px]" role="status" aria-live="polite">
-            <span className={`font-display font-extrabold text-sm sm:text-base text-center ${tier === 'none' || tier === 'back' ? 'opacity-70' : ''}`}>
-              {spinning ? (suspense ? t('casino.slots.suspense') : t('casino.slots.spinning')) : message || t('casino.slots.good')}
-            </span>
-          </div>
-          <div className="gr-readout rounded-xl px-2.5 py-1 flex flex-col items-center justify-center" aria-label={t('casino.slots.bestAria', { amount: best })}>
-            <span className="flex items-center gap-1 text-[9px] uppercase tracking-widest text-white/60 font-bold">
-              <Trophy className="w-3 h-3" aria-hidden />
-              {t('casino.slots.best')}
-            </span>
-            <span className="font-display font-extrabold text-sm tabular-nums">{best.toLocaleString()}</span>
-          </div>
-        </div>
+        <Bulbs count={16} />
 
-        <div className="w-full flex flex-col gap-2">
-          <p className="text-center text-xs text-white/75">{t('casino.slots.betPerSpin')}</p>
-          <ChipSelector selected={bet} onSelect={(v) => { setBet(v); playSfx('chip'); }} max={spinning ? 0 : balance} values={BETS} />
-          <Button size="lg" fullWidth disabled={spinning || bet > balance} onClick={doSpin}>
-            {spinning ? t('casino.slots.spinning') : t('casino.slots.spin', { amount: bet })}
-          </Button>
-          <p className="text-center text-[11px] text-white/50 hidden sm:block">{t('casino.slots.hint')}</p>
-        </div>
-
-        <Bulbs count={14} />
-      </section>
-
-      <section className="glass-strong rounded-3xl p-4" aria-labelledby="paytable-title">
-        <h2 id="paytable-title" className="font-display font-bold text-white mb-2">{t('casino.slots.paytable')}</h2>
-        <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5">
-          {payRows.map((row, i) => (
-            <li key={i} className="flex items-center gap-2 text-sm min-w-0">
-              <span className="flex items-center gap-0.5 shrink-0 rounded-lg bg-[#fffdf6] px-1 py-0.5">{row.icons}</span>
-              <span className="text-ink-400 text-xs truncate flex-1">{row.label}</span>
-              <span className="font-extrabold text-gold-400 tabular-nums shrink-0">×{row.mult}</span>
-            </li>
+        <div ref={windowRef} className="gr5-window" role="img" aria-label={t('casino.slots.window', { symbols: visibleGrid(stops).map((col) => t(`casino.slots.symbols.${col[1]}`)).join(', ') })}>
+          {Array.from({ length: REELS }, (_, r) => (
+            <SlotReel
+              key={`${r}-${spinId}`}
+              from={from[r]}
+              to={stops[r]}
+              loops={spinId === 0 ? 0 : LOOPS[r]}
+              durationMs={durations[r]}
+              cellHeight={cellHeight}
+              highlightRows={celebrating || tier === 'partial' ? rowsByReel[r] : []}
+              anticipate={suspense && r >= 3}
+            />
           ))}
-        </ul>
-        <p className="mt-3 text-[11px] text-ink-400">{t('casino.slots.payNote', { rtp: (returnToPlayer() * 100).toFixed(1) })}</p>
+          <svg className="gr5-lines" viewBox="0 0 500 300" preserveAspectRatio="none" aria-hidden>
+            {drawnLines.map((l) => (
+              <polyline
+                key={l}
+                className={`gr5-line ${previewLines ? '' : 'gr5-line-win'}`}
+                points={LINES[l].map((row, reel) => `${reel * 100 + 50},${row * 100 + 50}`).join(' ')}
+                stroke={LINE_COLORS[l]}
+                vectorEffect="non-scaling-stroke"
+                style={{ strokeWidth: previewLines ? 3 : 6 }}
+              />
+            ))}
+          </svg>
+          {banner && outcome && tier === 'win' && (
+            <div className="gr5-float">
+              <span className="gr5-banner-ribbon text-2xl sm:text-3xl inline-block">{t('casino.slots.youWin')}</span>
+            </div>
+          )}
+          {bigBanner && (
+            <button type="button" className="gr-bigwin" onClick={() => setBanner(false)} aria-label={t('common.close')}>
+              <span className="gr5-banner-ribbon text-3xl sm:text-4xl">{t(tier === 'jackpot' ? 'casino.slots.jackpot' : 'casino.slots.bigWin')}</span>
+              <span className="gr-bigwin-amount gr-title text-4xl sm:text-5xl mt-3">{rolled.toLocaleString()}</span>
+              <span className="text-xs text-white/80 mt-1 font-bold uppercase tracking-widest">{t('casino.slots.chips')}</span>
+            </button>
+          )}
+        </div>
+
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            [t('casino.slots.credit'), balance],
+            [t('casino.slots.bet'), totalBet],
+            [t('casino.slots.winLabel'), spinning ? 0 : rolled],
+          ].map(([label, value]) => (
+            <div key={label} className="gr5-panel px-2 py-1 text-center min-w-0">
+              <div className="text-[9px] sm:text-[10px] uppercase tracking-widest text-white/55 font-bold truncate">{label}</div>
+              <div className="font-display font-extrabold text-sm sm:text-lg truncate">{Number(value).toLocaleString()}</div>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex items-center justify-between gap-2 px-1 min-h-[20px]" role="status" aria-live="polite">
+          <span className={`font-display font-bold text-sm ${celebrating ? 'text-gold-400' : 'text-white/80'}`}>{status}</span>
+          <span className="flex items-center gap-1 text-xs text-white/70 shrink-0" aria-label={t('casino.slots.bestAria', { amount: best })}>
+            <Trophy className="w-3.5 h-3.5 text-gold-400" aria-hidden />
+            {best.toLocaleString()}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <div className="flex flex-col items-center gap-1">
+            <span className="text-[10px] uppercase tracking-widest text-white/60 font-bold">{t('casino.slots.lines')}</span>
+            <div className="flex gap-1" role="radiogroup" aria-label={t('casino.slots.lines')}>
+              {LINE_OPTIONS.map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  role="radio"
+                  aria-checked={lines === n}
+                  disabled={spinning || autoLeft > 0}
+                  onClick={() => showLines(n)}
+                  className={`gr5-btn gr5-seg ${lines === n ? 'gr5-btn-on' : ''}`}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex flex-col items-center gap-1">
+            <span className="text-[10px] uppercase tracking-widest text-white/60 font-bold">{t('casino.slots.betPerLine')}</span>
+            <div className="flex items-center gap-1">
+              <button type="button" className="gr5-btn gr5-seg" disabled={spinning || autoLeft > 0 || bplIndex === 0} onClick={() => { setBplIndex((i) => i - 1); playSfx('chip'); }} aria-label={t('casino.slots.less')}>
+                <Minus className="w-4 h-4" />
+              </button>
+              <span className="gr5-panel min-w-[38px] px-1.5 py-1 text-center font-display font-extrabold text-sm">{betPerLine}</span>
+              <button
+                type="button"
+                className="gr5-btn gr5-seg"
+                disabled={spinning || autoLeft > 0 || bplIndex === BET_PER_LINE.length - 1 || BET_PER_LINE[bplIndex + 1] * lines > balance}
+                onClick={() => { setBplIndex((i) => i + 1); playSfx('chip'); }}
+                aria-label={t('casino.slots.more')}
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-5 sm:gap-8 pt-1">
+          <button type="button" className="gr5-btn text-xs sm:text-sm" disabled={spinning || autoLeft > 0} onClick={betMax}>
+            {t('casino.slots.betMax')}
+          </button>
+          <div className="relative">
+            <button
+              type="button"
+              className={`gr5-spin ${pulled ? 'gr5-spin-pressed' : ''} ${!spinning && autoLeft === 0 && totalBet <= balance ? 'gr5-spin-ready' : ''}`}
+              disabled={spinning || autoLeft > 0 || totalBet > balance}
+              onClick={doSpin}
+              aria-label={t('casino.slots.spinAria', { amount: totalBet })}
+            >
+              {t('casino.slots.spinWord')}
+            </button>
+            <span className={`gr5-lever ${pulled ? 'gr5-lever-pulled' : ''}`} aria-hidden />
+          </div>
+          <button type="button" className={`gr5-btn text-xs sm:text-sm ${autoLeft > 0 ? 'gr5-btn-on' : ''}`} disabled={autoLeft === 0 && (spinning || totalBet > balance)} onClick={toggleAuto} aria-pressed={autoLeft > 0}>
+            {autoLeft > 0 ? t('casino.slots.autoStop', { n: autoLeft + (spinning ? 1 : 0) }) : t('casino.slots.auto', { n: AUTO_SPINS })}
+          </button>
+        </div>
+        <p className="text-center text-[11px] text-white/50 hidden sm:block">{t('casino.slots.hint')}</p>
       </section>
     </CasinoFrame>
   );

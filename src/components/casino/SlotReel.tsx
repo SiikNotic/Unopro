@@ -11,8 +11,8 @@ interface SlotReelProps {
   loops: number;
   durationMs: number;
   cellHeight: number;
-  /** The payline symbol is part of the win. */
-  highlight?: boolean;
+  /** Visible rows (0 top – 2 bottom) that are part of a win. */
+  highlightRows?: number[];
   /** Keep-them-waiting glow while this reel is still turning. */
   anticipate?: boolean;
 }
@@ -20,10 +20,10 @@ interface SlotReelProps {
 type Motion = 'rest' | 'fast' | 'settling' | 'landed';
 
 /**
- * One reel. The strip is the real reel order from `from` to `to` (plus extra turns), so what scrolls past
+ * One reel showing three rows. The strip is the real reel order from `from` to `to` (plus extra turns), so what scrolls past
  * is what is printed on the reel. Remount it (new key) for each spin.
  */
-export function SlotReel({ from, to, loops, durationMs, cellHeight, highlight = false, anticipate = false }: SlotReelProps) {
+export function SlotReel({ from, to, loops, durationMs, cellHeight, highlightRows = [], anticipate = false }: SlotReelProps) {
   const distance = ((((to - from) % REEL.length) + REEL.length) % REEL.length) + loops * REEL.length;
   const [motion, setMotion] = useState<Motion>('rest');
   const moving = motion === 'fast' || motion === 'settling';
@@ -56,7 +56,6 @@ export function SlotReel({ from, to, loops, durationMs, cellHeight, highlight = 
 
   const started = motion !== 'rest';
   const cells = Array.from({ length: distance + 3 }, (_, k) => symbolAt(from - 1 + k));
-  const payIndex = distance + 1;
   return (
     <div
       className={`slot-reel flex-1 ${motion === 'landed' ? 'slot-reel-landed' : ''} ${anticipate && moving ? 'slot-reel-anticipate' : ''}`}
@@ -70,7 +69,7 @@ export function SlotReel({ from, to, loops, durationMs, cellHeight, highlight = 
         }}
       >
         {cells.map((symbol, k) => (
-          <div key={k} className={`slot-cell ${highlight && k === payIndex ? 'slot-cell-win' : ''}`} style={{ height: cellHeight }}>
+          <div key={k} className={`slot-cell ${highlightRows.includes(k - distance) ? 'slot-cell-win' : ''}`} style={{ height: cellHeight }}>
             <SlotSymbolIcon symbol={symbol} />
           </div>
         ))}

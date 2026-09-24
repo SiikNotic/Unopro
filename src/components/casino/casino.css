@@ -420,3 +420,273 @@ button.casino-chip:focus-visible { outline: 3px solid rgba(243, 236, 220, 0.9); 
   color: #ffcf5a;
   text-shadow: 0 0 8px rgba(255, 190, 60, 0.75);
 }
+
+/* ── Gold Rush 5-reel machine (saloon style) ── */
+.sal-lantern {
+  position: absolute;
+  top: 0;
+  width: 34px;
+  transform: translateX(-50%);
+  transform-origin: 50% 0;
+  animation: sal-sway 6s ease-in-out infinite;
+}
+.sal-lantern-cord { display: block; width: 2px; height: 40px; margin: 0 auto; background: #2a1608; }
+.sal-lantern-body {
+  display: block;
+  width: 26px;
+  height: 36px;
+  margin: 0 auto;
+  border-radius: 6px 6px 9px 9px;
+  background: radial-gradient(circle at 50% 55%, #fff1b8, #ffb13b 45%, #8a4a10 75%);
+  box-shadow: inset 0 0 0 3px #3a2410, 0 0 24px 8px rgba(255, 170, 60, 0.55);
+  animation: sal-flicker 3.4s ease-in-out infinite;
+}
+.sal-lantern-glow {
+  position: absolute;
+  left: 50%;
+  top: 30px;
+  width: 360px;
+  height: 360px;
+  transform: translateX(-50%);
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgba(255, 180, 80, 0.28), transparent 65%);
+  animation: sal-flicker 3.4s ease-in-out infinite;
+}
+@keyframes sal-sway { 0%, 100% { rotate: -2deg; } 50% { rotate: 2deg; } }
+@keyframes sal-flicker { 0%, 100% { opacity: 1; } 45% { opacity: 0.86; } 52% { opacity: 0.95; } 70% { opacity: 0.8; } }
+
+.gr5-machine {
+  position: relative;
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.1), transparent 18%),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.1) 0 2px, transparent 2px 13px),
+    linear-gradient(170deg, #7b4526, #55301a 55%, #33190b);
+  box-shadow:
+    inset 0 0 0 3px #c99a3e,
+    inset 0 0 0 7px #3a1d0c,
+    inset 0 0 0 9px rgba(233, 196, 106, 0.7),
+    0 30px 60px -14px rgba(0, 0, 0, 0.9);
+}
+/* brass corner brackets */
+.gr5-corner {
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  border: 5px solid #d9aa4a;
+  filter: drop-shadow(0 2px 1px rgba(0, 0, 0, 0.6));
+  pointer-events: none;
+}
+.gr5-corner::after {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: radial-gradient(circle at 35% 30%, #fff1b8, #b8841f);
+}
+.gr5-corner-tl { top: 6px; left: 6px; border-right: 0; border-bottom: 0; border-top-left-radius: 14px; }
+.gr5-corner-tr { top: 6px; right: 6px; border-left: 0; border-bottom: 0; border-top-right-radius: 14px; }
+.gr5-corner-bl { bottom: 6px; left: 6px; border-right: 0; border-top: 0; border-bottom-left-radius: 14px; }
+.gr5-corner-br { bottom: 6px; right: 6px; border-left: 0; border-top: 0; border-bottom-right-radius: 14px; }
+.gr5-corner-tl::after { top: 3px; left: 3px; }
+.gr5-corner-tr::after { top: 3px; right: 3px; }
+.gr5-corner-bl::after { bottom: 3px; left: 3px; }
+.gr5-corner-br::after { bottom: 3px; right: 3px; }
+
+/* Title plaque with ribbon */
+.gr5-plaque {
+  position: relative;
+  padding: 6px 26px 8px;
+  border-radius: 14px 14px 22px 22px;
+  background: linear-gradient(180deg, #6b3a1c, #3d1f0d);
+  box-shadow: inset 0 0 0 2.5px #d9aa4a, inset 0 0 0 5px #2a1407, 0 6px 14px rgba(0, 0, 0, 0.6);
+}
+.gr5-ribbon {
+  position: relative;
+  display: inline-block;
+  padding: 1px 18px 2px;
+  background: linear-gradient(180deg, #f3dca0, #caa257);
+  color: #4a2412;
+  font-weight: 900;
+  letter-spacing: 0.3em;
+  font-size: 11px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.45);
+}
+.gr5-ribbon::before, .gr5-ribbon::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  width: 12px;
+  height: 100%;
+  background: #a37d38;
+  z-index: -1;
+}
+.gr5-ribbon::before { left: -9px; clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 40% 50%); }
+.gr5-ribbon::after { right: -9px; clip-path: polygon(0 0, 100% 0, 60% 50%, 100% 100%, 0 100%); }
+
+/* Reel window */
+.gr5-window {
+  position: relative;
+  display: flex;
+  gap: 4px;
+  padding: 5px;
+  border-radius: 14px;
+  background: #1a0c05;
+  box-shadow: inset 0 0 0 2px #d9aa4a, inset 0 0 0 5px #2a1407, inset 0 8px 18px rgba(0, 0, 0, 0.9);
+}
+.gr5-window .slot-reel {
+  border-radius: 8px;
+  box-shadow: inset 0 0 0 1.5px rgba(217, 170, 74, 0.8);
+  background: linear-gradient(180deg, #d6c6a1 0%, #fbf3df 18%, #fffaf0 50%, #fbf3df 82%, #d6c6a1 100%);
+}
+.gr5-window .slot-reel + .slot-reel { box-shadow: inset 0 0 0 1.5px rgba(217, 170, 74, 0.8); }
+.gr5-lines {
+  position: absolute;
+  inset: 5px;
+  z-index: 3;
+  pointer-events: none;
+  overflow: visible;
+}
+.gr5-line { fill: none; stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 4px rgba(0, 0, 0, 0.6)); }
+.gr5-line-win { animation: gr5-line-pulse 0.5s ease-in-out infinite alternate; }
+@keyframes gr5-line-pulse { from { opacity: 0.55; } to { opacity: 1; } }
+
+/* Credit / bet / win readouts */
+.gr5-panel {
+  border-radius: 10px;
+  background: #120804;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.9), 0 0 0 2px #6b4a1c, 0 0 0 3.5px rgba(217, 170, 74, 0.75);
+  color: #ffd46b;
+  text-shadow: 0 0 8px rgba(255, 190, 60, 0.6);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Lacquered red buttons with brass rims */
+.gr5-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 10px;
+  padding: 6px 10px;
+  min-height: 44px;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1.05;
+  color: #fbe7b5;
+  text-shadow: 0 1px 0 #3a0a06;
+  background: linear-gradient(180deg, #a3302a, #6b1712);
+  box-shadow: inset 0 0 0 2px #d9aa4a, inset 0 0 0 4px #4a0f0a, 0 3px 0 #2a0805, 0 5px 10px rgba(0, 0, 0, 0.5);
+  transition: transform 0.08s ease, filter 0.15s ease;
+}
+.gr5-btn:hover { filter: brightness(1.1); }
+.gr5-btn:active { transform: translateY(2px); box-shadow: inset 0 0 0 2px #d9aa4a, inset 0 0 0 4px #4a0f0a, 0 1px 0 #2a0805; }
+.gr5-btn:disabled { opacity: 0.45; pointer-events: none; }
+.gr5-btn:focus-visible { outline: 3px solid #f3ecdc; outline-offset: 2px; }
+.gr5-btn-on { background: linear-gradient(180deg, #d9aa4a, #9a6a14); color: #3a1a07; text-shadow: none; }
+.gr5-seg { padding: 4px 0; min-height: 30px; min-width: 34px; border-radius: 7px; font-size: 13px; }
+
+/* Round brass SPIN button */
+.gr5-spin {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-weight: 900;
+  font-size: 22px;
+  letter-spacing: 0.04em;
+  color: #5a2e06;
+  text-shadow: 0 1px 0 rgba(255, 244, 200, 0.8);
+  background:
+    radial-gradient(circle at 50% 40%, #fff3c2, #f0c460 35%, #c48a1c 70%, #7a4e0a);
+  box-shadow:
+    inset 0 0 0 4px #7a4e0a,
+    inset 0 0 0 7px #f6d67a,
+    inset 0 -6px 12px rgba(90, 46, 6, 0.55),
+    0 5px 0 #4a2a06,
+    0 10px 20px rgba(0, 0, 0, 0.6);
+  transition: transform 0.08s ease, filter 0.15s ease;
+}
+.gr5-spin::after {
+  content: '';
+  position: absolute;
+  inset: -7px;
+  border-radius: 9999px;
+  border: 3px dotted rgba(246, 214, 122, 0.8);
+}
+.gr5-spin:hover { filter: brightness(1.08); }
+.gr5-spin:active, .gr5-spin-pressed { transform: translateY(4px) scale(0.98); box-shadow: inset 0 0 0 4px #7a4e0a, inset 0 0 0 7px #f6d67a, inset 0 -3px 8px rgba(90, 46, 6, 0.55), 0 1px 0 #4a2a06; }
+.gr5-spin:disabled { filter: grayscale(0.4) brightness(0.8); }
+.gr5-spin:focus-visible { outline: 3px solid #f3ecdc; outline-offset: 8px; }
+.gr5-spin-ready { animation: gr5-ready 1.6s ease-in-out infinite; }
+@keyframes gr5-ready { 0%, 100% { filter: none; } 50% { filter: brightness(1.12) drop-shadow(0 0 10px rgba(255, 210, 110, 0.8)); } }
+
+/* Small lever next to the spin button */
+.gr5-lever { position: absolute; right: -24px; top: 50%; width: 14px; height: 60px; transform: translateY(-80%); pointer-events: none; }
+.gr5-lever::before { content: ''; position: absolute; bottom: 0; left: 5px; width: 4px; height: 100%; border-radius: 3px; background: linear-gradient(90deg, #8d6a2a, #f2d68a, #8d6a2a); transform-origin: 50% 100%; transition: transform 0.2s ease-in; }
+.gr5-lever::after { content: ''; position: absolute; top: -8px; left: -1px; width: 16px; height: 16px; border-radius: 9999px; background: radial-gradient(circle at 35% 30%, #fff3c2, #d9aa4a 60%, #7a4e0a); transition: transform 0.2s ease-in; transform-origin: 50% 68px; }
+.gr5-lever-pulled::before { transform: scaleY(-1); }
+.gr5-lever-pulled::after { transform: rotate(180deg); }
+
+/* ¡GANASTE! / ¡JACKPOT! ribbon */
+.gr5-banner-ribbon {
+  position: relative;
+  padding: 8px 28px 10px;
+  background: linear-gradient(180deg, #f8e3a4, #d8a947 55%, #a8751f);
+  color: #5a1e06;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-shadow: 0 1px 0 rgba(255, 244, 200, 0.7);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.55), inset 0 0 0 2px rgba(122, 78, 10, 0.5);
+  animation: gr5-ribbon-in 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.4) both;
+}
+.gr5-banner-ribbon::before, .gr5-banner-ribbon::after {
+  content: '';
+  position: absolute;
+  top: 10px;
+  width: 26px;
+  height: 100%;
+  background: #9a6a1a;
+  z-index: -1;
+}
+.gr5-banner-ribbon::before { left: -18px; clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 35% 50%); }
+.gr5-banner-ribbon::after { right: -18px; clip-path: polygon(0 0, 100% 0, 65% 50%, 100% 100%, 0 100%); }
+@keyframes gr5-ribbon-in { from { transform: scale(0.3) rotate(-8deg); opacity: 0; } to { transform: none; opacity: 1; } }
+.gr5-float {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 6;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* Help sheet */
+.gr5-help-backdrop { position: fixed; inset: 0; z-index: 50; background: rgba(0, 0, 0, 0.7); display: flex; align-items: flex-end; justify-content: center; }
+@media (min-width: 640px) { .gr5-help-backdrop { align-items: center; } }
+.gr5-help {
+  width: 100%;
+  max-width: 560px;
+  max-height: 88dvh;
+  overflow-y: auto;
+  border-radius: 20px 20px 0 0;
+  background: linear-gradient(180deg, #4a2614, #2a1409);
+  box-shadow: inset 0 0 0 2px #d9aa4a;
+  animation: casino-pop 0.3s ease-out both;
+}
+@media (min-width: 640px) { .gr5-help { border-radius: 20px; } }
+.gr5-mini-line { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px; width: 44px; }
+.gr5-mini-line span { height: 7px; border-radius: 1.5px; background: rgba(255, 255, 255, 0.14); }
+.gr5-mini-line span.on { background: #f5c451; }
+@media (max-width: 360px) {
+  .gr5-spin { width: 82px; height: 82px; font-size: 19px; }
+}
