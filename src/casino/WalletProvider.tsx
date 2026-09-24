@@ -2,8 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { storage } from '@/storage';
 import { canRefill } from './wallet';
-import type { CasinoGame, WalletData } from './ledger';
-import { normalizeWallet, openRound, raiseStake as raise, RECOVER_AFTER_MS, recoverRounds, refillWallet, settleRound as settle } from './ledger';
+import type { CasinoGame, InstantRefusal, WalletData } from './ledger';
+import { normalizeWallet, openRound, playRound, raiseStake as raise, RECOVER_AFTER_MS, recoverRounds, refillWallet, settleRound as settle } from './ledger';
 import { newId } from './random';
 import { WALLET_RESET_EVENT, WalletContext } from './walletContext';
 
@@ -113,6 +113,19 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     });
   }, [mutate]);
 
+  const bookInstantRound = useCallback(
+    (id: string, game: CasinoGame, stake: number, payout: number, journal?: (balance: number) => void) =>
+      mutate<{ ok: true; balance: number } | { ok: false; reason: InstantRefusal }>((w) => {
+        const r = playRound(w, { id, game, stake, payout, now: Date.now() });
+        if (!r.ok) return { wallet: w, result: { ok: false as const, reason: r.reason } };
+        journal?.(r.wallet.balance);
+        return { wallet: r.wallet, result: { ok: true as const, balance: r.wallet.balance } };
+      }),
+    [mutate]
+  );
+
+  const wasSettled = useCallback((id: string) => read().paid.includes(id), [read]);
+
   const isOpen = useCallback((id: string) => read().open.some((o) => o.id === id), [read]);
   const openStake = useCallback((id: string) => read().open.find((o) => o.id === id)?.stake ?? null, [read]);
 
@@ -128,8 +141,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       settleRound,
       isOpen,
       openStake,
+      bookInstantRound,
+      wasSettled,
     }),
-    [wallet, refill, startRound, raiseStake, settleRound, isOpen, openStake]
+    [wallet, refill, startRound, raiseStake, settleRound, isOpen, openStake, bookInstantRound, wasSettled]
   );
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
 }

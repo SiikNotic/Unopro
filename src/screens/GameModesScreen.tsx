@@ -39,7 +39,7 @@ const CASINO_GAMES: { screen: Screen; key: 'blackjack' | 'roulette' | 'slots'; a
     ),
   },
   { screen: 'roulette', key: 'roulette', art: <MiniWheel /> },
-  { screen: 'slots', key: 'slots', art: <SlotSymbolIcon symbol="seven" className="w-8 h-8" /> },
+  { screen: 'slotLobby', key: 'slots', art: <SlotSymbolIcon symbol="seven" className="w-8 h-8" /> },
 ];
 
 /** "Play": the one place to pick what to play — Carta modes and casino games. */

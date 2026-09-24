@@ -27,6 +27,10 @@ interface CasinoFrameProps {
   dock?: ReactNode;
   /** Widest the content may grow on tablets and desktops. */
   maxWidth?: string;
+  /** Balance to show instead of the wallet's (a server balance, or one held back until reels stop). */
+  balanceOverride?: number | null;
+  /** Offer the free refill when the wallet runs dry (default true). */
+  allowRefill?: boolean;
   children: ReactNode;
 }
 
@@ -34,7 +38,7 @@ interface CasinoFrameProps {
  * Shared shell for every casino game: a top bar that always says where you are and how to go back,
  * the table in the middle and the controls in a dock under the thumb. Respects notches and home bars.
  */
-export function CasinoFrame({ title, subtitle, back, scenario, backdrop, onHelp, dock, maxWidth = 'max-w-3xl', children }: CasinoFrameProps) {
+export function CasinoFrame({ title, subtitle, back, scenario, backdrop, onHelp, dock, maxWidth = 'max-w-3xl', balanceOverride, allowRefill = true, children }: CasinoFrameProps) {
   const { back: goBack } = useNavigation();
   const { t } = useI18n();
   const { balance, canRefill, refill } = useWallet();
@@ -63,7 +67,7 @@ export function CasinoFrame({ title, subtitle, back, scenario, backdrop, onHelp,
             <h1 className="font-display font-extrabold text-[17px] sm:text-xl leading-tight text-[var(--cz-ivory)] truncate">{title}</h1>
             {subtitle && <p className="hidden sm:block text-xs text-[var(--cz-muted)] truncate">{subtitle}</p>}
           </div>
-          <ChipBalance balance={balance} />
+          <ChipBalance balance={balanceOverride === undefined ? balance : balanceOverride} />
           {onHelp && (
             <button type="button" onClick={onHelp} className="cz-btn cz-btn-secondary cz-icon-btn" aria-label={t('casino.rules')} title={t('casino.rules')}>
               <HelpCircle className="w-5 h-5" />
@@ -74,7 +78,7 @@ export function CasinoFrame({ title, subtitle, back, scenario, backdrop, onHelp,
       </header>
 
       <main className={`relative flex-1 mx-auto w-full ${maxWidth} cz-safe-x py-3 sm:py-5 flex flex-col gap-3 sm:gap-4`}>
-        {canRefill && (
+        {canRefill && allowRefill && (
           <div className="cz-panel p-3 flex items-center gap-3 cz-fade-in" role="status">
             <p className="text-sm text-[var(--cz-ivory)] flex-1 min-w-0">{t('casino.broke')}</p>
             <button

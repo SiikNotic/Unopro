@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import type { Screen, ScreenParams } from '@/types/navigation';
 import { SCREENS } from '@/types/navigation';
 import { GAME_MODES } from '@/game/rules/modes';
+import { isMachineId } from '@/casino/premium/engine';
 
 interface NavigationContextValue {
   currentScreen: Screen;
@@ -41,11 +42,12 @@ function cleanParams(raw: unknown): ScreenParams {
   const out: ScreenParams = {};
   if (p.mode && GAME_MODES.some((m) => m.id === p.mode && m.enabled)) out.mode = p.mode;
   if (typeof p.topic === 'string' && /^[a-z]{2,16}$/.test(p.topic)) out.topic = p.topic;
+  if (isMachineId(p.machine)) out.machine = p.machine;
   return out;
 }
 
 const sameEntry = (a: Entry | null, screen: Screen, params: ScreenParams) =>
-  !!a && a.screen === screen && (a.params.topic ?? '') === (params.topic ?? '') && (a.params.mode ?? '') === (params.mode ?? '');
+  !!a && a.screen === screen && (a.params.topic ?? '') === (params.topic ?? '') && (a.params.mode ?? '') === (params.mode ?? '') && (a.params.machine ?? '') === (params.machine ?? '');
 
 export function NavigationProvider({ children }: { children: ReactNode }) {
   const [entry, setEntry] = useState<Entry>(() => {

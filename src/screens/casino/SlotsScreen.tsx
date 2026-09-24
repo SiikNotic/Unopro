@@ -305,7 +305,7 @@ export function SlotsScreen() {
   const bigBanner = banner && outcome && (tier === 'big' || tier === 'jackpot');
 
   return (
-    <CasinoFrame title={t('casino.slots.name')} subtitle={t('casino.slots.rules')} back="gameModes" scenario="lounge" backdrop={<SaloonBackdrop />}>
+    <CasinoFrame title={t('casino.slots.marquee')} subtitle={t('casino.slots.rules')} back="slotLobby" scenario="lounge" backdrop={<SaloonBackdrop />}>
       {celebrating && !reduced && outcome && <CoinShower key={outcome.id} id={outcome.id} count={COINS[tier]} />}
       {help && <HelpSheet onClose={() => setHelp(false)} rtp={rtpLabel()} />}
 

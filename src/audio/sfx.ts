@@ -23,15 +23,22 @@ export type SfxName =
   | 'reelSpin'
   | 'anticipation'
   | 'coin'
-  | 'bigWin';
+  | 'bigWin'
+  | 'spinClick'
+  | 'winSmall'
+  | 'megaWin'
+  | 'jackpot';
 
 let enabled = true;
+/** Running loops (startLoop), stopped when sound is switched off. */
+const loops = new Map<string, () => void>();
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
 let noiseBuffer: AudioBuffer | null = null;
 
 export function setSoundEnabled(value: boolean): void {
   enabled = value;
+  if (!value) for (const stop of [...loops.values()]) stop();
   if (!value && ctx?.state === 'running') void ctx.suspend();
   if (value && ctx?.state === 'suspended') void ctx.resume();
 }
@@ -208,7 +215,94 @@ const SOUNDS: Record<SfxName, (c: AudioContext, t: number) => void> = {
     [1047, 1319, 1568].forEach((f) => tone(c, f, t + 0.5, 1.1, 'sine', 0.09));
     for (let i = 0; i < 10; i++) tone(c, 2800 + (i % 4) * 300, t + 0.55 + i * 0.07, 0.06, 'sine', 0.05);
   },
+  // Slots: the SPIN button: a firm mechanical click.
+  spinClick: (c, t) => {
+    noise(c, t, 0.03, 3200, 0.3);
+    tone(c, 420, t, 0.06, 'square', 0.06, 180);
+    tone(c, 95, t + 0.01, 0.1, 'sine', 0.22, 55);
+  },
+  // Small win: two soft bells, deliberately modest.
+  winSmall: (c, t) => {
+    tone(c, 1319, t, 0.22, 'sine', 0.1);
+    tone(c, 1760, t + 0.08, 0.3, 'sine', 0.08);
+  },
+  // Mega win: a longer rising fanfare with a shimmering tail.
+  megaWin: (c, t) => {
+    [392, 523, 659, 784, 1047, 1319, 1568].forEach((f, i) => {
+      tone(c, f, t + i * 0.08, 0.3, 'square', 0.045);
+      tone(c, f, t + i * 0.08, 0.36, 'triangle', 0.11);
+    });
+    [784, 1047, 1319, 1568].forEach((f) => tone(c, f, t + 0.62, 1.6, 'sine', 0.08));
+    for (let i = 0; i < 18; i++) tone(c, 2600 + (i % 5) * 260, t + 0.7 + i * 0.07, 0.06, 'sine', 0.045);
+    tone(c, 65, t + 0.62, 0.9, 'sine', 0.3, 45);
+  },
+  // Jackpot: bells, a big chord and a cascade of coins.
+  jackpot: (c, t) => {
+    for (let r = 0; r < 3; r++) [1047, 1319, 1568, 2093].forEach((f, i) => tone(c, f, t + r * 0.32 + i * 0.05, 0.25, 'sine', 0.1));
+    [262, 330, 392, 523, 659, 784].forEach((f) => {
+      tone(c, f, t + 1.0, 2.2, 'triangle', 0.07);
+      tone(c, f * 1.005, t + 1.0, 2.2, 'sawtooth', 0.018);
+    });
+    tone(c, 55, t + 1.0, 1.6, 'sine', 0.35, 40);
+    for (let i = 0; i < 36; i++) tone(c, 2800 + ((i * 7) % 9) * 180, t + 1.1 + i * 0.055, 0.07, 'sine', 0.04);
+    noise(c, t + 1.0, 0.5, 6000, 0.08, 'highpass');
+  },
 };
+
+/**
+ * A looping sound (the reels whirring) until the returned function is called. Only one loop per name
+ * runs at a time: starting it again returns the stop of the running one. Silent while sound is off.
+ */
+export function startLoop(name: 'reels'): () => void {
+  const running = loops.get(name);
+  if (running) return running;
+  const noop = () => {};
+  if (!enabled) return noop;
+  const c = audio();
+  if (!c || c.state !== 'running' || !master || !noiseBuffer) return noop;
+  try {
+    // One bar of ratchet clicks, looped seamlessly.
+    const period = 0.06;
+    const buf = c.createBuffer(1, Math.round(c.sampleRate * period * 4), c.sampleRate);
+    const data = buf.getChannelData(0);
+    const src = noiseBuffer.getChannelData(0);
+    for (let k = 0; k < 4; k++) {
+      const at = Math.round(k * period * c.sampleRate);
+      const len = Math.round(0.012 * c.sampleRate);
+      for (let i = 0; i < len && at + i < data.length; i++) data[at + i] = src[i] * (1 - i / len) * (k === 0 ? 1 : 0.7);
+    }
+    const node = c.createBufferSource();
+    node.buffer = buf;
+    node.loop = true;
+    const filter = c.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = 2400;
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.0001, c.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.16, c.currentTime + 0.08);
+    node.connect(filter).connect(g).connect(master);
+    node.start();
+    let stopped = false;
+    const stop = () => {
+      if (stopped) return;
+      stopped = true;
+      loops.delete(name);
+      try {
+        const now = c.currentTime;
+        g.gain.cancelScheduledValues(now);
+        g.gain.setValueAtTime(Math.max(0.0001, g.gain.value), now);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+        node.stop(now + 0.15);
+      } catch {
+        // already stopped
+      }
+    };
+    loops.set(name, stop);
+    return stop;
+  } catch {
+    return noop;
+  }
+}
 
 export function playSfx(name: SfxName, delaySeconds = 0): void {
   if (!enabled) return;

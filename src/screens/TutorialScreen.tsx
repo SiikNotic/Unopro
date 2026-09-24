@@ -27,7 +27,7 @@ const TOPICS: Topic[] = [
   { id: 'strategy', icon: Lightbulb, group: 'carta', target: 'gameModes' },
   { id: 'blackjack', icon: Club, group: 'casino', target: 'blackjack' },
   { id: 'roulette', icon: CircleDot, group: 'casino', target: 'roulette' },
-  { id: 'slots', icon: Sparkles, group: 'casino', target: 'slots' },
+  { id: 'slots', icon: Sparkles, group: 'casino', target: 'slotLobby' },
 ];
 
 const card = (id: string, color: Card['color'], type: Card['type'], value: Card['value'] = null): Card => ({ id, color, type, value });

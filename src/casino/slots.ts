@@ -1,6 +1,11 @@
 // "Gold Rush" video slot: 5 reels × 3 rows, up to 10 paylines, sheriff star as wild.
 // Pure; results come from a seeded PRNG. Wins pay left to right on active lines.
-import type { Rng } from '@/game/engine';
+// Dependency free (also imported by the slot server).
+
+/** Any source of uniform [0, 1) numbers (the game's seeded PRNG or the crypto one). */
+interface Rng {
+  next(): number;
+}
 
 export type SlotSymbol =
   | 'seven'

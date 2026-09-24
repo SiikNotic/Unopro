@@ -23,7 +23,7 @@ interface GameEntry {
 const GAMES: GameEntry[] = [
   { id: 'blackjack', screen: 'blackjack' },
   { id: 'roulette', screen: 'roulette' },
-  { id: 'slots', screen: 'slots' },
+  { id: 'slots', screen: 'slotLobby' },
   { id: 'carta', screen: 'gameModes' },
 ];
 

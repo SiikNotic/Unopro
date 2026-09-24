@@ -201,3 +201,18 @@ export function refillWallet(w: WalletData): { wallet: WalletData; ok: boolean }
   return { wallet: { ...w, balance: w.balance + REFILL_CHIPS, stats: { ...w.stats, refills: w.stats.refills + 1 } }, ok: true };
 }
 
+
+export type InstantRefusal = 'funds' | 'duplicate' | 'invalid';
+
+/**
+ * A round decided and paid in one step (the house already knows the result): takes the stake and credits
+ * the payout atomically. A round id can only ever be booked once.
+ */
+export function playRound(w: WalletData, req: OpenRequest & { payout: number }): { wallet: WalletData; ok: true; credited: number } | { wallet: WalletData; ok: false; reason: InstantRefusal } {
+  if (w.open.some((o) => o.id === req.id) || w.paid.includes(req.id)) return { wallet: w, ok: false, reason: 'duplicate' };
+  if (Number.isInteger(req.stake) && req.stake >= 1 && req.stake > w.balance) return { wallet: w, ok: false, reason: 'funds' };
+  const opened = openRound(w, req);
+  if (!opened.ok) return { wallet: w, ok: false, reason: 'invalid' };
+  const settled = settleRound(opened.wallet, req.id, null, req.now);
+  return { wallet: settled.wallet, ok: true, credited: settled.credited };
+}

@@ -1,5 +1,5 @@
 import { createContext } from 'react';
-import type { CasinoGame, HistoryEntry, WalletStats } from './ledger';
+import type { CasinoGame, HistoryEntry, InstantRefusal, WalletStats } from './ledger';
 
 export interface WalletContextValue {
   balance: number;
@@ -17,6 +17,19 @@ export interface WalletContextValue {
   isOpen: (id: string) => boolean;
   /** Stake of an open round (what the wallet actually took), or null when it isn't open. */
   openStake: (id: string) => number | null;
+  /**
+   * Books a round whose result is already decided: stake out and payout in, atomically, once per id.
+   * `journal` runs inside the same step, right before the wallet is saved, with the new balance.
+   */
+  bookInstantRound: (
+    id: string,
+    game: CasinoGame,
+    stake: number,
+    payout: number,
+    journal?: (balance: number) => void
+  ) => { ok: true; balance: number } | { ok: false; reason: InstantRefusal };
+  /** True when a round with this id was booked and paid (recent rounds only). */
+  wasSettled: (id: string) => boolean;
 }
 
 /** Fired by Settings → reset so the wallet drops its in-memory copy along with storage. */

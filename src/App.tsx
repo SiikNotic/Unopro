@@ -10,6 +10,8 @@ import { PlayScreen } from '@/screens/PlayScreen';
 import { BlackjackScreen } from '@/screens/casino/BlackjackScreen';
 import { RouletteScreen } from '@/screens/casino/RouletteScreen';
 import { SlotsScreen } from '@/screens/casino/SlotsScreen';
+import { SlotLobbyScreen } from '@/screens/casino/SlotLobbyScreen';
+import { PremiumSlotScreen } from '@/screens/casino/PremiumSlotScreen';
 import { ProfileScreen } from '@/screens/ProfileScreen';
 import { WalletProvider } from '@/casino/WalletProvider';
 import type { Screen } from '@/types/navigation';
@@ -27,6 +29,8 @@ function ScreenRouter() {
     roulette: <RouletteScreen />,
     slots: <SlotsScreen />,
     profile: <ProfileScreen />,
+    slotLobby: <SlotLobbyScreen />,
+    slotMachine: <PremiumSlotScreen />,
   };
 
   return (

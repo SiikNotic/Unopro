@@ -43,13 +43,14 @@ export function ChipSelector({ selected, onSelect, max, values = CHIP_VALUES }: 
 }
 
 /** Balance pill shown in every casino header. */
-export function ChipBalance({ balance }: { balance: number }) {
+/** `null` = not known yet (waiting for the server). */
+export function ChipBalance({ balance }: { balance: number | null }) {
   const { t } = useI18n();
   return (
-    <div className="cz-pill cz-pill-gold px-2.5 shrink-0" style={{ minHeight: 36 }} aria-label={t('casino.balanceAria', { amount: balance })} title={t('casino.balance')}>
+    <div className="cz-pill cz-pill-gold px-2.5 shrink-0" style={{ minHeight: 36 }} aria-label={balance === null ? t('casino.balance') : t('casino.balanceAria', { amount: balance })} title={t('casino.balance')}>
       <Coins className="w-4 h-4 text-[var(--cz-gold)]" aria-hidden />
-      <span key={balance} className="casino-pop text-[14px]" aria-live="polite">
-        {formatChips(balance)}
+      <span key={balance ?? 'unknown'} className="casino-pop text-[14px]" aria-live="polite">
+        {balance === null ? '…' : formatChips(balance)}
       </span>
     </div>
   );
