@@ -230,3 +230,45 @@ export function resultReason(hand: Hand, dealer: PlayingCard[]): ResultReason {
   if (player < house) return 'lower';
   return 'push';
 }
+
+const VALID_RANKS = new Set(['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']);
+const VALID_SUITS = new Set(['S', 'H', 'D', 'C']);
+const PHASES = new Set<Phase>(['BETTING', 'PLAYER', 'SETTLED']);
+
+function isCard(x: unknown): x is PlayingCard {
+  if (!x || typeof x !== 'object') return false;
+  const c = x as Record<string, unknown>;
+  return typeof c.id === 'string' && VALID_RANKS.has(c.rank as string) && VALID_SUITS.has(c.suit as string);
+}
+
+/**
+ * Checks a table read back from storage before the engine trusts it. Anything malformed, or a hand in
+ * progress whose cards don't add up, is rejected (the caller then starts a fresh table).
+ */
+export function isValidTable(x: unknown): x is BlackjackState {
+  if (!x || typeof x !== 'object') return false;
+  const s = x as Record<string, unknown>;
+  if (!PHASES.has(s.phase as Phase) || typeof s.rngState !== 'number' || !Number.isFinite(s.rngState)) return false;
+  if (!Array.isArray(s.shoe) || !s.shoe.every(isCard) || s.shoe.length > DECKS * 52) return false;
+  if (!Array.isArray(s.dealer) || !s.dealer.every(isCard)) return false;
+  if (!Array.isArray(s.results) || !Array.isArray(s.hands) || s.hands.length > 2) return false;
+  const handsOk = s.hands.every((h: unknown) => {
+    if (!h || typeof h !== 'object') return false;
+    const hand = h as Record<string, unknown>;
+    return (
+      Array.isArray(hand.cards) &&
+      hand.cards.every(isCard) &&
+      typeof hand.bet === 'number' &&
+      Number.isInteger(hand.bet) &&
+      hand.bet > 0 &&
+      typeof hand.done === 'boolean' &&
+      typeof hand.doubled === 'boolean' &&
+      typeof hand.fromSplit === 'boolean'
+    );
+  });
+  if (!handsOk || typeof s.active !== 'number' || !Number.isInteger(s.active) || s.active < 0 || s.active >= Math.max(1, s.hands.length)) return false;
+  if (s.phase === 'PLAYER' && (s.hands.length === 0 || s.dealer.length < 2)) return false;
+  // Every card id must be unique across shoe, hands and dealer (no duplicated or injected cards).
+  const ids = [...(s.shoe as PlayingCard[]), ...(s.dealer as PlayingCard[]), ...(s.hands as Hand[]).flatMap((h) => h.cards)].map((c) => c.id);
+  return new Set(ids).size === ids.length;
+}

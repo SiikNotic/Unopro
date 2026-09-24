@@ -396,7 +396,8 @@
       "yourMove": "Hit for another card or stand?",
       "readyToDeal": "Ready: tap Deal",
       "dealFor": "Deal · {amount}",
-      "you": "You"
+      "you": "You",
+      "voided": "That hand was already closed in another tab. Place a new bet."
     },
     "roulette": {
       "name": "Roulette",
@@ -501,5 +502,60 @@
     "refillShort": "Refill {amount}",
     "addChips": "Add chips to the bet",
     "betOf": "Bet of {amount}"
+  },
+  "profile": {
+    "title": "Profile",
+    "subtitle": "Your chips and history",
+    "guest": "Player",
+    "name": "Name",
+    "save": "Save name",
+    "editName": "Edit name",
+    "local": "Profile stored on this device only",
+    "stats": "Casino stats",
+    "rounds": "Rounds",
+    "wagered": "Wagered",
+    "won": "Collected",
+    "net": "Net result",
+    "best": "Best win",
+    "refills": "Refills",
+    "history": "Latest rounds",
+    "empty": "You haven't played a casino round yet.",
+    "betShort": "bet {amount}",
+    "historyNote": "The last 50 rounds are kept. Virtual chips only, no real value."
+  },
+  "lobby": {
+    "featured": "Featured",
+    "slideOf": "{n} of {total}",
+    "play": "Play",
+    "hello": "Hi, {name}",
+    "helloGuest": "Welcome to the casino",
+    "headline": "What are we playing today?",
+    "games": "Games",
+    "gamesHint": "Tap a game to start",
+    "seeAll": "See all",
+    "more": "More",
+    "profile": "Profile and history",
+    "tutorialHint": "Learn the rules step by step",
+    "profileHint": "Your chips, stats and rounds",
+    "settingsHint": "Sound, music, language and more",
+    "balanceProfile": "Balance: {amount} chips. Open profile",
+    "name": {
+      "carta": "Carta",
+      "blackjack": "Blackjack",
+      "roulette": "Roulette",
+      "slots": "Gold Rush"
+    },
+    "tag": {
+      "carta": "Against bots · 2–10 players",
+      "blackjack": "Blackjack pays 3:2",
+      "roulette": "European · single zero",
+      "slots": "New · 5 reels"
+    },
+    "pitch": {
+      "carta": "The original card game: match colours, throw wilds and call UNO before anyone else.",
+      "blackjack": "Stand at the right time, double when it counts and beat the dealer without going over 21.",
+      "roulette": "Pick your numbers, watch the ball spin and collect up to 35 times your bet.",
+      "slots": "Ten paylines, the sheriff star as wild and a jackpot on five sevens."
+    }
   }
 }

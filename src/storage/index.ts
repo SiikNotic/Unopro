@@ -20,11 +20,14 @@ export const storage = {
     return value === null ? defaultValue : value;
   },
 
-  set<T>(key: string, value: T): void {
+  /** Returns false when the value could not be saved (storage full, blocked or unavailable). */
+  set<T>(key: string, value: T): boolean {
     try {
       localStorage.setItem(buildKey(key), JSON.stringify(value));
+      return true;
     } catch {
-      // storage may be full or unavailable — fail silently
+      // storage may be full or unavailable
+      return false;
     }
   },
 

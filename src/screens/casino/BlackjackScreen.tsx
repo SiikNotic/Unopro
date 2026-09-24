@@ -11,14 +11,48 @@ import { useWallet } from '@/casino/useWallet';
 import { MIN_BET } from '@/casino/wallet';
 import * as bj from '@/casino/blackjack';
 import type { PlayingCard } from '@/casino/cards';
-import { randomSeed } from '@/game/engine';
+import { cryptoRng, secureSeed } from '@/casino/random';
+import { shuffle } from '@/casino/cards';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useViewport } from '@/hooks/useViewport';
 import { playSfx } from '@/audio/sfx';
 
-// The table survives leaving the screen (not a reload), so a hand in progress is never lost by navigating.
-let savedTable: bj.BlackjackState | null = null;
-let savedBet = 0;
+// The hand in progress is kept per tab (sessionStorage), so leaving the screen or reloading the page
+// never loses a bet. The wallet round id travels with it: a round is only ever paid once.
+const SESSION_KEY = 'carta.blackjack';
+
+interface SavedRound {
+  roundId: string | null;
+  table: bj.BlackjackState;
+  lastBet: number;
+}
+
+function loadRound(): SavedRound | null {
+  try {
+    const raw = JSON.parse(sessionStorage.getItem(SESSION_KEY) ?? 'null') as Partial<SavedRound> | null;
+    if (!raw || !bj.isValidTable(raw.table)) return null;
+    const lastBet = typeof raw.lastBet === 'number' && Number.isInteger(raw.lastBet) && raw.lastBet >= 0 ? raw.lastBet : 0;
+    return { roundId: typeof raw.roundId === 'string' ? raw.roundId : null, table: raw.table, lastBet };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The stored copy never reveals what comes next: the undealt shoe is reshuffled with a fresh
+ * cryptographic seed (and a fresh engine seed), so reading storage tells nothing about the next card.
+ */
+function saveRound(round: SavedRound) {
+  try {
+    const table = { ...round.table, shoe: shuffle(round.table.shoe, cryptoRng()), rngState: secureSeed() };
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify({ ...round, table }));
+  } catch {
+    // best effort
+  }
+}
+
+/** Clears a hand from the table while keeping the shoe (used when a restored hand was already closed). */
+const clearHand = (t: bj.BlackjackState): bj.BlackjackState => ({ ...t, phase: 'BETTING', hands: [], dealer: [], results: [], active: 0 });
 
 /** Overlapping row of cards; overlaps more as the hand grows so it never gets wider than ~3 cards. */
 function CardRow({ cards, width, hideHole = false, dealtFrom = 0 }: { cards: PlayingCard[]; width: number; hideHole?: boolean; dealtFrom?: number }) {
@@ -58,22 +92,37 @@ const OUTCOME_PILL: Record<bj.Outcome, string> = {
 
 export function BlackjackScreen() {
   const { t } = useI18n();
-  const { balance, spend, credit } = useWallet();
+  const { balance, startRound, raiseStake, settleRound, isOpen, openStake } = useWallet();
   const reduced = useReducedMotion();
   const { width: vw, height: vh } = useViewport();
-  const [table, setTable] = useState<bj.BlackjackState>(() => savedTable ?? bj.createBlackjack(randomSeed()));
-  const [bet, setBet] = useState(savedBet);
-  const [lastBet, setLastBet] = useState(savedBet);
+  const [initial] = useState(() => {
+    const saved = loadRound();
+    if (!saved) return { roundId: null, table: bj.createBlackjack(secureSeed()), lastBet: 0 };
+    if (saved.table.phase !== 'PLAYER') return { ...saved, roundId: null };
+    // A hand in play is only resumed if its wallet round is still open and the bets on the table are
+    // exactly what the wallet took. Otherwise it was closed elsewhere or edited: the hand is void.
+    const stake = saved.roundId ? openStake(saved.roundId) : null;
+    const onTable = saved.table.hands.reduce((sum, h) => sum + h.bet, 0);
+    if (stake === null || stake !== onTable) return { ...saved, roundId: null, table: clearHand(saved.table) };
+    return saved;
+  });
+  const [table, setTable] = useState<bj.BlackjackState>(initial.table);
+  const [bet, setBet] = useState(0);
+  const [lastBet, setLastBet] = useState(initial.lastBet);
   const [help, setHelp] = useState(false);
+  const [voided, setVoided] = useState(false);
   // Dealer cards revealed so far once the round settles (one by one, for suspense).
   const [dealerShown, setDealerShown] = useState(table.phase === 'SETTLED' ? table.dealer.length : 2);
   const prevPhase = useRef(table.phase);
   const resultPending = useRef(false);
+  // The latest table and round, read synchronously so a second tap acts on the updated state.
+  const tableRef = useRef(table);
+  const roundRef = useRef<string | null>(initial.roundId);
+  const lockUntil = useRef<Record<string, number>>({});
 
   useEffect(() => {
-    savedTable = table;
-    savedBet = bet;
-  }, [table, bet]);
+    saveRound({ roundId: roundRef.current, table, lastBet });
+  }, [table, lastBet]);
 
   const settledVisible = table.phase === 'SETTLED' && dealerShown >= table.dealer.length;
 
@@ -109,13 +158,35 @@ export function BlackjackScreen() {
     else playSfx('defeat');
   }, [settledVisible, table.results]);
 
-  /** Moves to the next table state, paying out when the round has just settled. */
-  const apply = (next: bj.BlackjackState, fromPhase: bj.Phase = table.phase) => {
-    if (next.phase === 'SETTLED' && fromPhase !== 'SETTLED') {
-      credit(bj.totalPayout(next));
+  /** Ignores a repeat of the same action within a short window (double taps, key repeat). */
+  const guarded = (key: string, fn: () => void) => {
+    const now = performance.now();
+    if (now < (lockUntil.current[key] ?? 0)) return;
+    lockUntil.current[key] = now + 250;
+    fn();
+  };
+
+  /** Moves the table forward from its latest state; pays the round the moment it settles, once. */
+  const act = (step: (current: bj.BlackjackState) => bj.BlackjackState) => {
+    const current = tableRef.current;
+    // The round was closed in another tab (e.g. a duplicated tab): this copy of the hand can't be played.
+    if (current.phase === 'PLAYER' && (!roundRef.current || !isOpen(roundRef.current))) {
+      const cleared = clearHand(current);
+      tableRef.current = cleared;
+      roundRef.current = null;
+      setTable(cleared);
+      setVoided(true);
+      playSfx('error');
+      return;
+    }
+    const next = step(current);
+    if (next === current) return;
+    tableRef.current = next;
+    setTable(next);
+    if (next.phase === 'SETTLED' && current.phase !== 'SETTLED' && roundRef.current) {
+      settleRound(roundRef.current, bj.totalPayout(next));
       resultPending.current = true;
     }
-    setTable(next);
   };
 
   const addChip = (value: number) => {
@@ -124,27 +195,40 @@ export function BlackjackScreen() {
     setBet((b) => b + value);
   };
 
-  const dealWith = (amount: number) => {
-    if (amount < MIN_BET || !spend(amount)) {
-      playSfx('error');
-      return;
-    }
-    playSfx('roundStart');
-    setLastBet(amount);
-    setBet(0);
-    setDealerShown(2);
-    // A fresh round starts from betting, even when the previous one is still on the table.
-    apply(bj.deal(table, amount), 'BETTING');
-  };
+  const dealWith = (amount: number) =>
+    guarded('deal', () => {
+      if (tableRef.current.phase === 'PLAYER') return;
+      const id = amount >= MIN_BET ? startRound('blackjack', amount, null) : null;
+      if (!id) {
+        playSfx('error');
+        return;
+      }
+      roundRef.current = id;
+      setVoided(false);
+      playSfx('roundStart');
+      setLastBet(amount);
+      setBet(0);
+      setDealerShown(2);
+      // A fresh round starts from betting, even when the previous one is still on the table.
+      prevPhase.current = 'BETTING';
+      if (tableRef.current.phase === 'SETTLED') tableRef.current = { ...tableRef.current, phase: 'BETTING' };
+      act((current) => bj.deal(current, amount));
+    });
 
-  const doExtra = (action: 'double' | 'split') => {
-    if (!spend(bj.extraStake(table, action))) {
-      playSfx('error');
-      return;
-    }
-    playSfx('chip');
-    apply(action === 'double' ? bj.double(table) : bj.split(table));
-  };
+  const doExtra = (action: 'double' | 'split') =>
+    guarded(action, () => {
+      const current = tableRef.current;
+      const allowed = action === 'double' ? bj.canDouble(current) : bj.canSplit(current);
+      if (!allowed || !roundRef.current || !raiseStake(roundRef.current, bj.extraStake(current, action))) {
+        playSfx('error');
+        return;
+      }
+      playSfx('chip');
+      act(action === 'double' ? bj.double : bj.split);
+    });
+
+  const hit = () => guarded('hit', () => { playSfx('draw'); act(bj.hit); });
+  const stand = () => guarded('stand', () => { playSfx('turn'); act(bj.stand); });
 
   const inPlay = table.phase === 'PLAYER';
   const hasRound = table.hands.length > 0;
@@ -175,6 +259,8 @@ export function BlackjackScreen() {
     message = t('casino.blackjack.dealerPlays');
   } else if (inPlay) {
     message = split ? t('casino.blackjack.playHand', { n: table.active + 1 }) : t('casino.blackjack.yourMove');
+  } else if (voided) {
+    message = t('casino.blackjack.voided');
   } else {
     message = bet > 0 ? t('casino.blackjack.readyToDeal') : t('casino.blackjack.placeBet');
   }
@@ -185,10 +271,10 @@ export function BlackjackScreen() {
   const dock = inPlay ? (
     <div className="flex flex-col gap-2">
       <div className="grid grid-cols-2 gap-2">
-        <button type="button" className="cz-btn cz-btn-primary cz-btn-lg" onClick={() => { playSfx('draw'); apply(bj.hit(table)); }}>
+        <button type="button" className="cz-btn cz-btn-primary cz-btn-lg" onClick={hit}>
           <Plus className="w-5 h-5" /> {t('casino.blackjack.hit')}
         </button>
-        <button type="button" className="cz-btn cz-btn-strong cz-btn-lg" onClick={() => { playSfx('turn'); apply(bj.stand(table)); }}>
+        <button type="button" className="cz-btn cz-btn-strong cz-btn-lg" onClick={stand}>
           <HandIcon className="w-5 h-5" /> {t('casino.blackjack.stand')}
         </button>
       </div>

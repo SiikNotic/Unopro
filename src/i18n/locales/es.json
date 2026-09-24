@@ -396,7 +396,8 @@
       "yourMove": "¿Pides otra carta o te plantas?",
       "readyToDeal": "Listo: pulsa Repartir",
       "dealFor": "Repartir · {amount}",
-      "you": "Tú"
+      "you": "Tú",
+      "voided": "Esa mano ya se cerró en otra pestaña. Haz una nueva apuesta."
     },
     "roulette": {
       "name": "Ruleta",
@@ -501,5 +502,60 @@
     "refillShort": "Recargar {amount}",
     "addChips": "Añadir fichas a la apuesta",
     "betOf": "Apuesta de {amount}"
+  },
+  "profile": {
+    "title": "Perfil",
+    "subtitle": "Tus fichas y tu historial",
+    "guest": "Jugador",
+    "name": "Nombre",
+    "save": "Guardar nombre",
+    "editName": "Editar nombre",
+    "local": "Perfil guardado solo en este dispositivo",
+    "stats": "Estadísticas del casino",
+    "rounds": "Rondas",
+    "wagered": "Apostado",
+    "won": "Cobrado",
+    "net": "Balance neto",
+    "best": "Mejor premio",
+    "refills": "Recargas",
+    "history": "Últimas rondas",
+    "empty": "Aún no has jugado ninguna ronda en el casino.",
+    "betShort": "apuesta {amount}",
+    "historyNote": "Se guardan las últimas 50 rondas. Solo fichas virtuales, sin valor real."
+  },
+  "lobby": {
+    "featured": "Destacados",
+    "slideOf": "{n} de {total}",
+    "play": "Jugar",
+    "hello": "Hola, {name}",
+    "helloGuest": "Bienvenido al casino",
+    "headline": "¿A qué jugamos hoy?",
+    "games": "Juegos",
+    "gamesHint": "Toca un juego para empezar",
+    "seeAll": "Ver todos",
+    "more": "Más",
+    "profile": "Perfil e historial",
+    "tutorialHint": "Aprende las reglas paso a paso",
+    "profileHint": "Tus fichas, estadísticas y rondas",
+    "settingsHint": "Sonido, música, idioma y más",
+    "balanceProfile": "Saldo: {amount} fichas. Abrir perfil",
+    "name": {
+      "carta": "Carta",
+      "blackjack": "Blackjack",
+      "roulette": "Ruleta",
+      "slots": "Fiebre del Oro"
+    },
+    "tag": {
+      "carta": "Contra bots · 2–10 jugadores",
+      "blackjack": "Blackjack paga 3:2",
+      "roulette": "Europea · un solo cero",
+      "slots": "Nuevo · 5 rodillos"
+    },
+    "pitch": {
+      "carta": "El juego de cartas original: combina colores, lanza comodines y canta UNO antes que nadie.",
+      "blackjack": "Plántate a tiempo, dobla cuando toque y gánale al crupier sin pasarte de 21.",
+      "roulette": "Elige tus números, mira girar la bola y cobra hasta 35 veces tu apuesta.",
+      "slots": "Diez líneas de pago, la estrella de sheriff como comodín y un jackpot con cinco sietes."
+    }
   }
 }

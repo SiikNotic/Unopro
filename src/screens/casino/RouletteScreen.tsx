@@ -8,12 +8,12 @@ import { useI18n } from '@/i18n';
 import { useWallet } from '@/casino/useWallet';
 import type { Bet, BetType } from '@/casino/roulette';
 import { betWins, pocketColor, POCKETS, sameSpot, spin, totalPayout, WHEEL_ORDER } from '@/casino/roulette';
-import { createRng, randomSeed } from '@/game/engine';
+import { cryptoRng } from '@/casino/random';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useViewport } from '@/hooks/useViewport';
 import { playSfx } from '@/audio/sfx';
 
-const rng = createRng(randomSeed());
+const rng = cryptoRng();
 const SPIN_MS = 4600;
 const SLICE = 360 / POCKETS;
 let savedHistory: number[] = [];
@@ -25,7 +25,7 @@ const COLOR_CLASS = { red: 'roulette-red', black: 'roulette-black', green: 'roul
 
 export function RouletteScreen() {
   const { t } = useI18n();
-  const { balance, spend, credit } = useWallet();
+  const { balance, startRound, settleRound } = useWallet();
   const reduced = useReducedMotion();
   const { width: vw, height: vh } = useViewport();
   const [bets, setBets] = useState<Bet[]>([]);
@@ -39,7 +39,8 @@ export function RouletteScreen() {
   const [history, setHistory] = useState<number[]>(savedHistory);
   const [rotor, setRotor] = useState(0);
   const [ball, setBall] = useState(0);
-  const pendingPayout = useRef(0);
+  // The open wallet round of the spin in flight (paid once, when the ball lands or when leaving).
+  const pendingRound = useRef<string | null>(null);
   const timer = useRef(0);
   const wheelRef = useRef<HTMLDivElement>(null);
 
@@ -47,9 +48,9 @@ export function RouletteScreen() {
   useEffect(
     () => () => {
       window.clearTimeout(timer.current);
-      if (pendingPayout.current > 0) credit(pendingPayout.current);
+      if (pendingRound.current) settleRound(pendingRound.current);
     },
-    [credit]
+    [settleRound]
   );
 
   const staked = bets.reduce((s, b) => s + b.amount, 0);
@@ -72,14 +73,18 @@ export function RouletteScreen() {
   };
 
   const doSpin = (placed: Bet[]) => {
+    // A second tap before React re-renders must not start a second spin.
+    if (pendingRound.current) return;
     const total = placed.reduce((s, b) => s + b.amount, 0);
-    if (total <= 0 || !spend(total)) {
+    // The result is drawn first and fixed in the wallet round together with the stake.
+    const n = spin(rng);
+    const payout = totalPayout(placed, n);
+    const id = total > 0 ? startRound('roulette', total, payout) : null;
+    if (!id) {
       playSfx('error');
       return;
     }
-    const n = spin(rng);
-    const payout = totalPayout(placed, n);
-    pendingPayout.current = payout;
+    pendingRound.current = id;
     setBets(placed);
     setLastBets(placed);
     setResult(null);
@@ -94,8 +99,8 @@ export function RouletteScreen() {
 
     timer.current = window.setTimeout(
       () => {
-        credit(pendingPayout.current);
-        pendingPayout.current = 0;
+        settleRound(id);
+        pendingRound.current = null;
         setResult(n);
         setWon(payout);
         setPhase('result');

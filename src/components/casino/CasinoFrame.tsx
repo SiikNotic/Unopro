@@ -35,7 +35,7 @@ interface CasinoFrameProps {
  * the table in the middle and the controls in a dock under the thumb. Respects notches and home bars.
  */
 export function CasinoFrame({ title, subtitle, back, scenario, backdrop, onHelp, dock, maxWidth = 'max-w-3xl', children }: CasinoFrameProps) {
-  const { navigate } = useNavigation();
+  const { back: goBack } = useNavigation();
   const { t } = useI18n();
   const { balance, canRefill, refill } = useWallet();
 
@@ -55,7 +55,7 @@ export function CasinoFrame({ title, subtitle, back, scenario, backdrop, onHelp,
 
       <header className="cz-topbar cz-safe-x">
         <div className={`mx-auto w-full ${maxWidth} flex items-center gap-2`}>
-          <button type="button" onClick={() => navigate(back)} className="cz-btn cz-btn-quiet cz-btn-sm -ml-2 px-2 shrink-0" aria-label={t('casino.backToGames')}>
+          <button type="button" onClick={() => goBack(back)} className="cz-btn cz-btn-quiet cz-btn-sm -ml-2 px-2 shrink-0" aria-label={t('casino.backToGames')}>
             <ArrowLeft className="w-5 h-5" />
             <span className="hidden sm:inline">{t('casino.games')}</span>
           </button>

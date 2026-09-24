@@ -13,6 +13,7 @@ import { DIFFICULTY_OPTIONS } from '@/settings/preferences';
 import type { ScenarioChoice } from '@/settings/preferences';
 import { SCENARIO_IDS, SCENARIOS } from '@/game/scenarios/scenarios';
 import { playSfx } from '@/audio/sfx';
+import { WALLET_RESET_EVENT } from '@/casino/walletContext';
 
 function SectionTitle({ icon: Icon, children }: { icon: LucideIcon; children: string }) {
   return (
@@ -57,6 +58,12 @@ export function SettingsScreen() {
 
   const handleReset = () => {
     storage.clear();
+    try {
+      sessionStorage.clear();
+    } catch {
+      // unavailable
+    }
+    window.dispatchEvent(new Event(WALLET_RESET_EVENT));
     setConfirmReset(false);
     setResetDone(true);
     window.setTimeout(() => setResetDone(false), 2500);

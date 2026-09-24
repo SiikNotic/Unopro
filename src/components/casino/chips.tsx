@@ -46,7 +46,7 @@ export function ChipSelector({ selected, onSelect, max, values = CHIP_VALUES }: 
 export function ChipBalance({ balance }: { balance: number }) {
   const { t } = useI18n();
   return (
-    <div className="cz-pill cz-pill-gold min-h-[36px] px-2.5 shrink-0" aria-label={t('casino.balanceAria', { amount: balance })} title={t('casino.balance')}>
+    <div className="cz-pill cz-pill-gold px-2.5 shrink-0" style={{ minHeight: 36 }} aria-label={t('casino.balanceAria', { amount: balance })} title={t('casino.balance')}>
       <Coins className="w-4 h-4 text-[var(--cz-gold)]" aria-hidden />
       <span key={balance} className="casino-pop text-[14px]" aria-live="polite">
         {formatChips(balance)}

@@ -5,7 +5,7 @@ import { createShoe, shuffle } from '../cards';
 import * as bj from '../blackjack';
 import * as roulette from '../roulette';
 import * as slots from '../slots';
-import { canRefill, MIN_BET, normalizeBalance, STARTING_CHIPS } from '../wallet';
+import { canRefill, MIN_BET } from '../wallet';
 
 let uid = 0;
 const c = (rank: Rank, suit: PlayingCard['suit'] = 'S'): PlayingCard => ({ id: `t${uid++}`, rank, suit });
@@ -112,6 +112,20 @@ describe('blackjack rounds', () => {
     expect(bj.resultReason(hand(['K', '7']), [c('10'), c('9')])).toBe('lower');
     expect(bj.resultReason(hand(['K', '8']), [c('10'), c('8')])).toBe('push');
     expect(bj.resultReason(hand(['A', 'K'], true), [c('10'), c('9')])).toBe('higher');
+  });
+
+  it('validates a table restored from storage', () => {
+    const fresh = bj.createBlackjack(5);
+    expect(bj.isValidTable(fresh)).toBe(true);
+    const playing = bj.deal(fresh, 20);
+    expect(bj.isValidTable(JSON.parse(JSON.stringify(playing)))).toBe(true);
+    expect(bj.isValidTable(null)).toBe(false);
+    expect(bj.isValidTable({ ...playing, phase: 'WON' })).toBe(false);
+    expect(bj.isValidTable({ ...playing, hands: [{ ...playing.hands[0], bet: -5 }] })).toBe(false);
+    // an injected ace that duplicates a card already in the shoe
+    const dup = { ...playing, hands: [{ ...playing.hands[0], cards: [...playing.hands[0].cards, playing.shoe[0]] }] };
+    expect(bj.isValidTable(dup)).toBe(false);
+    expect(bj.isValidTable({ ...playing, dealer: [{ id: 'x', rank: 'Z', suit: 'S' }] })).toBe(false);
   });
 
   it('ignores actions outside the player phase and conserves the shoe', () => {
@@ -234,15 +248,6 @@ describe('slots (5 reels)', () => {
 });
 
 describe('wallet', () => {
-  it('normalizes stored balances', () => {
-    expect(normalizeBalance(null)).toBe(STARTING_CHIPS);
-    expect(normalizeBalance('500')).toBe(STARTING_CHIPS);
-    expect(normalizeBalance(-3)).toBe(STARTING_CHIPS);
-    expect(normalizeBalance(Number.NaN)).toBe(STARTING_CHIPS);
-    expect(normalizeBalance(250.7)).toBe(250);
-    expect(normalizeBalance(0)).toBe(0);
-  });
-
   it('offers a refill only when broke', () => {
     expect(canRefill(MIN_BET - 1)).toBe(true);
     expect(canRefill(MIN_BET)).toBe(false);

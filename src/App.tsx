@@ -10,6 +10,7 @@ import { PlayScreen } from '@/screens/PlayScreen';
 import { BlackjackScreen } from '@/screens/casino/BlackjackScreen';
 import { RouletteScreen } from '@/screens/casino/RouletteScreen';
 import { SlotsScreen } from '@/screens/casino/SlotsScreen';
+import { ProfileScreen } from '@/screens/ProfileScreen';
 import { WalletProvider } from '@/casino/WalletProvider';
 import type { Screen } from '@/types/navigation';
 
@@ -25,6 +26,7 @@ function ScreenRouter() {
     blackjack: <BlackjackScreen />,
     roulette: <RouletteScreen />,
     slots: <SlotsScreen />,
+    profile: <ProfileScreen />,
   };
 
   return (

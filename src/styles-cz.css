@@ -155,3 +155,56 @@
 
 .cz-fade-in { animation: cz-fade 0.28s ease-out both; }
 @keyframes cz-fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* ── Lobby ── */
+.lobby { background: var(--cz-bg); }
+.lobby-ambient {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(70% 40% at 15% 0%, rgba(216, 178, 106, 0.12), transparent 70%),
+    radial-gradient(60% 40% at 100% 30%, rgba(40, 140, 110, 0.1), transparent 70%),
+    radial-gradient(80% 50% at 50% 110%, rgba(120, 30, 40, 0.14), transparent 70%);
+}
+.lobby-hero {
+  height: clamp(380px, 112vw, 470px);
+  /* Let the page scroll vertically but keep horizontal swipes for the carousel. */
+  touch-action: pan-y;
+  border: 1px solid rgba(216, 178, 106, 0.28);
+  box-shadow: 0 24px 50px -24px rgba(0, 0, 0, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+@media (min-width: 640px) { .lobby-hero { height: 340px; } }
+@media (min-width: 1024px) { .lobby-hero { height: 380px; } }
+.lobby-slide {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.6s ease, visibility 0.6s;
+}
+.lobby-slide-on { opacity: 1; visibility: visible; }
+.lobby-slide-on .lobby-float { animation: lobby-float 7s ease-in-out infinite; }
+.lobby-slide-on .lobby-light { animation: lobby-breathe 7s ease-in-out infinite; }
+@keyframes lobby-float { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-8px) rotate(-1deg); } }
+@media (min-width: 640px) {
+  @keyframes lobby-float { 0%, 100% { transform: translateY(-50%) rotate(0deg); } 50% { transform: translateY(calc(-50% - 8px)) rotate(-1deg); } }
+}
+@keyframes lobby-breathe { 0%, 100% { opacity: 0.85; } 50% { opacity: 1; } }
+
+.lobby-card {
+  display: flex;
+  flex-direction: column;
+  border-radius: 18px;
+  background: var(--cz-surface);
+  border: 1px solid var(--cz-line);
+  box-shadow: 0 14px 30px -20px rgba(0, 0, 0, 0.9);
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.lobby-card:hover { transform: translateY(-3px); border-color: rgba(216, 178, 106, 0.4); box-shadow: 0 20px 36px -20px rgba(0, 0, 0, 0.95); }
+.lobby-card:active { transform: scale(0.97); }
+.lobby-card:focus-visible { outline: 2px solid var(--cz-gold); outline-offset: 3px; }
+
+.lobby-rise { animation: lobby-rise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes lobby-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }

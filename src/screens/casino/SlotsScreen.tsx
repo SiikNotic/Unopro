@@ -9,14 +9,15 @@ import { useI18n } from '@/i18n';
 import { useWallet } from '@/casino/useWallet';
 import type { LineWin, SlotSymbol } from '@/casino/slots';
 import { BET_PER_LINE, evaluateSpin, LINE_OPTIONS, LINES, lineSymbols, PAYTABLE, REELS, returnToPlayer, spinReels, visibleGrid, WILD, winCells } from '@/casino/slots';
-import { createRng, randomSeed } from '@/game/engine';
+import { createRng } from '@/game/engine';
+import { cryptoRng, secureSeed } from '@/casino/random';
 import { useCountUp } from '@/hooks/useCountUp';
 import { useElementWidth } from '@/hooks/useViewport';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { storage } from '@/storage';
 import { playSfx } from '@/audio/sfx';
 
-const rng = createRng(randomSeed());
+const rng = cryptoRng();
 const BASE_DURATIONS = [900, 1150, 1400, 1650, 1900];
 const LOOPS = [2, 2, 3, 3, 4];
 /** Top symbols that make the last reels hold back once three of them line up. */
@@ -25,7 +26,7 @@ const AUTO_SPINS = 10;
 const BEST_KEY = 'carta.slotsBest';
 const LINE_COLORS = ['#ffd24a', '#ff5d5d', '#4ade80', '#60a5fa', '#f472b6', '#fb923c', '#a78bfa', '#2dd4bf', '#facc15', '#f87171'];
 const PAY_ORDER: SlotSymbol[] = ['star', 'seven', 'gold', 'eagle', 'bison', 'wagon', 'revolver', 'moneybag', 'hat', 'horseshoe', 'cactus'];
-let savedStops = spinReels(createRng(randomSeed()));
+let savedStops = spinReels(createRng(secureSeed()));
 /** Exact return over every combination: computed lazily once (it walks 161k line combinations). */
 let rtpText: string | null = null;
 const rtpLabel = () => (rtpText ??= (returnToPlayer() * 100).toFixed(1));
@@ -118,7 +119,7 @@ function HelpSheet({ onClose, rtp }: { onClose: () => void; rtp: string }) {
 
 export function SlotsScreen() {
   const { t } = useI18n();
-  const { balance, spend, credit } = useWallet();
+  const { balance, startRound, settleRound } = useWallet();
   const reduced = useReducedMotion();
   const windowRef = useRef<HTMLDivElement>(null);
   const windowWidth = useElementWidth(windowRef);
@@ -140,7 +141,8 @@ export function SlotsScreen() {
     const raw = storage.get<number>(BEST_KEY);
     return typeof raw === 'number' && Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : 0;
   });
-  const pendingPayout = useRef(0);
+  // Open wallet round of the spin in flight: also the lock against a second spin before re-render.
+  const pendingRound = useRef<string | null>(null);
   const timers = useRef<number[]>([]);
   const autoTimer = useRef(0);
   const previewTimer = useRef(0);
@@ -154,9 +156,9 @@ export function SlotsScreen() {
       timers.current.forEach((id) => window.clearTimeout(id));
       window.clearTimeout(autoTimer.current);
       window.clearTimeout(previewTimer.current);
-      if (pendingPayout.current > 0) credit(pendingPayout.current);
+      if (pendingRound.current) settleRound(pendingRound.current);
     },
-    [credit]
+    [settleRound]
   );
 
   const tier = outcome?.tier ?? 'none';
@@ -170,13 +172,17 @@ export function SlotsScreen() {
   });
 
   const doSpin = useCallback(() => {
-    if (spinning || !spend(totalBet)) {
+    if (pendingRound.current) return;
+    // Reels are drawn first; the stake and the payout they decide are fixed together in one wallet round.
+    const next = spinReels(rng);
+    const result = evaluateSpin(next, lines, betPerLine);
+    const id = startRound('slots', totalBet, result.total);
+    if (!id) {
       playSfx('error');
       setAutoLeft(0);
       return;
     }
-    const next = spinReels(rng);
-    const result = evaluateSpin(next, lines, betPerLine);
+    pendingRound.current = id;
     const nextTier = tierFor(result.total, totalBet, result.jackpot);
     const grid = visibleGrid(next);
     // Hold the last reels back only when three top symbols already line up on an active line.
@@ -189,7 +195,6 @@ export function SlotsScreen() {
     const plan = reduced ? BASE_DURATIONS.map(() => 0) : BASE_DURATIONS.map((d, i) => d + (tease && i === 3 ? 700 : 0) + (tease && i === 4 ? 1500 : 0));
 
     timers.current.forEach((id) => window.clearTimeout(id));
-    pendingPayout.current = result.total;
     savedStops = next;
     setFrom(stops);
     setStops(next);
@@ -210,8 +215,8 @@ export function SlotsScreen() {
     if (tease) later(plan[2], () => playSfx('anticipation'));
     const end = Math.max(...plan) + 180;
     later(end, () => {
-      credit(pendingPayout.current);
-      pendingPayout.current = 0;
+      settleRound(id);
+      pendingRound.current = null;
       setSpinning(false);
       setOutcome({ id: Date.now(), total: result.total, bet: totalBet, tier: nextTier, wins: result.wins });
       if (nextTier === 'win' || nextTier === 'big' || nextTier === 'jackpot') {
@@ -227,7 +232,7 @@ export function SlotsScreen() {
         });
       }
     });
-  }, [spinning, spend, totalBet, lines, betPerLine, reduced, stops, credit]);
+  }, [startRound, settleRound, totalBet, lines, betPerLine, reduced, stops]);
 
   // Auto spin: keeps going while there are spins left and chips to cover the bet; a big win pauses it.
   const spinRef = useRef(doSpin);

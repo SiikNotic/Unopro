@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import { AlertCircle, ArrowLeft, ArrowRight, ChevronRight, CircleDot, Club, Layers, Lightbulb, Play, Repeat, Sparkles, Zap } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
@@ -188,20 +187,19 @@ function Lesson({ topic, onBack, onGo }: { topic: Topic; onBack: () => void; onG
   );
 }
 
-// The open lesson survives leaving the screen (e.g. to try a game) and coming back.
-let savedTopic: TopicId | null = null;
-
 export function TutorialScreen() {
   const { t } = useI18n();
-  const [open, setOpen] = useState<TopicId | null>(savedTopic);
-
-  useEffect(() => {
-    savedTopic = open;
-    window.scrollTo({ top: 0 });
-  }, [open]);
-
-  const topic = TOPICS.find((x) => x.id === open);
-  if (topic) return <Lesson topic={topic} onBack={() => setOpen(null)} onGo={setOpen} />;
+  const { params, navigate, back } = useNavigation();
+  // The open lesson lives in the navigation history, so the phone's back button returns to the topics.
+  const topic = TOPICS.find((x) => x.id === params.topic);
+  if (topic)
+    return (
+      <Lesson
+        topic={topic}
+        onBack={() => back('tutorial')}
+        onGo={(id) => navigate('tutorial', { topic: id }, { replace: true })}
+      />
+    );
 
   return (
     <ScreenContainer title={t('tutorial.title')} subtitle={t('tutorial.subtitle')}>
@@ -211,7 +209,7 @@ export function TutorialScreen() {
             <h2 className="cz-label mb-2 px-1">{t(`tutorial.groups.${group}`)}</h2>
             <div className="flex flex-col gap-2">
               {TOPICS.filter((x) => x.group === group).map((x) => (
-                <button key={x.id} type="button" className="cz-row" onClick={() => setOpen(x.id)}>
+                <button key={x.id} type="button" className="cz-row" onClick={() => navigate('tutorial', { topic: x.id })}>
                   <span className="cz-row-icon">
                     <x.icon className="w-5 h-5" aria-hidden />
                   </span>

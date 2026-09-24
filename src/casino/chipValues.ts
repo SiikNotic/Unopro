@@ -11,5 +11,8 @@ export function chipColor(value: number): string {
 }
 
 export function formatChips(n: number): string {
-  return n >= 10000 ? `${Math.round(n / 1000)}k` : n.toLocaleString();
+  // From 999,500 up, rounding to thousands would print "1000k": switch to millions instead.
+  if (n >= 999_500) return `${(n / 1_000_000).toFixed(n >= 10_000_000 ? 0 : 1).replace(/\.0$/, '')}M`;
+  if (n >= 10_000) return `${Math.round(n / 1000)}k`;
+  return n.toLocaleString();
 }
