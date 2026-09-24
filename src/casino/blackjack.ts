@@ -213,3 +213,20 @@ export function extraStake(s: BlackjackState, action: 'double' | 'split'): numbe
   if (!hand) return 0;
   return action === 'double' ? hand.bet : s.hands[0].bet;
 }
+
+export type ResultReason = 'blackjack' | 'dealerBlackjack' | 'playerBust' | 'dealerBust' | 'higher' | 'lower' | 'push';
+
+/** Why a settled hand won or lost, for the table's result plaque. */
+export function resultReason(hand: Hand, dealer: PlayingCard[]): ResultReason {
+  const natural = isBlackjack(hand.cards) && !hand.fromSplit;
+  const dealerNatural = isBlackjack(dealer);
+  if (natural && !dealerNatural) return 'blackjack';
+  if (dealerNatural) return natural ? 'push' : 'dealerBlackjack';
+  const player = handTotal(hand.cards).total;
+  const house = handTotal(dealer).total;
+  if (player > 21) return 'playerBust';
+  if (house > 21) return 'dealerBust';
+  if (player > house) return 'higher';
+  if (player < house) return 'lower';
+  return 'push';
+}

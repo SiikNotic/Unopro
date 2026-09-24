@@ -255,7 +255,6 @@
       "rules": "Blackjack pays 3:2 · Dealer stands on 17",
       "table": "Blackjack table",
       "dealer": "Dealer",
-      "feltPrint": "Blackjack pays 3 to 2 · Dealer stands on all 17s",
       "placeBet": "Pick a chip, then tap the circle to bet",
       "deal": "Deal",
       "hit": "Hit",
@@ -269,7 +268,28 @@
         "push": "Push",
         "lose": "Lose"
       },
-      "short": "Blackjack"
+      "short": "Blackjack",
+      "feltTop": "BLACKJACK PAYS 3 TO 2",
+      "feltBottom": "DEALER STANDS ON 17",
+      "total": "Total",
+      "bust": "Bust",
+      "helpTitle": "Blackjack rules",
+      "help": {
+        "goal": "Beat the dealer by getting closer to 21 without going over.",
+        "values": "Face cards count 10 and an Ace 1 or 11. An Ace plus a ten-value card as your first two is Blackjack.",
+        "actions": "Hit: take a card. Stand: keep your hand. Double: double the bet and take exactly one card. Split: turn a pair into two hands.",
+        "dealer": "The dealer draws to 17 and stands on all 17s, and checks for Blackjack before you play.",
+        "pays": "A win pays 1 to 1, Blackjack pays 3 to 2 and a push returns your bet."
+      },
+      "reason": {
+        "blackjack": "Blackjack! Pays 3 to 2",
+        "dealerBlackjack": "Dealer has Blackjack",
+        "playerBust": "You bust with {player}",
+        "dealerBust": "Dealer busts with {dealer} — you win!",
+        "higher": "You win! {player} against {dealer}",
+        "lower": "Dealer wins: {dealer} against {player}",
+        "push": "Push at {player}: your bet comes back"
+      }
     },
     "roulette": {
       "name": "Roulette",

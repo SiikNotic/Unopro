@@ -255,7 +255,6 @@
       "rules": "Blackjack paga 3:2 · El crupier se planta en 17",
       "table": "Mesa de blackjack",
       "dealer": "Crupier",
-      "feltPrint": "Blackjack paga 3 a 2 · El crupier se planta en todos los 17",
       "placeBet": "Toca las fichas y luego el círculo para apostar",
       "deal": "Repartir",
       "hit": "Pedir",
@@ -269,7 +268,28 @@
         "push": "Empate",
         "lose": "Pierdes"
       },
-      "short": "Blackjack"
+      "short": "Blackjack",
+      "feltTop": "BLACKJACK PAGA 3 A 2",
+      "feltBottom": "EL CRUPIER SE PLANTA EN 17",
+      "total": "Total",
+      "bust": "Se pasa",
+      "helpTitle": "Reglas del blackjack",
+      "help": {
+        "goal": "Gana al crupier sumando más que él sin pasarte de 21.",
+        "values": "Las figuras valen 10 y el As 1 u 11. Un As con una carta de 10 al empezar es Blackjack.",
+        "actions": "Pedir: otra carta. Plantarse: te quedas. Doblar: doblas la apuesta y recibes una sola carta. Dividir: separas una pareja en dos manos.",
+        "dealer": "El crupier pide hasta 17 y se planta en todos los 17. Revisa si tiene Blackjack antes de que juegues.",
+        "pays": "Ganar paga 1 a 1, el Blackjack paga 3 a 2 y el empate te devuelve la apuesta."
+      },
+      "reason": {
+        "blackjack": "¡Blackjack! Cobras 3 a 2",
+        "dealerBlackjack": "El crupier tiene Blackjack",
+        "playerBust": "Te pasaste con {player}",
+        "dealerBust": "El crupier se pasa con {dealer}, ¡ganas!",
+        "higher": "¡Ganas! {player} contra {dealer}",
+        "lower": "El crupier gana: {dealer} contra {player}",
+        "push": "Empate a {player}: recuperas tu apuesta"
+      }
     },
     "roulette": {
       "name": "Ruleta",

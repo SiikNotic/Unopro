@@ -101,6 +101,19 @@ describe('blackjack rounds', () => {
     expect(aces.results[0]).toEqual({ outcome: 'win', payout: 20 });
   });
 
+  it('explains why a hand won or lost', () => {
+    const hand = (ranks: Rank[], fromSplit = false): bj.Hand => ({ cards: ranks.map((r) => c(r)), bet: 10, done: true, doubled: false, fromSplit });
+    expect(bj.resultReason(hand(['A', 'K']), [c('9'), c('8')])).toBe('blackjack');
+    expect(bj.resultReason(hand(['A', 'K']), [c('A'), c('Q')])).toBe('push');
+    expect(bj.resultReason(hand(['10', '9']), [c('A'), c('Q')])).toBe('dealerBlackjack');
+    expect(bj.resultReason(hand(['K', '6', '9']), [c('10'), c('7')])).toBe('playerBust');
+    expect(bj.resultReason(hand(['K', '6']), [c('10'), c('6'), c('9')])).toBe('dealerBust');
+    expect(bj.resultReason(hand(['K', '9']), [c('10'), c('7')])).toBe('higher');
+    expect(bj.resultReason(hand(['K', '7']), [c('10'), c('9')])).toBe('lower');
+    expect(bj.resultReason(hand(['K', '8']), [c('10'), c('8')])).toBe('push');
+    expect(bj.resultReason(hand(['A', 'K'], true), [c('10'), c('9')])).toBe('higher');
+  });
+
   it('ignores actions outside the player phase and conserves the shoe', () => {
     const s0 = bj.createBlackjack(3);
     expect(bj.hit(s0)).toBe(s0);
