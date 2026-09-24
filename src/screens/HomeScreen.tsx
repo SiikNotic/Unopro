@@ -1,4 +1,4 @@
-import { Play, Gamepad2, BookOpen, Settings } from 'lucide-react';
+import { Play, Gamepad2, BookOpen, Settings, Coins } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Logo } from '@/components/ui/Logo';
 import { LanguageSelector } from '@/components/LanguageSelector';
@@ -20,6 +20,7 @@ export function HomeScreen() {
   const menuItems: HomeMenuItem[] = [
     { screen: 'gameModes', icon: <Play className="w-5 h-5" />, labelKey: 'home.play', variant: 'primary' },
     { screen: 'gameModes', icon: <Gamepad2 className="w-5 h-5" />, labelKey: 'home.gameModes', variant: 'secondary' },
+    { screen: 'casino', icon: <Coins className="w-5 h-5" />, labelKey: 'home.casino', variant: 'secondary' },
     { screen: 'tutorial', icon: <BookOpen className="w-5 h-5" />, labelKey: 'home.tutorial', variant: 'secondary' },
     { screen: 'settings', icon: <Settings className="w-5 h-5" />, labelKey: 'home.settings', variant: 'secondary' },
   ];

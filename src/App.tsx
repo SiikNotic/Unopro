@@ -7,6 +7,11 @@ import { GameModesScreen } from '@/screens/GameModesScreen';
 import { SettingsScreen } from '@/screens/SettingsScreen';
 import { TutorialScreen } from '@/screens/TutorialScreen';
 import { PlayScreen } from '@/screens/PlayScreen';
+import { CasinoScreen } from '@/screens/casino/CasinoScreen';
+import { BlackjackScreen } from '@/screens/casino/BlackjackScreen';
+import { RouletteScreen } from '@/screens/casino/RouletteScreen';
+import { SlotsScreen } from '@/screens/casino/SlotsScreen';
+import { WalletProvider } from '@/casino/WalletProvider';
 import type { Screen } from '@/types/navigation';
 
 function ScreenRouter() {
@@ -18,6 +23,10 @@ function ScreenRouter() {
     settings: <SettingsScreen />,
     tutorial: <TutorialScreen />,
     play: <PlayScreen />,
+    casino: <CasinoScreen />,
+    blackjack: <BlackjackScreen />,
+    roulette: <RouletteScreen />,
+    slots: <SlotsScreen />,
   };
 
   return (
@@ -32,9 +41,11 @@ function App() {
   return (
     <I18nProvider>
       <PreferencesProvider>
-        <NavigationProvider>
-          <ScreenRouter />
-        </NavigationProvider>
+        <WalletProvider>
+          <NavigationProvider>
+            <ScreenRouter />
+          </NavigationProvider>
+        </WalletProvider>
       </PreferencesProvider>
     </I18nProvider>
   );

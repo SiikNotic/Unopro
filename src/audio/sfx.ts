@@ -14,7 +14,11 @@ export type SfxName =
   | 'turn'
   | 'roundStart'
   | 'victory'
-  | 'defeat';
+  | 'defeat'
+  | 'chip'
+  | 'wheel'
+  | 'reelStop'
+  | 'cashIn';
 
 let enabled = true;
 let ctx: AudioContext | null = null;
@@ -145,6 +149,30 @@ const SOUNDS: Record<SfxName, (c: AudioContext, t: number) => void> = {
   },
   defeat: (c, t) => {
     [392, 349, 311].forEach((f, i) => tone(c, f, t + i * 0.16, 0.34, 'triangle', 0.13, f * 0.97));
+  },
+  // Casino: a clay chip clicking on a stack.
+  chip: (c, t) => {
+    tone(c, 2600, t, 0.035, 'triangle', 0.12, 1900);
+    noise(c, t, 0.04, 5200, 0.22);
+    tone(c, 2300, t + 0.045, 0.03, 'triangle', 0.07, 1700);
+  },
+  // Roulette: ball rattling round the wheel, slowing down.
+  wheel: (c, t) => {
+    let at = t;
+    for (let i = 0; i < 26; i++) {
+      noise(c, at, 0.025, 3800 - i * 60, 0.16);
+      at += 0.06 + i * i * 0.0009;
+    }
+  },
+  // Slots: a reel locking into place.
+  reelStop: (c, t) => {
+    tone(c, 180, t, 0.09, 'square', 0.08, 90);
+    noise(c, t, 0.05, 1400, 0.3, 'lowpass');
+  },
+  // Winnings paid out: a quick ringing run.
+  cashIn: (c, t) => {
+    [1047, 1319, 1568, 2093].forEach((f, i) => tone(c, f, t + i * 0.06, 0.18, 'sine', 0.12));
+    for (let i = 0; i < 5; i++) tone(c, 2600 + i * 120, t + 0.25 + i * 0.05, 0.05, 'triangle', 0.05);
   },
 };
 
