@@ -51,8 +51,14 @@ function RoomEntry({ game, cfg, joining }: { game: TableGame; cfg: OnlineConfig;
   const { back, navigate } = useNavigation();
   const [profileName, saveName] = useProfileName();
   const account = useAccount();
-  const signedIn = account.status === 'user' && !!account.profile?.username;
-  const [name, setName] = useState((signedIn ? account.profile?.username : profileName) || account.user?.name || '');
+  const accountName = account.status === 'user' ? (account.profile?.username ?? null) : null;
+  const signedIn = !!accountName;
+  // A guest types a name; a signed-in player always plays as their username (read live, so it's there
+  // even when the account finished loading after this screen opened).
+  const [typed, setName] = useState(profileName || '');
+  const name = accountName ?? typed;
+  // If the account can't be read (network), fall back to typing a name rather than blocking rooms.
+  const waitingForAccount = account.status === 'loading' || (account.status === 'user' && !account.profile && !account.coinsError);
   const [seats, setSeats] = useState(4);
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
@@ -105,7 +111,7 @@ function RoomEntry({ game, cfg, joining }: { game: TableGame; cfg: OnlineConfig;
             <p className="ms-note mt-2">{t('room.seatsNote')}</p>
           </div>
         )}
-        <button type="button" className="cz-btn cz-btn-primary cz-btn-game w-full mt-5" onClick={submit} disabled={busy} aria-busy={busy}>
+        <button type="button" className="cz-btn cz-btn-primary cz-btn-game w-full mt-5" onClick={submit} disabled={busy || waitingForAccount} aria-busy={busy || waitingForAccount}>
           {joining ? <KeyRound className="w-5 h-5" /> : <Users className="w-5 h-5" />} {busy ? t('online.connecting') : t(joining ? 'room.join' : 'room.create')}
         </button>
         {error && (

@@ -34,6 +34,12 @@ function suggestedName(user: AccountUser | null): string | null {
 
 const HEARTBEAT_MS = 2 * 60 * 1000;
 
+/** A stored session that belongs to a registered player rather than an anonymous guest. */
+function registeredSessionStored(): boolean {
+  const s = readSession();
+  return !!s && decodeJwt(s.access_token)?.is_anonymous !== true;
+}
+
 const asAuthError = (e: unknown) => (e instanceof AuthError ? e : new AuthError('unknown'));
 
 /**
@@ -44,7 +50,9 @@ const asAuthError = (e: unknown) => (e instanceof AuthError ? e : new AuthError(
 export function AccountProvider({ children }: { children: ReactNode }) {
   const cfg = useMemo(() => onlineConfig(), []);
   const api = useMemo(() => (cfg ? createAuthApi({ authUrl: `${cfg.base}/auth/v1`, apiKey: cfg.apiKey }) : null), [cfg]);
-  const [status, setStatus] = useState<AccountStatus>(cfg ? 'loading' : 'off');
+  // Known at once without the network: a guest (no session, or an anonymous one) plays right away; a
+  // stored registered session means "loading" until the server confirms who it is.
+  const [status, setStatus] = useState<AccountStatus>(() => (!cfg ? 'off' : registeredSessionStored() ? 'loading' : 'guest'));
   const [user, setUser] = useState<AccountUser | null>(null);
   const [coins, setCoins] = useState<AccountInfo | null>(null);
   const [coinsError, setCoinsError] = useState(false);

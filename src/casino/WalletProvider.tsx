@@ -5,7 +5,7 @@ import { canRefill } from './wallet';
 import type { CasinoGame, InstantRefusal, WalletData } from './ledger';
 import { normalizeWallet, openRound, playRound, raiseStake as raise, RECOVER_AFTER_MS, recoverRounds, refillWallet, settleRound as settle } from './ledger';
 import { newId } from './random';
-import { WALLET_RESET_EVENT, WalletContext } from './walletContext';
+import { accountWallet, WALLET_RESET_EVENT, WalletContext } from './walletContext';
 import type { WalletContextValue } from './walletContext';
 import { useAccount } from '@/account/useAccount';
 
@@ -19,6 +19,7 @@ type LockManagerLike = {
 const lockManager = (): LockManagerLike | null =>
   typeof navigator !== 'undefined' && (navigator as unknown as { locks?: LockManagerLike }).locks ? (navigator as unknown as { locks: LockManagerLike }).locks : null;
 const LEGACY_KEY = 'carta.chips';
+
 
 /**
  * Virtual chips shared by every casino game, kept only in this browser. Every change re-reads the stored
@@ -191,29 +192,15 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const openStake = useCallback((id: string) => read().open.find((o) => o.id === id)?.stake ?? null, [read]);
 
   const account = useAccount();
-  const accountMode = account.status === 'user';
+  // While a signed-in account is still loading, nothing may be bet from the guest wallet either:
+  // otherwise a round could start on guest chips and finish after the switch to account coins.
+  const accountMode = account.status === 'user' || account.status === 'loading';
   const accountBalance = account.coins?.balance ?? 0;
 
   const value = useMemo<WalletContextValue>(() => {
     if (accountMode) {
       // Signed in: the balance is the account's, and nothing here may move coins (the server does).
-      return {
-        mode: 'account',
-        balance: accountBalance,
-        canRefill: false,
-        refill: () => {},
-        history: [],
-        stats: wallet.stats,
-        startRound: () => null,
-        raiseStake: () => false,
-        settleRound: () => 0,
-        isOpen: () => false,
-        openStake: () => null,
-        bookInstantRound: () => ({ ok: false, reason: 'elsewhere' }),
-        wasSettled: () => false,
-        activeHere: true,
-        playHere: () => {},
-      };
+      return accountWallet(accountBalance, wallet.stats);
     }
     return {
       mode: 'local',

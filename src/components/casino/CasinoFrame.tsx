@@ -104,7 +104,7 @@ export function CasinoFrame({ title, subtitle, back, scenario, backdrop, onHelp,
             </button>
           </div>
         )}
-        {error && (
+        {error && !account.ban && (
           <div className="cz-panel p-3 text-sm text-[#ffd0d0] cz-fade-in" role="alert">
             {error}
           </div>

@@ -45,3 +45,31 @@ export interface WalletContextValue {
 export const WALLET_RESET_EVENT = 'carta:wallet-reset';
 
 export const WalletContext = createContext<WalletContextValue | null>(null);
+
+/**
+ * The wallet's functions while playing for account coins: they refuse, because the server moves the
+ * coins. Defined once, so their identity never changes: game screens key effects (and the cleanup of
+ * their animation timers) on these functions, and a new function on every balance change would cancel
+ * a spin half-way.
+ */
+const NO_HISTORY: WalletContextValue['history'] = [];
+const ACCOUNT_OPS: Omit<WalletContextValue, 'balance' | 'stats'> = {
+  mode: 'account',
+  canRefill: false,
+  refill: () => {},
+  history: NO_HISTORY,
+  startRound: () => null,
+  raiseStake: () => false,
+  settleRound: () => 0,
+  isOpen: () => false,
+  openStake: () => null,
+  bookInstantRound: () => ({ ok: false, reason: 'elsewhere' }),
+  wasSettled: () => false,
+  activeHere: true,
+  playHere: () => {},
+};
+
+/** The wallet while playing for account coins: the account's balance, and functions that never change. */
+export function accountWallet(balance: number, stats: WalletContextValue['stats']): WalletContextValue {
+  return { ...ACCOUNT_OPS, balance, stats };
+}

@@ -30,6 +30,8 @@ export function RouletteScreen() {
   const { t } = useI18n();
   const { balance, startRound, settleRound, mode } = useWallet();
   const account = useAccount();
+  const settleRef = useRef(settleRound);
+  settleRef.current = settleRound;
   const [error, setError] = useState<string | null>(null);
   // Account mode: a round on the server in flight, and the balance to show once the ball lands.
   const serverBusy = useRef(false);
@@ -56,11 +58,13 @@ export function RouletteScreen() {
   useEffect(
     () => () => {
       window.clearTimeout(timer.current);
-      if (pendingRound.current) settleRound(pendingRound.current);
+      if (pendingRound.current) settleRef.current(pendingRound.current);
       if (landBalance.current !== null) account.setBalance(landBalance.current);
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only on unmount
-    [settleRound]
+    // Only on unmount: the latest settleRound is read through a ref, so a new function identity
+    // (a balance change) never runs this cleanup mid-spin and cancels the animation timers.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
   );
 
   const staked = bets.reduce((s, b) => s + b.amount, 0);

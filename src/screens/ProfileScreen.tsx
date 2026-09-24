@@ -142,7 +142,7 @@ export function ProfileScreen() {
                 return (
                   <li key={h.id} className="flex items-center gap-3 px-4 py-3">
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-white truncate">{h.game === 'bonus' ? t('profile.bonus') : h.game === 'premium' ? t('profile.premium') : t(`casino.${h.game}.name`)}</p>
+                      <p className="text-sm font-semibold text-white truncate">{h.game === 'bonus' ? t('profile.bonus') : h.game === 'premium' ? t('profile.premium') : h.game === 'blackjack' || h.game === 'roulette' || h.game === 'slots' ? t(`casino.${h.game}.name`) : t(`staff.ledger.${h.game}`)}</p>
                       <p className="text-[11px] text-[var(--cz-muted)]">
                         {time.format(h.at)}
                         {h.stake > 0 && ` · ${t('profile.betShort', { amount: h.stake })}`}

@@ -126,9 +126,13 @@ export function SlotsScreen() {
   const { t } = useI18n();
   const { balance, startRound, settleRound, mode } = useWallet();
   const account = useAccount();
+  const settleRef = useRef(settleRound);
+  settleRef.current = settleRound;
   const [error, setError] = useState<string | null>(null);
   // Account mode: the balance to show once the reels stop.
   const landBalance = useRef<number | null>(null);
+  // Account mode: a spin is on its way to the server (auto spin waits for it instead of counting on).
+  const [requesting, setRequesting] = useState(false);
   const reduced = useReducedMotion();
   const windowRef = useRef<HTMLDivElement>(null);
   const windowWidth = useElementWidth(windowRef);
@@ -165,11 +169,13 @@ export function SlotsScreen() {
       timers.current.forEach((id) => window.clearTimeout(id));
       window.clearTimeout(autoTimer.current);
       window.clearTimeout(previewTimer.current);
-      if (pendingRound.current && pendingRound.current !== SERVER_LOCK) settleRound(pendingRound.current);
+      if (pendingRound.current && pendingRound.current !== SERVER_LOCK) settleRef.current(pendingRound.current);
       if (landBalance.current !== null) account.setBalance(landBalance.current);
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only on unmount
-    [settleRound]
+    // Only on unmount: the latest settleRound is read through a ref, so a new function identity
+    // (a balance change) never runs this cleanup mid-spin and cancels the animation timers.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
   );
 
   const tier = outcome?.tier ?? 'none';
@@ -246,7 +252,9 @@ export function SlotsScreen() {
       // Account coins: the server draws the reels and books the round; the reels then show that result.
       pendingRound.current = SERVER_LOCK;
       setError(null);
+      setRequesting(true);
       void serverRound<SlotsResult>({ op: 'slots', requestId: newId(), lines, betPerLine }).then((res) => {
+        setRequesting(false);
         if (!res.ok) {
           pendingRound.current = null;
           setError(t(`casino.accountErrors.${res.code}`));
@@ -282,7 +290,7 @@ export function SlotsScreen() {
   const spinRef = useRef(doSpin);
   spinRef.current = doSpin;
   useEffect(() => {
-    if (spinning || autoLeft <= 0 || !outcome) return;
+    if (spinning || requesting || autoLeft <= 0 || !outcome) return;
     if (tier === 'big' || tier === 'jackpot' || balance < totalBet) {
       setAutoLeft(0);
       return;
@@ -292,7 +300,7 @@ export function SlotsScreen() {
       spinRef.current();
     }, tier === 'win' ? 1500 : 650);
     return () => window.clearTimeout(autoTimer.current);
-  }, [outcome, spinning, autoLeft, tier, balance, totalBet]);
+  }, [outcome, spinning, requesting, autoLeft, tier, balance, totalBet]);
 
   const toggleAuto = () => {
     if (autoLeft > 0) {
