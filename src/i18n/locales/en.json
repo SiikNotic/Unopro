@@ -84,7 +84,13 @@
         "name": "Hard",
         "description": "Rarely forget UNO, never forgive"
       }
-    }
+    },
+    "music": "Music",
+    "musicDescription": "Soft background music. Starts when you tap the screen.",
+    "musicNeedsSound": "Turn Sound on to hear the music.",
+    "musicVolume": "Music volume",
+    "musicOn": "Turn music on",
+    "musicOff": "Mute music"
   },
   "tutorial": {
     "title": "Tutorial",

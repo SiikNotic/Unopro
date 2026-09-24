@@ -7,6 +7,10 @@ export type ScenarioChoice = ScenarioId | 'random';
 
 export interface Preferences {
   sound: boolean;
+  /** Background music (only heard while `sound` is also on). */
+  music: boolean;
+  /** Music volume slider, 0–1. */
+  musicVolume: number;
   haptics: boolean;
   animations: boolean;
   difficulty: BotDifficulty;
@@ -15,6 +19,8 @@ export interface Preferences {
 
 export const DEFAULT_PREFERENCES: Preferences = {
   sound: true,
+  music: true,
+  musicVolume: 0.35,
   haptics: true,
   animations: true,
   difficulty: 'normal',
@@ -30,5 +36,8 @@ export function normalizePreferences(raw: unknown): Preferences {
   const difficulty = DIFFICULTY_OPTIONS.includes(value.difficulty as BotDifficulty) ? (value.difficulty as BotDifficulty) : DEFAULT_PREFERENCES.difficulty;
   const scenario =
     value.scenario === 'random' || SCENARIO_IDS.includes(value.scenario as ScenarioId) ? (value.scenario as ScenarioChoice) : DEFAULT_PREFERENCES.scenario;
-  return { sound: bool('sound'), haptics: bool('haptics'), animations: bool('animations'), difficulty, scenario };
+  const rawVolume = value.musicVolume;
+  const musicVolume =
+    typeof rawVolume === 'number' && Number.isFinite(rawVolume) ? Math.round(Math.min(1, Math.max(0, rawVolume)) * 100) / 100 : DEFAULT_PREFERENCES.musicVolume;
+  return { sound: bool('sound'), music: bool('music'), musicVolume, haptics: bool('haptics'), animations: bool('animations'), difficulty, scenario };
 }

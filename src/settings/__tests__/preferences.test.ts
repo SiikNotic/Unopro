@@ -9,8 +9,16 @@ describe('Preferences', () => {
   });
 
   it('keeps valid stored values', () => {
-    const stored = { sound: false, haptics: false, animations: false, difficulty: 'hard', scenario: 'forest' };
+    const stored = { sound: false, music: false, musicVolume: 0.6, haptics: false, animations: false, difficulty: 'hard', scenario: 'forest' };
     expect(normalizePreferences(stored)).toEqual(stored);
+  });
+
+  it('clamps the music volume to 0–1 and falls back when it is not a number', () => {
+    expect(normalizePreferences({ musicVolume: 3 }).musicVolume).toBe(1);
+    expect(normalizePreferences({ musicVolume: -1 }).musicVolume).toBe(0);
+    expect(normalizePreferences({ musicVolume: 0.456 }).musicVolume).toBe(0.46);
+    expect(normalizePreferences({ musicVolume: 'loud' }).musicVolume).toBe(DEFAULT_PREFERENCES.musicVolume);
+    expect(normalizePreferences({ music: 'no' }).music).toBe(true);
   });
 
   it('uses the existing bot difficulties', () => {

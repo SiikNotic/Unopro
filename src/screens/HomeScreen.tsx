@@ -2,6 +2,7 @@ import { Play, Gamepad2, BookOpen, Settings, Coins } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Logo } from '@/components/ui/Logo';
 import { LanguageSelector } from '@/components/LanguageSelector';
+import { MusicButton } from '@/components/ui/MusicButton';
 import { useNavigation } from '@/components/Navigation';
 import { useI18n } from '@/i18n';
 import type { Screen } from '@/types/navigation';
@@ -27,6 +28,9 @@ export function HomeScreen() {
 
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center px-5 sm:px-8 max-w-md mx-auto">
+      <div className="fixed top-4 right-4 z-10">
+        <MusicButton />
+      </div>
       <div className="flex flex-col items-center gap-2 mb-12 animate-slide-up">
         <Logo size="lg" showText={false} />
         <h1 className="font-display font-extrabold text-5xl sm:text-6xl tracking-tight text-white mt-4">

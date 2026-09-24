@@ -84,7 +84,13 @@
         "name": "Difícil",
         "description": "Casi nunca olvidan UNO ni perdonan"
       }
-    }
+    },
+    "music": "Música",
+    "musicDescription": "Música de fondo suave. Empieza al tocar la pantalla.",
+    "musicNeedsSound": "Activa el Sonido para escuchar la música.",
+    "musicVolume": "Volumen de la música",
+    "musicOn": "Activar música",
+    "musicOff": "Silenciar música"
   },
   "tutorial": {
     "title": "Tutorial",

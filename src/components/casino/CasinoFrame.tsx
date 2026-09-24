@@ -4,6 +4,7 @@ import { ArrowLeft, Gift, ShieldCheck } from 'lucide-react';
 import { useNavigation } from '@/components/Navigation';
 import { SceneBackground } from '@/components/scene/SceneBackground';
 import { Button } from '@/components/ui/Button';
+import { MusicButton } from '@/components/ui/MusicButton';
 import { useI18n } from '@/i18n';
 import { useWallet } from '@/casino/useWallet';
 import { REFILL_CHIPS } from '@/casino/wallet';
@@ -56,6 +57,7 @@ export function CasinoFrame({ title, subtitle, back, scenario, backdrop, childre
             {subtitle && <p className="text-xs sm:text-sm text-white/70 truncate">{subtitle}</p>}
           </div>
           <ChipBalance balance={balance} />
+          <MusicButton />
         </header>
 
         {canRefill && (

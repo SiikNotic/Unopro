@@ -8,6 +8,7 @@ import type { TableEvents } from '@/game/table/events';
 import { useI18n } from '@/i18n';
 import { useViewport } from '@/hooks/useViewport';
 import { LanguageSelector } from '@/components/LanguageSelector';
+import { MusicButton } from '@/components/ui/MusicButton';
 import { DebugPanel } from '@/components/game/DebugPanel';
 import { useCardName } from './useCardName';
 import { PlayerHand } from './PlayerHand';
@@ -248,6 +249,7 @@ export function GameTable({ state, localPlayerId, dispatch, onExit, engineError,
         </button>
         <Scoreboard state={state} localPlayerId={localPlayerId} />
         <div className="flex items-center gap-1">
+          <MusicButton className="!w-8 !h-8 !rounded-lg" />
           <div className="chip rounded-xl px-2 py-1">
             <LanguageSelector compact short={narrow} />
           </div>

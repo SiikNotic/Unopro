@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Volume2, Smartphone, Sparkles, Info, Trash2, Check, Shuffle, Gauge, Mountain, Globe } from 'lucide-react';
+import { Volume2, Music, Smartphone, Sparkles, Info, Trash2, Check, Shuffle, Gauge, Mountain, Globe } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { Toggle } from '@/components/ui/Toggle';
+import { MusicVolume } from '@/components/ui/MusicVolume';
 import { LanguageSelector } from '@/components/LanguageSelector';
 import { Button } from '@/components/ui/Button';
 import { useI18n } from '@/i18n';
@@ -141,6 +142,19 @@ export function SettingsScreen() {
                 label={t('settings.sound')}
               />
             </SettingRow>
+            <div className="py-3">
+              <div className="flex items-center gap-3">
+                <div className="shrink-0 w-10 h-10 rounded-xl bg-gradient-to-b from-ink-700 to-ink-800 border border-white/5 flex items-center justify-center">
+                  <Music className="w-5 h-5 text-gold-400" aria-hidden />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-white text-sm">{t('settings.music')}</p>
+                  <p className="text-xs text-ink-400 mt-0.5 leading-snug">{preferences.sound ? t('settings.musicDescription') : t('settings.musicNeedsSound')}</p>
+                </div>
+                <Toggle checked={preferences.music} onChange={(v) => setPreference('music', v)} label={t('settings.music')} />
+              </div>
+              <MusicVolume className="mt-3 pl-[52px]" />
+            </div>
             <SettingRow icon={Smartphone} title={t('settings.haptics')} description={t('settings.hapticsDescription')}>
               <Toggle
                 checked={preferences.haptics}

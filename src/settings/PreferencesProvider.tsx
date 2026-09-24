@@ -5,6 +5,7 @@ import { normalizePreferences } from './preferences';
 import type { Preferences } from './preferences';
 import { PreferencesContext } from './preferencesContext';
 import { setSoundEnabled } from '@/audio/sfx';
+import { configureMusic, installMusic } from '@/audio/music';
 
 const STORAGE_KEY = 'carta.preferences';
 
@@ -25,6 +26,13 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
   }, [preferences.animations]);
 
   useEffect(() => setSoundEnabled(preferences.sound), [preferences.sound]);
+
+  // Background music follows both the Sound switch and its own switch and volume.
+  useEffect(() => installMusic(), []);
+  useEffect(
+    () => configureMusic({ enabled: preferences.sound && preferences.music, volume: preferences.musicVolume }),
+    [preferences.sound, preferences.music, preferences.musicVolume]
+  );
 
   const value = useMemo(() => ({ preferences, setPreference }), [preferences, setPreference]);
   return <PreferencesContext.Provider value={value}>{children}</PreferencesContext.Provider>;
