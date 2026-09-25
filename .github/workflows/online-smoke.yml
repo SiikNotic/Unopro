@@ -25,7 +25,15 @@ jobs:
           ORIGIN=https://siiknotic.github.io
           CODE=$(curl -s -o /dev/null -w '%{http_code}' -X OPTIONS -H "Origin: $ORIGIN" "$URL/functions/v1/game-room")
           echo "OPTIONS -> $CODE"; [ "$CODE" = 204 ]
-          TOKEN=$(curl -s -X POST "$URL/auth/v1/signup" -H "apikey: $KEY" -H 'content-type: application/json' -d '{}' | python3 -c 'import json,sys; print(json.load(sys.stdin)["access_token"])')
+          SIGNUP=$(curl -s -X POST "$URL/auth/v1/signup" -H "apikey: $KEY" -H 'content-type: application/json' -d '{}')
+          if echo "$SIGNUP" | grep -qi captcha; then
+            # With CAPTCHA on, a guest session needs a token solved in a browser: that refusal is the check.
+            echo "CAPTCHA is on: an anonymous sign-up without a token was refused -> $SIGNUP"
+            CODE=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$URL/functions/v1/game-room" -H "apikey: $KEY" -H "Origin: $ORIGIN" -H 'content-type: application/json' -d '{"op":"sync","code":"ZZZZZ"}')
+            echo "game-room without a session -> $CODE"; [ "$CODE" = 401 ]
+            exit 0
+          fi
+          TOKEN=$(echo "$SIGNUP" | python3 -c 'import json,sys; print(json.load(sys.stdin)["access_token"])')
           call() { curl -s -X POST "$URL/functions/v1/game-room" -H "apikey: $KEY" -H "Authorization: Bearer $TOKEN" -H "Origin: $ORIGIN" -H 'content-type: application/json' -d "$1"; }
           for game in blackjack roulette; do
             OUT=$(call "{\"op\":\"quick\",\"game\":\"$game\",\"name\":\"Smoke\"}")
