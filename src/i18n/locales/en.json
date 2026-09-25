@@ -1424,7 +1424,8 @@
       "unavailableHint": "No ads are available right now.",
       "cap": "Daily limit reached",
       "rewarded": "You received {amount} coins for the ad!",
-      "loadError": "The ad couldn't be shown"
+      "loadError": "The ad couldn't be shown",
+      "detail": "Technical detail: {detail}"
     },
     "errors": {
       "cooldown": "The loan isn't available yet.",

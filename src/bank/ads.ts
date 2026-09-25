@@ -49,6 +49,17 @@ export function getRewardedAdsProvider(): RewardedAdsProvider {
   return current;
 }
 
+let issue: string | null = null;
+
+/** The last technical reason ads couldn't be offered (shown small on the Bank card, for support). */
+export function getAdsIssue(): string | null {
+  return issue;
+}
+
+export function setAdsIssue(value: string | null): void {
+  issue = value ? value.slice(0, 160) : null;
+}
+
 /** True when a real ad network adapter was registered. */
 export function hasAdsProvider(): boolean {
   return current !== noAdsProvider;

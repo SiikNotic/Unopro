@@ -2,12 +2,15 @@ import { describe, expect, it, vi } from 'vitest';
 import { ADMOB_TEST_REWARDED_ID, createAdMobProvider } from '../admobProvider';
 
 type Listener = (arg?: unknown) => void;
-function fakeAdMob(opts: { loadFails?: boolean; consent?: 'REQUIRED' | 'OBTAINED'; canRequestAds?: boolean; behaviour?: 'reward' | 'close' | 'showFails' } = {}) {
+function fakeAdMob(opts: { loadFails?: boolean; consentFails?: boolean; consent?: 'REQUIRED' | 'OBTAINED'; canRequestAds?: boolean; behaviour?: 'reward' | 'close' | 'showFails' } = {}) {
   const listeners = new Map<string, Set<Listener>>();
   const emit = (e: string, a?: unknown) => listeners.get(e)?.forEach((l) => l(a));
   const AdMob = {
     initialize: vi.fn(async () => {}),
-    requestConsentInfo: vi.fn(async () => ({ status: opts.consent ?? 'OBTAINED', isConsentFormAvailable: true, canRequestAds: opts.canRequestAds ?? true })),
+    requestConsentInfo: vi.fn(async () => {
+      if (opts.consentFails) throw new Error('Publisher misconfiguration');
+      return { status: opts.consent ?? 'OBTAINED', isConsentFormAvailable: true, canRequestAds: opts.canRequestAds ?? true };
+    }),
     showConsentForm: vi.fn(async () => ({ status: 'OBTAINED', isConsentFormAvailable: true, canRequestAds: true })),
     prepareRewardVideoAd: vi.fn(async () => {
       if (opts.loadFails) throw new Error('No fill');
@@ -73,6 +76,15 @@ describe('AdMob adapter', () => {
     expect(await p.isAvailable()).toBe(false);
     expect(await p.showRewardedAd({ userId: 'u' })).toMatchObject({ status: 'failed' });
     expect(denied.AdMob.prepareRewardVideoAd).not.toHaveBeenCalled();
+  });
+
+  it('a failing consent check (no privacy message yet) does not block ads, and the reason is kept', async () => {
+    const { getAdsIssue } = await import('../ads');
+    const p = createAdMobProvider({ adUnitId: 'ca-app-pub-1/2', admob: fakeAdMob({ consentFails: true }).module });
+    expect(await p.isAvailable()).toBe(true);
+    expect(getAdsIssue()).toBe('consent: Publisher misconfiguration');
+    expect(await p.showRewardedAd({ userId: 'u' })).toEqual({ status: 'completed', rewardId: null });
+    expect(getAdsIssue()).toBeNull();
   });
 
   it("Google's test unit runs in test mode", async () => {

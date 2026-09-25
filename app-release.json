@@ -1,17 +1,15 @@
 {
-  "version": "1.1.0",
+  "version": "1.1.1",
   "notes": {
     "es": [
-      "Actualizaciones dentro de la app: cuando haya una versión nueva te avisamos aquí y se instala desde la misma app.",
-      "Ya puedes registrarte e iniciar sesión con Google o Discord desde la app.",
-      "Al confirmar tu correo vuelves directo a la app con la sesión iniciada.",
-      "Banco: anuncios con recompensa de 100 monedas (AdMob)."
+      "Nuevo logo e ícono de Carta Casino.",
+      "Anuncios del Banco: ya no se bloquean si falta el mensaje de privacidad de Google; si no hay anuncio, la tarjeta muestra el motivo técnico.",
+      "Pantalla de inicio con el logo nuevo."
     ],
     "en": [
-      "In-app updates: when a new version is out we tell you here and it installs from the app itself.",
-      "You can now sign up and sign in with Google or Discord from the app.",
-      "Confirming your email brings you straight back to the app, signed in.",
-      "Bank: rewarded ads worth 100 coins (AdMob)."
+      "New Carta Casino logo and icon.",
+      "Bank ads: no longer blocked when Google's privacy message is missing; when no ad is available, the card shows the technical reason.",
+      "Splash screen with the new logo."
     ]
   }
 }

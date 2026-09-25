@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { BookOpen, ChevronRight, CircleUserRound, Coins, Gift, Landmark, Layers, Play, Settings, ShieldCheck, UserRound } from 'lucide-react';
+import { BookOpen, ChevronRight, CircleUserRound, Coins, Gift, Landmark, Play, Settings, ShieldCheck, UserRound } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useNavigation } from '@/components/Navigation';
 import { MusicButton } from '@/components/ui/MusicButton';
@@ -182,9 +182,7 @@ export function HomeScreen() {
       <header className="cz-topbar cz-safe-x">
         <div className="mx-auto w-full max-w-5xl flex items-center gap-2">
           <div className="flex items-center gap-2 min-w-0 flex-1">
-            <span className="flex-none w-9 h-9 rounded-xl bg-gradient-to-br from-[#e8c887] to-[#a8792c] flex items-center justify-center shadow-[0_4px_14px_-6px_rgba(216,178,106,0.8)]">
-              <Layers className="w-5 h-5 text-[#1c1509]" strokeWidth={2.5} />
-            </span>
+            <img src={`${import.meta.env.BASE_URL}icons/icon-192.png`} alt="" width={40} height={40} className="flex-none w-10 h-10 rounded-xl shadow-[0_4px_14px_-6px_rgba(216,178,106,0.8)] ring-1 ring-[rgba(216,178,106,0.45)]" />
             <span className="min-w-0 leading-none">
               <span className="block font-display font-extrabold text-[17px] text-white tracking-tight truncate">Carta</span>
               <span className="block text-[9px] font-bold tracking-[0.3em] text-[var(--cz-gold)]">CASINO</span>

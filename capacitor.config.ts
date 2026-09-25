@@ -3,7 +3,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 // The Android app wraps the same web build (dist/). The web on GitHub Pages is unchanged.
 const config: CapacitorConfig = {
   appId: 'io.github.siiknotic.carta',
-  appName: 'Carta',
+  appName: 'Carta Casino',
   webDir: 'dist',
   server: {
     // The app's pages are served locally under this origin, the same one as the website, so the

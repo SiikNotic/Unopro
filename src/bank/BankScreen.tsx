@@ -14,6 +14,7 @@ import { claimLoan, fetchBankStatus } from './bankApi';
 import { cooldownProgress, formatCountdown, loanRemainingMs, serverClock } from './bankLogic';
 import type { AdState, BankStatus, ServerClock } from './bankLogic';
 import { useRewardedAd } from './useRewardedAd';
+import { getAdsIssue } from './ads';
 import './bank.css';
 
 type LoanPhase = 'idle' | 'claiming';
@@ -325,6 +326,7 @@ function AdCard({ state, failure, amount, capReached, locked, today, cap, onStar
                   ? t('bank.ad.unavailable')
                   : t('bank.ad.cta');
   const busy = state === 'LOADING' || state === 'SHOWING_AD' || state === 'VERIFYING';
+  const issue = getAdsIssue();
   return (
     <section className={`bk-card bk-metal ${off ? 'bk-card-off' : ''}`} aria-labelledby="bk-ad-title" data-state={state}>
       <div className="bk-card-top">
@@ -342,6 +344,7 @@ function AdCard({ state, failure, amount, capReached, locked, today, cap, onStar
         +{formatChips(amount)} <span>{t('bank.coins')}</span>
       </p>
       <p className="text-xs text-white/70 min-h-[2.5em]">{unavailable ? t('bank.ad.unavailableHint') : t('bank.ad.hint')}</p>
+      {(unavailable || state === 'ERROR') && issue && <p className="text-[10px] text-white/45 break-words">{t('bank.ad.detail', { detail: issue })}</p>}
       <button type="button" className={`cz-btn w-full mt-auto ${off || state === 'ERROR' ? 'cz-btn-secondary' : 'cz-btn-primary'}`} disabled={state !== 'AVAILABLE' || capReached || locked} aria-busy={busy} onClick={onStart}>
         {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : state === 'REWARDED' ? <Sparkles className="w-5 h-5" /> : <Tv className="w-5 h-5" />}
         {label}
