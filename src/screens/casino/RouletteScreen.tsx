@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { casinoScene } from '@/games/shared/setup';
 import { RotateCcw, Trash2, Undo2 } from 'lucide-react';
 import { CasinoFrame } from '@/components/casino/CasinoFrame';
 import { Chip, ChipSelector } from '@/components/casino/chips';
@@ -27,6 +28,8 @@ const NUMBERS = Array.from({ length: 36 }, (_, i) => i + 1);
 const COLOR_CLASS = { red: 'roulette-red', black: 'roulette-black', green: 'roulette-green' } as const;
 
 export function RouletteScreen() {
+  // The scene chosen on the setup screen (visual only).
+  const [scene] = useState(() => casinoScene('roulette'));
   const { t } = useI18n();
   const { balance, startRound, settleRound, mode } = useWallet();
   const account = useAccount();
@@ -275,8 +278,8 @@ export function RouletteScreen() {
     <CasinoFrame
       title={t('casino.roulette.name')}
       subtitle={t('casino.roulette.rules')}
-      back="gameModes"
-      scenario="city"
+      back="rouletteSetup"
+      scenario={scene}
       onHelp={() => setHelp(true)}
       error={error}
       dock={dock}

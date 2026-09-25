@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { casinoScene } from '@/games/shared/setup';
 import { Copy, Timer, Trash2, Undo2, Users } from 'lucide-react';
 import { useNavigation } from '@/components/Navigation';
 import { CasinoFrame } from '@/components/casino/CasinoFrame';
@@ -27,7 +28,7 @@ export function RouletteTableScreen() {
   const { params, navigate } = useNavigation();
   const code = params.room ?? '';
   const { room, view, secondsTo, balance } = useCoinTable(code);
-  const home = () => navigate('gameModes', {}, { replace: true });
+  const home = () => navigate('rouletteSetup', {}, { replace: true });
   if (!view || !view.roulette || view.status !== 'playing') return <OnlineGate view={view} error={room.error} onExit={home} />;
   return <Table code={code} table={view.roulette} you={view.you} members={view.members} room={room} secondsTo={secondsTo} balance={balance} onLeft={home} />;
 }
@@ -51,6 +52,7 @@ function Table({ code, table, you, members, room, secondsTo, balance, onLeft }: 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [scene] = useState(() => casinoScene('roulette'));
   const [rotor, setRotor] = useState(0);
   const [ball, setBall] = useState(0);
   const mine = table.seats.find((s) => s.seat === you);
@@ -167,7 +169,7 @@ function Table({ code, table, you, members, room, secondsTo, balance, onLeft }: 
   );
 
   return (
-    <CasinoFrame title={t('table.rt.title')} subtitle={t('table.subtitle')} back="gameModes" onBack={() => void leave()} scenario="city" dock={dock} maxWidth="max-w-5xl">
+    <CasinoFrame title={t('table.rt.title')} subtitle={t('table.subtitle')} back="rouletteSetup" onBack={() => void leave()} scenario={scene} dock={dock} maxWidth="max-w-5xl">
       <section className="cz-panel p-3 flex flex-wrap items-center gap-3" role="status" aria-live="polite">
         <Timer className="w-5 h-5 text-[var(--cz-gold)] shrink-0" aria-hidden />
         <p className="font-display font-bold text-white flex-1 min-w-0">{status}</p>

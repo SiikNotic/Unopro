@@ -64,7 +64,9 @@
         "name": "Mesa de Ruleta",
         "description": "Una rueda para todos; cada quien apuesta sus monedas."
       }
-    }
+    },
+    "tableTitle": "Juegos de mesa",
+    "tableSubtitle": "Contra bots en este dispositivo o en línea."
   },
   "settings": {
     "title": "Ajustes",
@@ -928,13 +930,13 @@
     "carta": {
       "name": "Carta",
       "desc": "Estrategia de cartas en el lounge. Clásico o por equipos.",
-      "players": "1–4 jugadores",
+      "players": "2–6 jugadores",
       "long": ""
     },
     "domino": {
       "name": "Dominó",
       "desc": "Fichas de verdad sobre la mesa. Cuenta, bloquea y domina.",
-      "players": "1–4 jugadores",
+      "players": "2–4 jugadores",
       "long": "Doble seis, a 100 o 200 puntos. Juega contra bots o pasa el dispositivo entre amigos."
     },
     "bingo": {
@@ -990,7 +992,58 @@
     "start": "Empezar partida",
     "online": "Online",
     "onlineNote": "El modo online está preparado pero el servidor aún no está conectado: puedes ver cómo será la sala, pero todavía no se puede jugar con otras personas a distancia.",
-    "onlineReady": "Juega con amigos a distancia: crea una sala y pásales el código, o únete con el suyo. Los asientos libres los juega un bot del servidor."
+    "onlineReady": "Juega con amigos a distancia: crea una sala y pásales el código, o únete con el suyo. Los asientos libres los juega un bot del servidor.",
+    "kicker": "Configura tu partida",
+    "mode": "Modo",
+    "format": "Formato",
+    "rules": "Reglas",
+    "summary": "Resumen de la partida",
+    "modes": {
+      "local": "Local",
+      "localHint": "en este dispositivo",
+      "online": "En línea",
+      "onlineHint": "con otras personas",
+      "solo": "Solo",
+      "soloHint": "contra la casa",
+      "table": "Mesa en línea"
+    },
+    "openRoom": "Crear sala en línea",
+    "findTable": "Buscar mesa",
+    "sum": {
+      "players": "Jugadores: {n}",
+      "upTo": "Hasta {n} jugadores"
+    },
+    "partner": "Compañero",
+    "formats": {
+      "classic": "todos contra todos",
+      "teams": "por parejas"
+    },
+    "teamsNote": "Los equipos se sientan alternados: tu compañero queda enfrente. Los puntos se suman por equipo.",
+    "cartaRules": {
+      "stacking": "Acumular +2 y +4",
+      "stackingHint": "Responde un +2 o +4 con otro y el siguiente roba la suma.",
+      "drawUntil": "Robar hasta poder jugar",
+      "drawUntilHint": "Si no tienes jugada, robas hasta sacar una carta que sirva."
+    },
+    "orBot": "o bot",
+    "cartaOnlineNote": "Jugar ahora te sienta en una mesa pública; también puedes crear una sala privada y compartir el código. Los asientos libres los juega un bot del servidor, con la dificultad elegida.",
+    "dealer": "Crupier",
+    "croupier": "Crupier",
+    "house": "la casa",
+    "otherPlayer": "otro jugador",
+    "tableNote": "Otros jugadores se sientan al unirse. Se apuesta con las monedas de tu cuenta (hace falta una cuenta registrada).",
+    "houseRules": "Reglas de la mesa",
+    "classic": "clásico",
+    "casinoRules": {
+      "blackjack": {
+        "solo": "6 barajas|El crupier se planta en 17 suave|Blackjack paga 3 a 2|Doblar con las dos primeras cartas|Dividir una vez por ronda|Sin seguro",
+        "online": "6 barajas, zapato nuevo en cada mano|El crupier se planta en 17 suave|Blackjack paga 3 a 2|Doblar con las dos primeras cartas (sin dividir)|Apuesta de {min} a {max} monedas|Juego justo verificable (provably fair)"
+      },
+      "roulette": {
+        "solo": "Ruleta europea: un solo cero (37 números)|Pleno paga 35 a 1|Docenas y columnas pagan 2 a 1|Rojo/negro, par/impar, 1-18/19-36 pagan 1 a 1",
+        "online": "Ruleta europea: un solo cero (37 números)|Una sola rueda para toda la mesa|Pleno paga 35 a 1; docenas y columnas 2 a 1; suertes sencillas 1 a 1|Hasta {max} monedas por jugador y ronda|Juego justo verificable (provably fair)"
+      }
+    }
   },
   "room": {
     "create": "Crear sala",

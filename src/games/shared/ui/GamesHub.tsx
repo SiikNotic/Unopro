@@ -11,7 +11,7 @@ import './hub.css';
 import '../fonts.css';
 
 type HubGame = 'carta' | 'domino' | 'bingo';
-const TARGET: Record<HubGame, Screen> = { carta: 'gameModes', domino: 'dominoSetup', bingo: 'bingoSetup' };
+const TARGET: Record<HubGame, Screen> = { carta: 'cartaSetup', domino: 'dominoSetup', bingo: 'bingoSetup' };
 
 /**
  * Grows the card's colour to fill the screen, navigates underneath it, then fades it away: the game seems

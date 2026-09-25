@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { casinoScene } from '@/games/shared/setup';
 import { Hand as HandIcon, Layers, Plus, RotateCcw, Split, X } from 'lucide-react';
 import { CasinoFrame } from '@/components/casino/CasinoFrame';
 import { Chip, ChipAdder } from '@/components/casino/chips';
@@ -108,6 +109,8 @@ const OUTCOME_PILL: Record<bj.Outcome, string> = {
 };
 
 export function BlackjackScreen() {
+  // The scene chosen on the setup screen (visual only).
+  const [scene] = useState(() => casinoScene('blackjack'));
   const { t } = useI18n();
   const { balance, startRound, raiseStake, settleRound, isOpen, openStake, mode } = useWallet();
   const account = useAccount();
@@ -423,8 +426,8 @@ export function BlackjackScreen() {
     <CasinoFrame
       title={t('casino.blackjack.short')}
       subtitle={t('casino.blackjack.rules')}
-      back="gameModes"
-      scenario="lounge"
+      back="blackjackSetup"
+      scenario={scene}
       backdrop={<SaloonBackdrop />}
       onHelp={() => setHelp(true)}
       dock={dock}

@@ -2,12 +2,16 @@
   "version": "1.2.0",
   "notes": {
     "es": [
+      "Nueva pantalla de configuración para Carta, Dominó, Bingo, Blackjack y Ruleta: jugadores, asientos, dificultad, reglas y escenario en un mismo diseño.",
+      "Carta contra bots: de 2 a 6 jugadores, equipos 2 vs 2 o 3 vs 3, partida a 250 o 500 puntos y reglas opcionales (acumular +2/+4, robar hasta poder jugar).",
       "Multijugador en línea: Carta, Blackjack y Ruleta con otros jugadores (Jugar ahora o sala privada con código).",
       "Blackjack y Ruleta en mesa compartida con las monedas de tu cuenta.",
       "Juego justo (provably fair): cada ronda usa una semilla secreta de 256 bits cuya huella SHA-256 ves antes de apostar; al terminar se revela y puedes verificarla con el botón Verificar.",
       "La app se actualiza con cada nueva versión de la web."
     ],
     "en": [
+      "New setup screen for Carta, Domino, Bingo, Blackjack and Roulette: players, seats, difficulty, rules and scene in one design.",
+      "Carta vs bots: 2 to 6 players, 2 vs 2 or 3 vs 3 teams, games to 250 or 500 points and optional rules (stack +2/+4, draw until you can play).",
       "Online multiplayer: Carta, Blackjack and Roulette with other players (Play now or a private room with a code).",
       "Shared Blackjack and Roulette tables with your account coins.",
       "Provably fair: each round uses a secret 256-bit seed whose SHA-256 fingerprint you see before betting; it is revealed at the end and you can check it with the Verify button.",

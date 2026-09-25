@@ -17,6 +17,9 @@ export const BOT_TABLES: Record<'classic' | 'teams', BotTableConfig> = {
       bot1: { difficulty: 'normal', personality: 'aggressive' },
       bot2: { difficulty: 'hard', personality: 'defensive' },
       bot3: { difficulty: 'easy', personality: 'risky' },
+      // Bigger tables (5–6 players, chosen on the setup screen).
+      bot4: { difficulty: 'normal', personality: 'balanced' },
+      bot5: { difficulty: 'normal', personality: 'aggressive' },
     },
     thinkDelayMs: 750,
     penaltyWindowDelayMs: 1600,
@@ -26,6 +29,9 @@ export const BOT_TABLES: Record<'classic' | 'teams', BotTableConfig> = {
       bot1: { difficulty: 'normal', personality: 'aggressive' },
       bot2: { difficulty: 'hard', personality: 'teamPlayer' }, // your partner
       bot3: { difficulty: 'normal', personality: 'balanced' },
+      // 3 vs 3: teams alternate, so bot4 is also your partner.
+      bot4: { difficulty: 'normal', personality: 'teamPlayer' },
+      bot5: { difficulty: 'normal', personality: 'defensive' },
     },
     thinkDelayMs: 750,
     penaltyWindowDelayMs: 1600,

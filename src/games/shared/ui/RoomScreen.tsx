@@ -33,7 +33,7 @@ export function RoomScreen() {
 }
 
 /** Where "back" goes from the room screen of this game. */
-const backScreen = (game: OnlineGame): Screen => (game === 'domino' ? 'dominoSetup' : game === 'bingo' ? 'bingoSetup' : 'gameModes');
+const backScreen = (game: OnlineGame): Screen => ({ domino: 'dominoSetup', bingo: 'bingoSetup', carta: 'cartaSetup', blackjack: 'blackjackSetup', roulette: 'rouletteSetup' } as const)[game];
 
 /** Name of the game in room titles. */
 const gameName = (game: OnlineGame, t: (k: string) => string) => (game === 'domino' || game === 'bingo' ? t(`hub.${game}.name`) : t(`room.games.${game}`));

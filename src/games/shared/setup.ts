@@ -80,3 +80,63 @@ export function pickScene<T extends string>(choice: T | 'random', all: readonly 
   storage.set(lastKey, picked);
   return picked;
 }
+
+// ---------------------------------------------------------------- Carta (against bots, on this device)
+
+/** Carta against bots: the table format, how many sit down and the house rules the engine already supports. */
+export type CartaFormat = 'classic' | 'teams';
+export interface CartaSetup {
+  format: CartaFormat;
+  players: 2 | 3 | 4 | 5 | 6;
+  target: 250 | 500;
+  /** Answer a +2 / +4 with another one and pass the sum on (engine: settings.stacking). */
+  stacking: boolean;
+  /** Keep drawing until a playable card comes (engine: settings.drawUntilPlayable). */
+  drawUntilPlayable: boolean;
+}
+
+/** Seats each format supports (teams sit alternately, so partners face each other). */
+export const CARTA_PLAYERS: Record<CartaFormat, CartaSetup['players'][]> = { classic: [2, 3, 4, 5, 6], teams: [4, 6] };
+
+/** Team of each seat in team play: they alternate, so partners sit across the table. */
+export const cartaTeamOf = (seat: number): 'A' | 'B' => (seat % 2 === 0 ? 'A' : 'B');
+
+export const DEFAULT_CARTA: CartaSetup = { format: 'classic', players: 4, target: 500, stacking: false, drawUntilPlayable: false };
+
+export function normalizeCarta(raw: unknown): CartaSetup {
+  const r = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+  const format = oneOf(['classic', 'teams'] as const, r.format, DEFAULT_CARTA.format);
+  const players = oneOf(CARTA_PLAYERS[format], r.players, format === 'teams' ? 4 : DEFAULT_CARTA.players);
+  return {
+    format,
+    players,
+    target: oneOf([250, 500] as const, r.target, DEFAULT_CARTA.target),
+    stacking: typeof r.stacking === 'boolean' ? r.stacking : DEFAULT_CARTA.stacking,
+    drawUntilPlayable: typeof r.drawUntilPlayable === 'boolean' ? r.drawUntilPlayable : DEFAULT_CARTA.drawUntilPlayable,
+  };
+}
+
+const CARTA_KEY = 'games.carta.setup';
+export const loadCartaSetup = () => normalizeCarta(storage.get(CARTA_KEY));
+export const saveCartaSetup = (s: CartaSetup) => storage.set(CARTA_KEY, s);
+
+// ---------------------------------------------------------------- Casino games (Blackjack, Roulette)
+
+/** Scenes of the casino games: the same animated scenarios as Carta. */
+export const CASINO_SCENES = ['lounge', 'city', 'sky', 'ocean', 'forest', 'space', 'volcano'] as const;
+export type CasinoScene = (typeof CASINO_SCENES)[number];
+export type CasinoGame = 'blackjack' | 'roulette';
+export interface CasinoSetup {
+  scene: CasinoScene | 'random';
+}
+/** Each game keeps the look it always had unless the player picks another scene. */
+export const DEFAULT_CASINO: Record<CasinoGame, CasinoSetup> = { blackjack: { scene: 'lounge' }, roulette: { scene: 'city' } };
+
+export const normalizeCasino = (game: CasinoGame, raw: unknown): CasinoSetup => {
+  const r = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+  return { scene: oneOf([...CASINO_SCENES, 'random'] as const, r.scene, DEFAULT_CASINO[game].scene) };
+};
+export const loadCasinoSetup = (game: CasinoGame) => normalizeCasino(game, storage.get(`games.${game}.setup`));
+export const saveCasinoSetup = (game: CasinoGame, s: CasinoSetup) => storage.set(`games.${game}.setup`, s);
+/** The scene a casino screen opens with (a random choice avoids repeating the last one). */
+export const casinoScene = (game: CasinoGame): CasinoScene => pickScene(loadCasinoSetup(game).scene, CASINO_SCENES, `games.${game}.lastScene`);

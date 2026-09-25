@@ -64,7 +64,9 @@
         "name": "Roulette table",
         "description": "One wheel for everyone; each player bets their own coins."
       }
-    }
+    },
+    "tableTitle": "Table games",
+    "tableSubtitle": "Against bots on this device, or online."
   },
   "settings": {
     "title": "Settings",
@@ -928,13 +930,13 @@
     "carta": {
       "name": "Carta",
       "desc": "Card strategy in the lounge. Classic or teams.",
-      "players": "1–4 players",
+      "players": "2–6 players",
       "long": ""
     },
     "domino": {
       "name": "Domino",
       "desc": "Real tiles on the table. Count, block, take the round.",
-      "players": "1–4 players",
+      "players": "2–4 players",
       "long": "Double six, to 100 or 200 points. Play bots, or pass the device between friends."
     },
     "bingo": {
@@ -990,7 +992,58 @@
     "start": "Start match",
     "online": "Online",
     "onlineNote": "Online play is designed but the server is not connected yet: you can see what the room will look like, but you can't play with people elsewhere yet.",
-    "onlineReady": "Play with friends far away: create a room and send them the code, or join theirs. Empty seats are played by a server bot."
+    "onlineReady": "Play with friends far away: create a room and send them the code, or join theirs. Empty seats are played by a server bot.",
+    "kicker": "Set up your game",
+    "mode": "Mode",
+    "format": "Format",
+    "rules": "Rules",
+    "summary": "Game summary",
+    "modes": {
+      "local": "Local",
+      "localHint": "on this device",
+      "online": "Online",
+      "onlineHint": "with other people",
+      "solo": "Solo",
+      "soloHint": "vs the house",
+      "table": "Online table"
+    },
+    "openRoom": "Create an online room",
+    "findTable": "Find a table",
+    "sum": {
+      "players": "Players: {n}",
+      "upTo": "Up to {n} players"
+    },
+    "partner": "Partner",
+    "formats": {
+      "classic": "everyone for themselves",
+      "teams": "in pairs"
+    },
+    "teamsNote": "Teams sit alternately: your partner is across from you. Points add up per team.",
+    "cartaRules": {
+      "stacking": "Stack +2 and +4",
+      "stackingHint": "Answer a +2 or +4 with another one and the next player draws the sum.",
+      "drawUntil": "Draw until you can play",
+      "drawUntilHint": "With no move, keep drawing until a card you can play comes up."
+    },
+    "orBot": "or bot",
+    "cartaOnlineNote": "Play now seats you at a public table; you can also create a private room and share the code. Empty seats are played by a server bot at the chosen difficulty.",
+    "dealer": "Dealer",
+    "croupier": "Croupier",
+    "house": "the house",
+    "otherPlayer": "another player",
+    "tableNote": "Other players sit down as they join. Bets use your account coins (a registered account is needed).",
+    "houseRules": "Table rules",
+    "classic": "classic",
+    "casinoRules": {
+      "blackjack": {
+        "solo": "6 decks|Dealer stands on soft 17|Blackjack pays 3 to 2|Double on the first two cards|Split once per round|No insurance",
+        "online": "6 decks, a fresh shoe every hand|Dealer stands on soft 17|Blackjack pays 3 to 2|Double on the first two cards (no split)|Bets from {min} to {max} coins|Verifiable fair play (provably fair)"
+      },
+      "roulette": {
+        "solo": "European roulette: single zero (37 numbers)|Straight up pays 35 to 1|Dozens and columns pay 2 to 1|Red/black, even/odd, 1-18/19-36 pay 1 to 1",
+        "online": "European roulette: single zero (37 numbers)|One wheel for the whole table|Straight up 35 to 1; dozens and columns 2 to 1; even-money bets 1 to 1|Up to {max} coins per player per round|Verifiable fair play (provably fair)"
+      }
+    }
   },
   "room": {
     "create": "Create room",

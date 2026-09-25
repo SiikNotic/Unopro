@@ -20,13 +20,13 @@ interface Topic {
 }
 
 const TOPICS: Topic[] = [
-  { id: 'cards', icon: Layers, group: 'carta', target: 'gameModes' },
-  { id: 'turns', icon: Repeat, group: 'carta', target: 'gameModes' },
-  { id: 'specials', icon: Zap, group: 'carta', target: 'gameModes' },
-  { id: 'uno', icon: AlertCircle, group: 'carta', target: 'gameModes' },
-  { id: 'strategy', icon: Lightbulb, group: 'carta', target: 'gameModes' },
-  { id: 'blackjack', icon: Club, group: 'casino', target: 'blackjack' },
-  { id: 'roulette', icon: CircleDot, group: 'casino', target: 'roulette' },
+  { id: 'cards', icon: Layers, group: 'carta', target: 'cartaSetup' },
+  { id: 'turns', icon: Repeat, group: 'carta', target: 'cartaSetup' },
+  { id: 'specials', icon: Zap, group: 'carta', target: 'cartaSetup' },
+  { id: 'uno', icon: AlertCircle, group: 'carta', target: 'cartaSetup' },
+  { id: 'strategy', icon: Lightbulb, group: 'carta', target: 'cartaSetup' },
+  { id: 'blackjack', icon: Club, group: 'casino', target: 'blackjackSetup' },
+  { id: 'roulette', icon: CircleDot, group: 'casino', target: 'rouletteSetup' },
   { id: 'slots', icon: Sparkles, group: 'casino', target: 'slotLobby' },
 ];
 

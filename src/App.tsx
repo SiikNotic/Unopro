@@ -21,7 +21,13 @@ import type { Screen } from '@/types/navigation';
 // The slot machines (engine, math, art, sounds) load only when a player opens them.
 const SlotLobbyScreen = lazy(() => import('@/screens/casino/SlotLobbyScreen').then((m) => ({ default: m.SlotLobbyScreen })));
 // Domino and Bingo (engines, tiles, balls, scenes) load when a player opens them.
-const MatchSetupScreen = lazy(() => import('@/games/shared/ui/MatchSetupScreen').then((m) => ({ default: m.MatchSetupScreen })));
+// Every multiplayer / vs-bots game is set up on the shared GameSetupScreen.
+const setup = () => import('@/games/shared/gameSetup/SetupScreens');
+const CartaSetupScreen = lazy(() => setup().then((m) => ({ default: m.CartaSetupScreen })));
+const DominoSetupScreen = lazy(() => setup().then((m) => ({ default: m.DominoSetupScreen })));
+const BingoSetupScreen = lazy(() => setup().then((m) => ({ default: m.BingoSetupScreen })));
+const BlackjackSetupScreen = lazy(() => setup().then((m) => ({ default: m.BlackjackSetupScreen })));
+const RouletteSetupScreen = lazy(() => setup().then((m) => ({ default: m.RouletteSetupScreen })));
 const RoomScreen = lazy(() => import('@/games/shared/ui/RoomScreen').then((m) => ({ default: m.RoomScreen })));
 const DominoScreen = lazy(() => import('@/games/domino/ui/DominoScreen').then((m) => ({ default: m.DominoScreen })));
 const BingoScreen = lazy(() => import('@/games/bingo/ui/BingoScreen').then((m) => ({ default: m.BingoScreen })));
@@ -48,9 +54,9 @@ function ScreenRouter() {
     profile: <ProfileScreen />,
     slotLobby: <SlotLobbyScreen />,
     slotMachine: <PremiumSlotScreen />,
-    dominoSetup: <MatchSetupScreen key="domino" game="domino" />,
+    dominoSetup: <DominoSetupScreen />,
     domino: <DominoScreen />,
-    bingoSetup: <MatchSetupScreen key="bingo" game="bingo" />,
+    bingoSetup: <BingoSetupScreen />,
     bingo: <BingoScreen />,
     room: <RoomScreen />,
     account: <AccountScreen />,
@@ -59,6 +65,9 @@ function ScreenRouter() {
     cartaOnline: <CartaOnline />,
     blackjackTable: <BlackjackTableScreen />,
     rouletteTable: <RouletteTableScreen />,
+    cartaSetup: <CartaSetupScreen />,
+    blackjackSetup: <BlackjackSetupScreen />,
+    rouletteSetup: <RouletteSetupScreen />,
   };
 
   return (

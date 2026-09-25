@@ -18,13 +18,13 @@ import { usePlayerName } from '@/account/usePlayerName';
 
 interface GameEntry {
   id: LobbyGame;
-  /** Casino games open directly (Carta lives in the games hub above). */
+  /** Casino games open their setup (Carta, Domino and Bingo live in the games hub above). */
   screen: Screen;
 }
 
 const GAMES: GameEntry[] = [
-  { id: 'blackjack', screen: 'blackjack' },
-  { id: 'roulette', screen: 'roulette' },
+  { id: 'blackjack', screen: 'blackjackSetup' },
+  { id: 'roulette', screen: 'rouletteSetup' },
   { id: 'slots', screen: 'slotLobby' },
 ];
 
