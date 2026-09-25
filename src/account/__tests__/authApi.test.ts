@@ -80,3 +80,22 @@ describe('auth api', () => {
     await expect(api.signIn('a@b.co', 'x')).rejects.toMatchObject({ code: 'network' });
   });
 });
+
+describe('inside the Android app', () => {
+  it('sends Supabase back to the app link, and reads what the link carries', async () => {
+    const { appReturnUrl, isNativeApp, NATIVE_RETURN_URL, readAuthReturn: read } = await import('../authApi');
+    const g = globalThis as { Capacitor?: unknown };
+    g.Capacitor = { isNativePlatform: () => true };
+    try {
+      expect(isNativeApp()).toBe(true);
+      expect(appReturnUrl()).toBe('io.github.siiknotic.carta://auth');
+      const u = new URL(`${NATIVE_RETURN_URL}?code=abc`);
+      expect(read({ search: u.search, hash: u.hash })).toEqual({ code: 'abc', recovery: false, error: undefined });
+      const r = new URL(`${NATIVE_RETURN_URL}?reset=1&code=xyz`);
+      expect(read({ search: r.search, hash: r.hash })).toMatchObject({ code: 'xyz', recovery: true });
+    } finally {
+      delete g.Capacitor;
+    }
+    expect(isNativeApp()).toBe(false);
+  });
+});

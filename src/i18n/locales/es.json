@@ -1436,5 +1436,21 @@
       "forbidden": "No tienes permiso."
     },
     "needAccount": "Requiere una cuenta"
+  },
+  "update": {
+    "title": "Nueva versión {version}",
+    "subtitle": "Esto trae la nueva versión:",
+    "now": "Actualizar ahora",
+    "later": "Más tarde",
+    "downloading": "Descargando… {percent}%",
+    "installing": "Abriendo el instalador de Android… Confirma la instalación.",
+    "hint": "Android te pedirá confirmar la instalación. Tus monedas y tu cuenta no cambian.",
+    "whatsNew": "Novedades de Carta {version}",
+    "ok": "¡Entendido!",
+    "error": {
+      "permission": "Permite que Carta instale actualizaciones (se abrió Ajustes) y vuelve a tocar «Actualizar ahora».",
+      "checksum": "La descarga no coincide con la versión publicada, así que no se instaló. Inténtalo de nuevo.",
+      "failed": "No se pudo descargar la actualización. Revisa tu conexión e inténtalo de nuevo."
+    }
   }
 }

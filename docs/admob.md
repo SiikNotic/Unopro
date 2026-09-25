@@ -31,13 +31,31 @@ accept callbacks only for that ad unit.
 
 ## Building
 
-The workflow **Android app (APK)** builds `app-debug.apk` on every push that touches the app and
-attaches it to the run (Actions → the run → Artifacts). A Play Store release needs a signed release
-build (upload key kept as a GitHub secret): not set up yet.
+The workflow **Android app (APK)** builds `carta.apk` on every push that touches the app and attaches it
+to the run (Actions → the run → Artifacts): signed with the release key when the secrets exist, a debug
+build otherwise. New versions are published as GitHub Releases (see "In-app updates").
 
 ## Known limits of the app
 
-- Google / Discord sign-in is hidden in the app (Google blocks sign-in inside embedded browsers); email
-  and password work.
 - The app serves its files under `https://siiknotic.github.io` (Capacitor `server.hostname`) so the game
   servers accept it like the website.
+
+## Sign-in inside the app
+
+Supabase sends every sign-in link (email confirmation, Google, Discord, password reset) back to
+`io.github.siiknotic.carta://auth`, which Android opens in the app (intent filter in `AndroidManifest.xml`).
+Google and Discord open in the system browser (Google refuses sign-in inside embedded views). That address
+must be listed in Supabase → Authentication → URL Configuration → Redirect URLs.
+
+## In-app updates (outside Google Play)
+
+- `app-release.json` holds the version and its notes (ES/EN). Bumping the version and pushing publishes it.
+- The workflow signs the APK with the release key (GitHub Secrets `ANDROID_KEYSTORE_BASE64`,
+  `ANDROID_KEYSTORE_PASSWORD`; alias `carta`) and creates the GitHub Release `v<version>` with `carta.apk`
+  and `update.json` (versionCode, notes, APK URL, SHA-256).
+- The app (`src/app/UpdateDialog.tsx` + the native `AppUpdaterPlugin`) checks the latest release at start and
+  every 6 hours, shows the version and its notes, downloads the APK only from this project's releases,
+  checks its SHA-256 and opens Android's installer. Android refuses an update not signed with the same key
+  and always asks the player to confirm. After updating, the app shows once what the version brought.
+- Google Play does not allow apps to update themselves: a Play build must drop the updater (and the
+  `REQUEST_INSTALL_PACKAGES` permission) and use Play's updates instead.

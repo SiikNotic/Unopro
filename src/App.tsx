@@ -1,4 +1,5 @@
 import { lazy, Suspense } from 'react';
+import { UpdateDialog } from '@/app/UpdateDialog';
 import { NavigationProvider, useNavigation } from '@/components/Navigation';
 import { Background } from '@/components/ui/Background';
 import { I18nProvider } from '@/i18n';
@@ -59,6 +60,7 @@ function ScreenRouter() {
       <Background />
       <Suspense fallback={<div className="min-h-screen" aria-busy="true" />}>{screens[currentScreen]}</Suspense>
       <AccountOverlay />
+      <UpdateDialog />
     </main>
   );
 }

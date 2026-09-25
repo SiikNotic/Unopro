@@ -7,8 +7,9 @@ android {
         applicationId "io.github.siiknotic.carta"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        // Set by the release workflow from app-release.json (versionCode = major*10000 + minor*100 + patch).
+        versionCode((System.getenv("APP_VERSION_CODE") ?: "1") as int)
+        versionName(System.getenv("APP_VERSION_NAME") ?: "1.0")
         // AdMob App ID ("ca-app-pub-…~…"): public, set as the ADMOB_APP_ID repository variable. Without it,
         // Google's sample App ID is used, which only serves test ads.
         manifestPlaceholders = [admobAppId: (System.getenv("ADMOB_APP_ID") ?: "ca-app-pub-3940256099942544~3347511713")]
@@ -19,8 +20,22 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        // The release key lives only in GitHub Secrets (never in the repository). Every update must be signed
+        // with this same key or Android refuses to install it over the existing app.
+        release {
+            def ks = System.getenv("ANDROID_KEYSTORE_FILE")
+            if (ks) {
+                storeFile file(ks)
+                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias "carta"
+                keyPassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
+            }
+        }
+    }
     buildTypes {
         release {
+            if (System.getenv("ANDROID_KEYSTORE_FILE")) signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

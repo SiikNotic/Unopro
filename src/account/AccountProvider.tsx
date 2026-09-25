@@ -4,7 +4,7 @@ import { onlineConfig, tokenFor } from '@/games/online/client';
 import { SESSION_KEY } from '@/casino/premium/anonAuth';
 import { storage } from '@/storage';
 import type { AccountInfo } from '@/casino/server/protocol';
-import { appReturnUrl, AuthError, createAuthApi, decodeJwt, readAuthReturn, readSession, saveSession, SESSION_EVENT, takePkceVerifier } from './authApi';
+import { AuthError, createAuthApi, decodeJwt, isNativeApp, NATIVE_RETURN_URL, readAuthReturn, readSession, saveSession, SESSION_EVENT, takePkceVerifier } from './authApi';
 import type { AccountUser, OAuthProvider } from './authApi';
 import { AccountContext } from './accountContext';
 import type { AccountContextValue, AccountNotice, AccountStatus } from './accountContext';
@@ -170,37 +170,73 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     if (me.registered && !me.ban && (!me.bonusClaimed || !me.migrated)) await claimBonus();
   }, [cfg, api, claimBonus, readAccount]);
 
+  /** Applies what a redirect from Supabase brought back (OAuth, email confirmation, password reset). */
+  const applyReturn = useCallback(
+    async (ret: NonNullable<ReturnType<typeof readAuthReturn>>) => {
+      if (!api) return;
+      try {
+        if (ret.tokens) {
+          const t = ret.tokens;
+          saveSession({ access_token: t.access_token, refresh_token: t.refresh_token, expires_at: Number(t.expires_at) || Math.floor(Date.now() / 1000) + Number(t.expires_in || 3600) });
+          if (ret.recovery) setRecovering(true);
+        } else if (ret.code) {
+          const verifier = takePkceVerifier();
+          if (verifier) {
+            saveSession(await api.exchangeCode(ret.code, verifier));
+            if (ret.recovery) setRecovering(true);
+            else setNotice({ kind: 'welcome', name: null });
+          } else {
+            // Opened in another browser: the email is confirmed, but this browser must sign in.
+            setNotice({ kind: 'confirmed' });
+          }
+        } else if (ret.error) setNotice({ kind: 'error', code: 'link' });
+      } catch (e) {
+        setNotice({ kind: 'error', code: asAuthError(e).code === 'network' ? 'network' : 'link' });
+      }
+    },
+    [api]
+  );
+
   // Coming back from Google / Discord, an email confirmation or a password-reset link.
   useEffect(() => {
     if (!cfg || !api) return;
     const ret = readAuthReturn(window.location);
-    const clean = () => window.history.replaceState(window.history.state, '', appReturnUrl());
     void (async () => {
       if (ret) {
-        clean();
-        try {
-          if (ret.tokens) {
-            const t = ret.tokens;
-            saveSession({ access_token: t.access_token, refresh_token: t.refresh_token, expires_at: Number(t.expires_at) || Math.floor(Date.now() / 1000) + Number(t.expires_in || 3600) });
-            if (ret.recovery) setRecovering(true);
-          } else if (ret.code) {
-            const verifier = takePkceVerifier();
-            if (verifier) {
-              saveSession(await api.exchangeCode(ret.code, verifier));
-              if (ret.recovery) setRecovering(true);
-              else setNotice({ kind: 'welcome', name: null });
-            } else {
-              // Opened in another browser: the email is confirmed, but this browser must sign in.
-              setNotice({ kind: 'confirmed' });
-            }
-          } else if (ret.error) setNotice({ kind: 'error', code: 'link' });
-        } catch (e) {
-          setNotice({ kind: 'error', code: asAuthError(e).code === 'network' ? 'network' : 'link' });
-        }
+        window.history.replaceState(window.history.state, '', window.location.pathname);
+        await applyReturn(ret);
       }
       await load();
     })();
-  }, [cfg, api, load]);
+  }, [cfg, api, load, applyReturn]);
+
+  // Inside the Android app the same links arrive as io.github.siiknotic.carta://auth?... (app already open,
+  // or started by the link). The browser tab used for Google / Discord is closed.
+  useEffect(() => {
+    if (!cfg || !api || !isNativeApp()) return;
+    let cancelled = false;
+    let remove: (() => void) | null = null;
+    const handle = async (url: string | undefined) => {
+      if (!url || !url.startsWith(NATIVE_RETURN_URL)) return;
+      const u = new URL(url);
+      const ret = readAuthReturn({ search: u.search, hash: u.hash });
+      void import('@capacitor/browser').then(({ Browser }) => Browser.close()).catch(() => undefined);
+      if (!ret) return;
+      await applyReturn(ret);
+      await load();
+    };
+    void import('@capacitor/app').then(async ({ App }) => {
+      const h = await App.addListener('appUrlOpen', (e) => void handle(e.url));
+      if (cancelled) return void h.remove();
+      remove = () => void h.remove();
+      const launch = await App.getLaunchUrl().catch(() => undefined);
+      if (!cancelled) void handle(launch?.url);
+    });
+    return () => {
+      cancelled = true;
+      remove?.();
+    };
+  }, [cfg, api, load, applyReturn]);
 
   // Sign-in or sign-out in this tab or another one.
   useEffect(() => {
@@ -302,7 +338,11 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         return 'signed_in';
       },
       async signInWith(provider: OAuthProvider) {
-        window.location.assign(await need().oauthUrl(provider));
+        const url = await need().oauthUrl(provider);
+        // Inside the app: Google and Discord open in the system browser (Google refuses sign-in inside an
+        // embedded view) and come back through the app's link.
+        if (isNativeApp()) await (await import('@capacitor/browser')).Browser.open({ url });
+        else window.location.assign(url);
       },
       async signOut() {
         const s = readSession();

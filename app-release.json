@@ -1,0 +1,17 @@
+{
+  "version": "1.1.0",
+  "notes": {
+    "es": [
+      "Actualizaciones dentro de la app: cuando haya una versión nueva te avisamos aquí y se instala desde la misma app.",
+      "Ya puedes registrarte e iniciar sesión con Google o Discord desde la app.",
+      "Al confirmar tu correo vuelves directo a la app con la sesión iniciada.",
+      "Banco: anuncios con recompensa de 100 monedas (AdMob)."
+    ],
+    "en": [
+      "In-app updates: when a new version is out we tell you here and it installs from the app itself.",
+      "You can now sign up and sign in with Google or Discord from the app.",
+      "Confirming your email brings you straight back to the app, signed in.",
+      "Bank: rewarded ads worth 100 coins (AdMob)."
+    ]
+  }
+}

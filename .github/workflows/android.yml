@@ -1,14 +1,21 @@
 name: Android app (APK)
 
-# Builds the Android app (the same web build inside Capacitor, with AdMob rewarded ads) and publishes a
-# debug APK as a downloadable artifact of the run. Public values only, from repository Variables:
+# Builds the Android app (the same web build inside Capacitor, with AdMob rewarded ads).
+#
+# Public values, from repository Variables:
 #   VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY  (as for the web build)
 #   ADMOB_APP_ID           e.g. ca-app-pub-1234567890123456~1234567890   (unset: Google's test app)
 #   VITE_ADMOB_REWARDED_ID e.g. ca-app-pub-1234567890123456/1234567890   (unset: Google's test ad unit)
+# Secrets (the release signing key; never in the repository):
+#   ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD
+#
+# With the signing key, a new version in app-release.json is published as a GitHub Release (carta.apk +
+# update.json with its SHA-256); installed apps find it and update themselves. Without the key, only a debug
+# APK is built (as a run artifact).
 on:
   push:
     branches: ['**']
-    paths: ['android/**', 'src/**', 'capacitor.config.ts', 'package.json', 'package-lock.json', '.github/workflows/android.yml']
+    paths: ['android/**', 'src/**', 'app-release.json', 'capacitor.config.ts', 'package.json', 'package-lock.json', '.github/workflows/android.yml']
   workflow_dispatch:
 
 permissions:
@@ -16,11 +23,13 @@ permissions:
 
 concurrency:
   group: android-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   apk:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -31,6 +40,14 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
+      - name: Version from app-release.json
+        id: v
+        run: |
+          NAME=$(node -p "require('./app-release.json').version")
+          CODE=$(node -p "const [a,b,c]=require('./app-release.json').version.split('.').map(Number); a*10000+b*100+c")
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "code=$CODE" >> "$GITHUB_OUTPUT"
+          echo "Carta $NAME (versionCode $CODE)"
       - run: npm ci
       - run: npm run build
         env:
@@ -38,15 +55,68 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
           VITE_ADMOB_REWARDED_ID: ${{ vars.VITE_ADMOB_REWARDED_ID }}
       - run: npx cap sync android
-      - run: ./gradlew assembleDebug --no-daemon
+      - name: Signing key
+        id: key
+        env:
+          KS: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KS" ]; then
+            echo "$KS" | base64 -d > "$RUNNER_TEMP/release.jks"
+            echo "file=$RUNNER_TEMP/release.jks" >> "$GITHUB_OUTPUT"
+          else
+            echo "No signing key: building a debug APK only."
+          fi
+      - name: Build signed release APK
+        if: steps.key.outputs.file != ''
         working-directory: android
+        run: ./gradlew assembleRelease --no-daemon
         env:
           ADMOB_APP_ID: ${{ vars.ADMOB_APP_ID }}
+          APP_VERSION_NAME: ${{ steps.v.outputs.name }}
+          APP_VERSION_CODE: ${{ steps.v.outputs.code }}
+          ANDROID_KEYSTORE_FILE: ${{ steps.key.outputs.file }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      - name: Build debug APK
+        if: steps.key.outputs.file == ''
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
+        env:
+          ADMOB_APP_ID: ${{ vars.ADMOB_APP_ID }}
+          APP_VERSION_NAME: ${{ steps.v.outputs.name }}
+          APP_VERSION_CODE: ${{ steps.v.outputs.code }}
+      - name: Collect APK
+        run: |
+          if [ -f android/app/build/outputs/apk/release/app-release.apk ]; then cp android/app/build/outputs/apk/release/app-release.apk carta.apk
+          else cp android/app/build/outputs/apk/debug/app-debug.apk carta.apk; fi
+          sha256sum carta.apk
       - uses: actions/upload-artifact@v5
         with:
-          name: carta-debug-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: carta-apk
+          path: carta.apk
           retention-days: 30
+      - name: Publish the version (only when it is new)
+        if: steps.key.outputs.file != '' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NAME: ${{ steps.v.outputs.name }}
+          CODE: ${{ steps.v.outputs.code }}
+          REPO: ${{ github.repository }}
+        run: |
+          TAG="v$NAME"
+          if gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
+            echo "$TAG is already published: nothing to do (bump the version in app-release.json to publish)."
+            exit 0
+          fi
+          SHA=$(sha256sum carta.apk | cut -d' ' -f1)
+          node -e '
+            const r = require("./app-release.json");
+            const fs = require("fs");
+            const url = `https://github.com/${process.env.REPO}/releases/download/v${r.version}/carta.apk`;
+            fs.writeFileSync("update.json", JSON.stringify({ versionCode: Number(process.env.CODE), versionName: r.version, notes: r.notes, apkUrl: url, sha256: process.argv[1] }, null, 2));
+            fs.writeFileSync("notes.md", r.notes.es.map((n) => `- ${n}`).join("\n") + "\n\n**English**\n\n" + r.notes.en.map((n) => `- ${n}`).join("\n") + `\n\nSHA-256: \`${process.argv[1]}\`\n`);
+          ' "$SHA"
+          cat update.json
+          gh release create "$TAG" carta.apk update.json --repo "$REPO" --title "Carta $NAME" --notes-file notes.md --target "$GITHUB_SHA"
 
   ssv-smoke:
     # The deployed AdMob verification endpoint must refuse anything not signed by Google. Also proves it can

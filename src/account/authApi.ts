@@ -112,8 +112,17 @@ export const takePkceVerifier = (): string | null => {
   return typeof v === 'string' ? v : null;
 };
 
-/** Where Supabase sends the player back: this page, without any query or hash. */
-export const appReturnUrl = () => `${window.location.origin}${window.location.pathname}`;
+/** The Android app's own link: Supabase sends the player back into the app (intent filter in AndroidManifest). */
+export const NATIVE_RETURN_URL = 'io.github.siiknotic.carta://auth';
+
+/** True inside the Android app (Capacitor), false in a browser. */
+export const isNativeApp = (): boolean => !!(globalThis as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.();
+
+/**
+ * Where Supabase sends the player back: this page, without any query or hash; inside the app, the app's own
+ * link (the app's pages are served from a local origin that doesn't exist on the web).
+ */
+export const appReturnUrl = () => (isNativeApp() ? NATIVE_RETURN_URL : `${window.location.origin}${window.location.pathname}`);
 
 export function decodeJwt(token: string): Record<string, unknown> | null {
   try {

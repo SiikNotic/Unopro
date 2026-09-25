@@ -13,9 +13,6 @@ import { BanNotice } from './BanNotice';
 import { ROLE_RANK } from './accountContext';
 import './account.css';
 
-/** Inside the Android app, Google and Discord sign-in can't run (Google blocks embedded browsers): email only. */
-const inNativeApp = () => !!(window as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.();
-
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 export function GoogleLogo() {
@@ -161,20 +158,16 @@ function SignInPanel() {
         <p className="mt-1 text-sm text-white/75 max-w-[34ch]">{t('account.pitchText')}</p>
       </div>
 
-      {!inNativeApp() && (
-        <>
-          <div className="flex flex-col gap-2.5">
-            <button type="button" className="ac-provider ac-google" onClick={() => void provider('google')} disabled={!!busy} aria-busy={busy === 'google'}>
-              <GoogleLogo /> {t('account.withGoogle')}
-            </button>
-            <button type="button" className="ac-provider ac-discord" onClick={() => void provider('discord')} disabled={!!busy} aria-busy={busy === 'discord'}>
-              <DiscordLogo /> {t('account.withDiscord')}
-            </button>
-          </div>
+      <div className="flex flex-col gap-2.5">
+        <button type="button" className="ac-provider ac-google" onClick={() => void provider('google')} disabled={!!busy} aria-busy={busy === 'google'}>
+          <GoogleLogo /> {t('account.withGoogle')}
+        </button>
+        <button type="button" className="ac-provider ac-discord" onClick={() => void provider('discord')} disabled={!!busy} aria-busy={busy === 'discord'}>
+          <DiscordLogo /> {t('account.withDiscord')}
+        </button>
+      </div>
 
-          <div className="ac-divider">{t('account.orEmail')}</div>
-        </>
-      )}
+      <div className="ac-divider">{t('account.orEmail')}</div>
 
       <form className="cz-panel p-4 flex flex-col gap-4" onSubmit={submit} noValidate>
         <div className="ac-tabs" role="tablist" aria-label={t('account.title')}>
