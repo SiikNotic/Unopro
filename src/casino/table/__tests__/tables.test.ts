@@ -3,12 +3,16 @@ import { act, advanceBj, BJ_TIMING, bjTableView, canAct, canBet, createBjTable, 
 import type { BjTable } from '../blackjackTable';
 import { addBets, advanceRt, canAddBets, createRtTable, markPaid as rtPaid, parseSlip, RT_TIMING, rtTableView, slipsOf, unpaid as rtUnpaid } from '../rouletteTable';
 import { handTotal } from '../../blackjack';
+import { sha256, toHex } from '../fair';
+
+/** A fixed seed for a test (a real table gets newSeed()). */
+const S = (n: number) => toHex(sha256(new TextEncoder().encode(`test-${n}`)));
 
 const T0 = 1_000_000;
 
 describe('blackjack table', () => {
   it('runs a full round with two players and lists the payouts', () => {
-    let t = createBjTable(42, T0);
+    let t = createBjTable(S(42), T0);
     expect(canBet(t, 's0', 5)).toBe('amount');
     expect(canBet(t, 's0', 100)).toBeNull();
     t = placeBet(t, 's0', 'u0', 'Ana', 100, T0);
@@ -47,7 +51,7 @@ describe('blackjack table', () => {
   it('hit, double and stand only for the seat whose turn it is', () => {
     // find a seed where the round goes to the players (no dealer blackjack, first hand not a blackjack)
     for (let seed = 1; seed < 200; seed++) {
-      let t = placeBet(createBjTable(seed, T0), 's0', 'u0', 'A', 100, T0);
+      let t = placeBet(createBjTable(S(seed), T0), 's0', 'u0', 'A', 100, T0);
       t = advanceBj(t, T0 + BJ_TIMING.betting, ['s0', 's1']);
       if (t.phase !== 'playing') continue;
       expect(canAct(t, 's1', 'hit')).toBe('not_your_turn');
@@ -64,7 +68,7 @@ describe('blackjack table', () => {
   });
 
   it('closes the betting window on its timer when someone present has not bet', () => {
-    let t = placeBet(createBjTable(7, T0), 's0', 'u0', 'A', 100, T0);
+    let t = placeBet(createBjTable(S(7), T0), 's0', 'u0', 'A', 100, T0);
     expect(advanceBj(t, T0 + 1000, ['s0', 's1']).phase).toBe('betting');
     t = advanceBj(t, T0 + BJ_TIMING.betting, ['s0', 's1']);
     expect(t.phase).not.toBe('betting');
@@ -72,11 +76,12 @@ describe('blackjack table', () => {
   });
 
   it('never shows the shoe or the hole card', () => {
-    let t = placeBet(createBjTable(9, T0), 's0', 'u0', 'A', 100, T0);
+    let t = placeBet(createBjTable(S(9), T0), 's0', 'u0', 'A', 100, T0);
     t = advanceBj(t, T0 + BJ_TIMING.betting, ['s0']);
     const v = bjTableView(t) as unknown as Record<string, unknown>;
     expect('shoe' in v).toBe(false);
-    expect('rngState' in v).toBe(false);
+    expect('seed' in v).toBe(false);
+    expect(JSON.stringify(v)).not.toContain(t.seed);
   });
 });
 
@@ -93,7 +98,7 @@ describe('roulette table', () => {
   });
 
   it('runs a round: bets, spin, result, payouts, next round only after paying', () => {
-    let t = createRtTable(1234, T0);
+    let t = createRtTable(S(1234), T0);
     const bets = [{ type: 'red' as const, amount: 100 }, { type: 'black' as const, amount: 100 }, { type: 'straight' as const, value: 0, amount: 10 }];
     t = addBets(t, 's0', 'u0', 'Ana', bets, T0);
     expect(t.phase).toBe('betting');
@@ -121,15 +126,15 @@ describe('roulette table', () => {
   });
 
   it('limits coins per round and slips per player', () => {
-    let t = createRtTable(1, T0);
+    let t = createRtTable(S(1), T0);
     expect(canAddBets(t, 's0', [{ type: 'red', amount: 100001 }])).toBe('amount');
     for (let i = 0; i < 6; i++) t = addBets(t, 's0', 'u0', 'A', [{ type: 'red', amount: 10 }], T0);
     expect(canAddBets(t, 's0', [{ type: 'red', amount: 10 }])).toBe('too_many');
   });
 
   it('the pocket is the same for a given seed (drawn from the hidden state)', () => {
-    const a = advanceRt(addBets(createRtTable(99, T0), 's0', 'u', 'A', [{ type: 'red', amount: 1 }], T0), T0 + RT_TIMING.betting).pocket;
-    const b = advanceRt(addBets(createRtTable(99, T0), 's0', 'u', 'A', [{ type: 'red', amount: 1 }], T0), T0 + RT_TIMING.betting).pocket;
+    const a = advanceRt(addBets(createRtTable(S(99), T0), 's0', 'u', 'A', [{ type: 'red', amount: 1 }], T0), T0 + RT_TIMING.betting).pocket;
+    const b = advanceRt(addBets(createRtTable(S(99), T0), 's0', 'u', 'A', [{ type: 'red', amount: 1 }], T0), T0 + RT_TIMING.betting).pocket;
     expect(a).toBe(b);
     expect(a).toBeGreaterThanOrEqual(0);
     expect(a).toBeLessThanOrEqual(36);

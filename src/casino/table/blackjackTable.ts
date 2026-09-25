@@ -8,16 +8,20 @@
 //
 // Coins never move here: a bet enters the table only after the server has taken it from the wallet
 // (placeBet / double receive the id of that debit), and settle() lists what each seat must be paid.
-import { createRng } from '@/game/engine';
+//
+// Provably fair (fair.ts): every round has its own secret 256-bit seed whose SHA-256 is shown before any bet.
+// The hand is dealt from a fresh 6-deck shoe shuffled with that seed; the seed is revealed once the round is
+// settled, with the order the cards left the shoe, so anyone can recompute the shuffle.
 import type { PlayingCard } from '../cards';
-import { createShoe, shuffle } from '../cards';
+import { createShoe } from '../cards';
+import type { RevealedRound } from './fair';
+import { fairShuffle, isSeed, newSeed, seedHash } from './fair';
 import { handTotal, isBlackjack, outcomeFor } from '../blackjack';
 import type { Hand, Outcome } from '../blackjack';
 
 export const BJ_TIMING = { betting: 15000, turn: 20000, dealerStep: 800, settled: 7000 };
 export const BJ_LIMITS = { min: 10, max: 5000 };
 const DECKS = 6;
-const RESHUFFLE_BELOW = 60;
 
 export type BjPhase = 'waiting' | 'betting' | 'playing' | 'dealer' | 'settled';
 
@@ -39,26 +43,31 @@ export interface BjTable {
   phase: BjPhase;
   /** When the current phase (or the current turn) started, server clock. */
   phaseAt: number;
+  /** Secret seed of this round (never in a view until the round is settled). */
+  seed: string;
   shoe: PlayingCard[];
-  rngState: number;
+  /** Ids of the cards dealt this round, in the order they left the shoe. */
+  drawn: string[];
+  /** The previous round, revealed. */
+  last: (RevealedRound & { drawn: string[] }) | null;
   dealer: PlayingCard[];
   seats: BjSeat[];
   turn: number;
 }
 
-export function createBjTable(seed: number, now: number): BjTable {
-  const rng = createRng(seed);
-  const shoe = shuffle(createShoe(DECKS), rng);
-  return { kind: 'blackjack', round: 1, phase: 'waiting', phaseAt: now, shoe, rngState: rng.state(), dealer: [], seats: [], turn: 0 };
+/** The shoe of a round: a fresh 6-deck shoe shuffled with the round's seed (cards leave from the end). */
+export const bjShoe = (seed: string) => fairShuffle(createShoe(DECKS), seed, 'blackjack:shoe');
+
+/** `seed` is a fresh secret seed (newSeed()) for the first round. */
+export function createBjTable(seed: string, now: number): BjTable {
+  return { kind: 'blackjack', round: 1, phase: 'waiting', phaseAt: now, seed, shoe: [], drawn: [], last: null, dealer: [], seats: [], turn: 0 };
 }
 
 function draw(t: BjTable): PlayingCard {
-  if (t.shoe.length === 0) {
-    const rng = createRng(t.rngState);
-    t.shoe = shuffle(createShoe(DECKS), rng);
-    t.rngState = rng.state();
-  }
-  return t.shoe.pop()!;
+  // 312 cards always cover one round of at most 6 hands without splits.
+  const card = t.shoe.pop()!;
+  t.drawn.push(card.id);
+  return card;
 }
 
 export type BjError = 'phase' | 'already_bet' | 'amount' | 'not_your_turn' | 'cannot_double';
@@ -150,7 +159,7 @@ export const unpaid = (t: BjTable) => (t.phase === 'settled' ? t.seats.filter((s
  * the dealer drawing, settling, and the next round (only once every payout was credited).
  * `present` = seats of the players sitting at the table (the betting window closes early once they all bet).
  */
-export function advanceBj(table: BjTable, now: number, present: string[]): BjTable {
+export function advanceBj(table: BjTable, now: number, present: string[], fresh: () => string = newSeed): BjTable {
   let t = table;
   for (let guard = 0; guard < 80; guard++) {
     if (t.phase === 'betting') {
@@ -159,11 +168,8 @@ export function advanceBj(table: BjTable, now: number, present: string[]): BjTab
       if (!everyoneIn && now < due) break;
       const at = everyoneIn ? Math.min(now, due) : due;
       const next = structuredClone(t);
-      if (next.shoe.length < RESHUFFLE_BELOW) {
-        const rng = createRng(next.rngState);
-        next.shoe = shuffle(createShoe(DECKS), rng);
-        next.rngState = rng.state();
-      }
+      next.shoe = bjShoe(next.seed);
+      next.drawn = [];
       for (let i = 0; i < 2; i++) {
         for (const s of next.seats) s.hand.cards.push(draw(next));
         next.dealer.push(draw(next));
@@ -200,7 +206,8 @@ export function advanceBj(table: BjTable, now: number, present: string[]): BjTab
     }
     if (t.phase === 'settled') {
       if (now < t.phaseAt + BJ_TIMING.settled || unpaid(t).length) break;
-      t = { ...t, round: t.round + 1, phase: 'waiting', phaseAt: t.phaseAt + BJ_TIMING.settled, dealer: [], seats: [], turn: 0 };
+      const last = { round: t.round, seed: t.seed, hash: seedHash(t.seed), drawn: t.drawn };
+      t = { ...t, round: t.round + 1, phase: 'waiting', phaseAt: t.phaseAt + BJ_TIMING.settled, seed: fresh(), shoe: [], drawn: [], last, dealer: [], seats: [], turn: 0 };
       continue;
     }
     break;
@@ -220,6 +227,27 @@ export interface BjView {
   seats: { seat: string; name: string; bet: number; cards: PlayingCard[]; total: number; soft: boolean; done: boolean; doubled: boolean; outcome: Outcome | null; payout: number }[];
   turn: string | null;
   limits: typeof BJ_LIMITS;
+  fair: BjFair;
+}
+
+/** The commitment of this round, and a revealed round (this one once settled, else the previous one). */
+export interface BjFair {
+  round: number;
+  hash: string;
+  revealed: (RevealedRound & { drawn: string[] }) | null;
+}
+
+export function bjFair(t: BjTable): BjFair {
+  const hash = seedHash(t.seed);
+  const revealed = t.phase === 'settled' ? { round: t.round, seed: t.seed, hash, drawn: t.drawn } : t.last;
+  return { round: t.round, hash, revealed };
+}
+
+/** Checks a revealed round: the seed matches its commitment and the cards left the shoe in that order. */
+export function verifyBj(r: RevealedRound & { drawn: string[] }): boolean {
+  if (!isSeed(r.seed) || seedHash(r.seed) !== r.hash) return false;
+  const shoe = bjShoe(r.seed);
+  return r.drawn.every((id, i) => shoe[shoe.length - 1 - i]?.id === id);
 }
 
 export function bjTableView(t: BjTable): BjView {
@@ -240,5 +268,6 @@ export function bjTableView(t: BjTable): BjView {
     }),
     turn: current(t)?.seat ?? null,
     limits: BJ_LIMITS,
+    fair: bjFair(t),
   };
 }

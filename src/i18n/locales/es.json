@@ -341,6 +341,19 @@
       "addMore": "Añade más apuestas",
       "noMoreBets": "No va más.",
       "hint": "Toca las casillas para armar tu apuesta y confírmala antes de que cierre."
+    },
+    "fair": {
+      "title": "Juego justo (provably fair)",
+      "round": "Ronda {n}",
+      "how": "Antes de cualquier apuesta, el servidor fija la semilla secreta de la ronda y muestra su huella SHA-256. Cada carta o número sale de esa semilla (HMAC-SHA256). Al terminar la ronda se revela la semilla: si su SHA-256 coincide con la huella y da el mismo resultado, nadie pudo cambiar el resultado después de ver las apuestas.",
+      "hash": "Huella de la ronda {n} (SHA-256)",
+      "revealed": "Semilla de la ronda {n}, revelada",
+      "verify": "Verificar",
+      "ok": "Verificado: la semilla coincide y da este resultado",
+      "bad": "No coincide",
+      "none": "La semilla se revela al terminar la primera ronda.",
+      "bjDetail": "{n} cartas repartidas de un zapato nuevo de 6 barajas mezclado con esta semilla",
+      "rtDetail": "Esta semilla da el número {n}"
     }
   },
   "scenarios": {

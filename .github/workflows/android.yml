@@ -9,8 +9,10 @@ name: Android app (APK)
 # Secrets (the release signing key; never in the repository):
 #   ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD
 #
-# With the signing key, a new version in app-release.json is published as a GitHub Release (carta.apk +
-# update.json with its SHA-256); installed apps find it and update themselves. Without the key, only a debug
+# With the signing key, every push to the default branch that changes the app publishes a new version as a
+# GitHub Release (carta.apk + update.json with its SHA-256), at the same time as the web deploy; installed
+# apps find it and offer to update. The version is app-release.json's base version plus this workflow's run
+# number (1.2.0 + run 37 = 1.2.37, versionCode 10237), so it always goes up. Without the key, only a debug
 # APK is built (as a run artifact).
 on:
   push:
@@ -40,14 +42,24 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
-      - name: Version from app-release.json
+      - name: Version (base in app-release.json + run number)
         id: v
+        env:
+          RUN: ${{ github.run_number }}
         run: |
-          NAME=$(node -p "require('./app-release.json').version")
-          CODE=$(node -p "const [a,b,c]=require('./app-release.json').version.split('.').map(Number); a*10000+b*100+c")
-          echo "name=$NAME" >> "$GITHUB_OUTPUT"
-          echo "code=$CODE" >> "$GITHUB_OUTPUT"
-          echo "Carta $NAME (versionCode $CODE)"
+          # versionCode = major*10000 + minor*100 + patch (the formula installed apps check); written back into
+          # app-release.json so the bundled app knows its own version and notes.
+          node -e '
+            const fs = require("fs");
+            const r = require("./app-release.json");
+            const [a, b, c] = r.version.split(".").map(Number);
+            const code = a * 10000 + b * 100 + c + Number(process.env.RUN);
+            const name = `${Math.floor(code / 10000)}.${Math.floor(code / 100) % 100}.${code % 100}`;
+            if (Math.floor(code / 10000) !== a) throw new Error("minor version overflow: raise the base version");
+            fs.writeFileSync("app-release.json", JSON.stringify({ ...r, version: name }, null, 2) + "\n");
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, `name=${name}\ncode=${code}\n`);
+            console.log(`Carta ${name} (versionCode ${code})`);
+          '
       - run: npm ci
       - run: npm run build
         env:
@@ -104,7 +116,7 @@ jobs:
         run: |
           TAG="v$NAME"
           if gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
-            echo "$TAG is already published: nothing to do (bump the version in app-release.json to publish)."
+            echo "$TAG is already published (a re-run): nothing to do."
             exit 0
           fi
           SHA=$(sha256sum carta.apk | cut -d' ' -f1)

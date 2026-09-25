@@ -4,7 +4,12 @@
 //
 // Coins never move here: a slip of bets enters the table only after the server took its total from the
 // wallet (addBets), and settle lists what each seat must be paid.
-import { createRng } from '@/game/engine';
+//
+// Provably fair (fair.ts): each spin has its own secret 256-bit seed whose SHA-256 is shown before any bet;
+// the pocket is HMAC-SHA256(seed, "roulette:pocket:n") mapped without bias onto 0–36, and the seed is revealed
+// with the result so anyone can recompute it.
+import type { RevealedRound } from './fair';
+import { fairInts, isSeed, newSeed, seedHash } from './fair';
 import { POCKETS, totalPayout } from '../roulette';
 import type { Bet, BetType } from '../roulette';
 
@@ -33,14 +38,21 @@ export interface RtTable {
   round: number;
   phase: RtPhase;
   phaseAt: number;
-  rngState: number;
+  /** Secret seed of this spin (never in a view before the result). */
+  seed: string;
+  /** The previous spin, revealed. */
+  last: (RevealedRound & { pocket: number }) | null;
   pocket: number | null;
   seats: RtSeat[];
   history: number[];
 }
 
-export function createRtTable(seed: number, now: number): RtTable {
-  return { kind: 'roulette', round: 1, phase: 'waiting', phaseAt: now, rngState: seed >>> 0, pocket: null, seats: [], history: [] };
+/** The pocket a seed gives. */
+export const rtPocket = (seed: string) => fairInts(seed, 'roulette:pocket')(POCKETS);
+
+/** `seed` is a fresh secret seed (newSeed()) for the first spin. */
+export function createRtTable(seed: string, now: number): RtTable {
+  return { kind: 'roulette', round: 1, phase: 'waiting', phaseAt: now, seed, last: null, pocket: null, seats: [], history: [] };
 }
 
 /** Parses an untrusted slip of bets (null if anything is off). */
@@ -108,15 +120,13 @@ export function markPaid(t: RtTable, seat: string): RtTable {
 export const unpaid = (t: RtTable) => (t.phase === 'result' ? t.seats.filter((s) => !s.paid && s.payout > 0) : []);
 
 /** Closing bets, the spin, the result and the next round, up to `now` (next round only once all is paid). */
-export function advanceRt(table: RtTable, now: number): RtTable {
+export function advanceRt(table: RtTable, now: number, fresh: () => string = newSeed): RtTable {
   let t = table;
   for (let guard = 0; guard < 20; guard++) {
     if (t.phase === 'betting') {
       const due = t.phaseAt + RT_TIMING.betting;
       if (now < due) break;
-      const rng = createRng(t.rngState);
-      const pocket = Math.floor(rng.next() * POCKETS);
-      t = { ...t, phase: 'spinning', phaseAt: due, pocket, rngState: rng.state() };
+      t = { ...t, phase: 'spinning', phaseAt: due, pocket: rtPocket(t.seed) };
       continue;
     }
     if (t.phase === 'spinning') {
@@ -137,7 +147,8 @@ export function advanceRt(table: RtTable, now: number): RtTable {
     }
     if (t.phase === 'result') {
       if (now < t.phaseAt + RT_TIMING.result || unpaid(t).length) break;
-      t = { ...t, round: t.round + 1, phase: 'waiting', phaseAt: t.phaseAt + RT_TIMING.result, pocket: null, seats: [] };
+      const last = { round: t.round, seed: t.seed, hash: seedHash(t.seed), pocket: t.pocket! };
+      t = { ...t, round: t.round + 1, phase: 'waiting', phaseAt: t.phaseAt + RT_TIMING.result, seed: fresh(), last, pocket: null, seats: [] };
       continue;
     }
     break;
@@ -156,7 +167,24 @@ export interface RtView {
   seats: { seat: string; name: string; bets: Bet[]; total: number; payout: number }[];
   history: number[];
   limits: typeof RT_LIMITS;
+  fair: RtFair;
 }
+
+/** The commitment of this spin, and a revealed spin (this one at the result, else the previous one). */
+export interface RtFair {
+  round: number;
+  hash: string;
+  revealed: (RevealedRound & { pocket: number }) | null;
+}
+
+export function rtFair(t: RtTable): RtFair {
+  const hash = seedHash(t.seed);
+  const revealed = t.phase === 'result' && t.pocket !== null ? { round: t.round, seed: t.seed, hash, pocket: t.pocket } : t.last;
+  return { round: t.round, hash, revealed };
+}
+
+/** Checks a revealed spin: the seed matches its commitment and gives that pocket. */
+export const verifyRt = (r: RevealedRound & { pocket: number }) => isSeed(r.seed) && seedHash(r.seed) === r.hash && rtPocket(r.seed) === r.pocket;
 
 export function rtTableView(t: RtTable): RtView {
   const deadline = t.phase === 'betting' ? t.phaseAt + RT_TIMING.betting : t.phase === 'spinning' ? t.phaseAt + RT_TIMING.spin : t.phase === 'result' ? t.phaseAt + RT_TIMING.result : null;
@@ -170,5 +198,6 @@ export function rtTableView(t: RtTable): RtView {
     seats: t.seats.map((s) => ({ seat: s.seat, name: s.name, bets: s.bets, total: s.total, payout: t.phase === 'result' ? s.payout : 0 })),
     history: t.history,
     limits: RT_LIMITS,
+    fair: rtFair(t),
   };
 }

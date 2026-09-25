@@ -31,10 +31,26 @@ Only registered, non-banned accounts can sit down. Bets use the account coins:
 - **Blackjack**: up to 5 players against the house. Bets open for 15 s after the first bet (or until everyone
   at the table has bet), 20 s per turn (an idle hand stands), dealer stands on soft 17, blackjack pays 3:2,
   double on the first two cards, no split.
-- **Roulette**: up to 6 players, one wheel. Bets open for 20 s after the first slip; the pocket is drawn from
-  the table's hidden state when bets close; wins are paid at the result.
+- **Roulette**: up to 6 players, one wheel. Bets open for 20 s after the first slip; the pocket is fixed by
+  the round's seed (below) and shown when bets close; wins are paid at the result.
 - A player who leaves keeps their bets on the table: they are settled and paid to them. The last player to
   leave settles the round at once. Players unseen for 90 s are removed from the table.
+
+## Provably fair (Blackjack, Roulette)
+
+The same commit–reveal scheme online casinos publish (`src/casino/table/fair.ts`):
+
+1. Each round gets its own secret 256-bit seed from the platform CSPRNG (`crypto.getRandomValues`). Its SHA-256
+   (the fingerprint) is in every player's view from the moment the round opens, before any bet.
+2. Every random event comes from the seed with HMAC-SHA256(seed, `label:n`), read 4 bytes at a time with
+   rejection sampling (no modulo bias). Blackjack deals each hand from a fresh 6-deck shoe shuffled
+   (Fisher–Yates) with label `blackjack:shoe`; Roulette's pocket uses label `roulette:pocket` over 37 pockets.
+3. The seed never appears in a view while the round is open. Once settled it is revealed, with the order the
+   cards left the shoe (Blackjack) or the pocket (Roulette). The table's "Juego justo" panel recomputes
+   SHA-256(seed) = fingerprint and the shuffle / pocket in the browser; anyone can also check the SHA-256 of
+   the seed's 32 bytes with any tool.
+
+Because the fingerprint is fixed before the bets, the server cannot pick an outcome after seeing them.
 
 ## Deploying
 

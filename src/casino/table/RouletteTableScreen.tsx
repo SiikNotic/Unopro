@@ -13,7 +13,8 @@ import { betWins, pocketColor, POCKETS, sameSpot, WHEEL_ORDER } from '@/casino/r
 import type { Bet, BetType } from '@/casino/roulette';
 import { OnlineGate } from '@/games/online/OnlineGate';
 import type { RtView } from './rouletteTable';
-import { RT_TIMING } from './rouletteTable';
+import { RT_TIMING, verifyRt } from './rouletteTable';
+import { FairPanel } from './FairPanel';
 import { useCoinTable } from './useCoinTable';
 import './table.css';
 
@@ -230,6 +231,8 @@ function Table({ code, table, you, members, room, secondsTo, balance, onLeft }: 
           <p className="mt-3 text-center text-[11px] text-[rgba(232,214,170,0.6)]">{t('table.rt.hint')}</p>
         </section>
       </div>
+
+      <FairPanel fair={table.fair} verify={verifyRt} detail={(r) => t('table.fair.rtDetail', { n: r.pocket })} />
     </CasinoFrame>
   );
 }

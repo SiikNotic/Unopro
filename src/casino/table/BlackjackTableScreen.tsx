@@ -10,6 +10,8 @@ import { playSfx } from '@/audio/sfx';
 import { usePreferences, vibrate } from '@/settings/usePreferences';
 import { OnlineGate } from '@/games/online/OnlineGate';
 import type { BjView } from './blackjackTable';
+import { verifyBj } from './blackjackTable';
+import { FairPanel } from './FairPanel';
 import { useCoinTable } from './useCoinTable';
 import './table.css';
 
@@ -184,6 +186,8 @@ function Table({ code, table, you, members, room, secondsTo, balance, onLeft }: 
           <Users className="w-3.5 h-3.5" aria-hidden /> {t('table.watching', { names: waitingPlayers.map((m) => m.name).join(', ') })}
         </p>
       )}
+
+      <FairPanel fair={table.fair} verify={verifyBj} detail={(r) => t('table.fair.bjDetail', { n: r.drawn.length })} />
     </CasinoFrame>
   );
 }

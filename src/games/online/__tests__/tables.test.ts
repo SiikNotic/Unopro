@@ -5,6 +5,7 @@ import type { RoomView } from '../protocol';
 import type { BjTable } from '@/casino/table/blackjackTable';
 import { BJ_TIMING } from '@/casino/table/blackjackTable';
 import { RT_TIMING } from '@/casino/table/rouletteTable';
+import { sha256, toHex } from '@/casino/table/fair';
 import type { GameState } from '@/game/engine';
 
 function memoryStore() {
@@ -151,7 +152,7 @@ describe('coin tables', () => {
       const env = setup({ ana: 1000, beto: 1000 });
       const a = await env.ok('ana', { op: 'create', game: 'blackjack', seats: 5, name: 'Ana', settings: {} });
       const room = [...env.mem.rooms.values()][0];
-      room.state = { ...(room.state as BjTable), rngState: seed * 7919 };
+      room.state = { ...(room.state as BjTable), seed: toHex(sha256(new TextEncoder().encode(`seed-${seed}`))) };
       await env.ok('ana', { op: 'act', code: a.code, action: { type: 'BET', amount: 100 } });
       const v = await env.ok('ana', { op: 'tick', code: a.code });
       if (v.blackjack?.phase !== 'playing' || v.blackjack.turn !== 's0') continue;

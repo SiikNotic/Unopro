@@ -1,15 +1,17 @@
 {
-  "version": "1.1.1",
+  "version": "1.2.0",
   "notes": {
     "es": [
-      "Nuevo logo e ícono de Carta Casino.",
-      "Anuncios del Banco: ya no se bloquean si falta el mensaje de privacidad de Google; si no hay anuncio, la tarjeta muestra el motivo técnico.",
-      "Pantalla de inicio con el logo nuevo."
+      "Multijugador en línea: Carta, Blackjack y Ruleta con otros jugadores (Jugar ahora o sala privada con código).",
+      "Blackjack y Ruleta en mesa compartida con las monedas de tu cuenta.",
+      "Juego justo (provably fair): cada ronda usa una semilla secreta de 256 bits cuya huella SHA-256 ves antes de apostar; al terminar se revela y puedes verificarla con el botón Verificar.",
+      "La app se actualiza con cada nueva versión de la web."
     ],
     "en": [
-      "New Carta Casino logo and icon.",
-      "Bank ads: no longer blocked when Google's privacy message is missing; when no ad is available, the card shows the technical reason.",
-      "Splash screen with the new logo."
+      "Online multiplayer: Carta, Blackjack and Roulette with other players (Play now or a private room with a code).",
+      "Shared Blackjack and Roulette tables with your account coins.",
+      "Provably fair: each round uses a secret 256-bit seed whose SHA-256 fingerprint you see before betting; it is revealed at the end and you can check it with the Verify button.",
+      "The app now updates with every new version of the web."
     ]
   }
 }

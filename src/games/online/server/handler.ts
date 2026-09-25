@@ -17,6 +17,7 @@ import { BINGO_SPEEDS, DIFFICULTIES } from '@/games/shared/setup';
 import type { GameState } from '@/game/engine';
 import { act as bjAct, advanceBj, bjTableView, canAct as bjCanAct, canBet as bjCanBet, createBjTable, markPaid as bjMarkPaid, placeBet, unpaid as bjUnpaid } from '@/casino/table/blackjackTable';
 import type { BjTable } from '@/casino/table/blackjackTable';
+import { newSeed as fairSeed } from '@/casino/table/fair';
 import { addBets, advanceRt, canAddBets, createRtTable, hasSlip, markPaid as rtMarkPaid, parseSlip, rtTableView, slipTotal, unpaid as rtUnpaid } from '@/casino/table/rouletteTable';
 import type { RtTable } from '@/casino/table/rouletteTable';
 import { advanceCarta, applyCarta, botSeat, cartaDeadline, cartaView, createCarta, parseCartaAction } from './carta';
@@ -419,8 +420,8 @@ function newMatch(room: RoomRow, now: number, randomInt: (n: number) => number):
 }
 
 /** A coin table opens already running (players sit down and bet whenever a round is open). */
-function newTable(room: RoomRow, now: number, randomInt: (n: number) => number): RoomRow {
-  const seed = newSeed(randomInt);
+function newTable(room: RoomRow, now: number): RoomRow {
+  const seed = fairSeed();
   const state = room.game === 'blackjack' ? createBjTable(seed, now) : createRtTable(seed, now);
   return { ...room, status: 'playing', state, clock: { lastAt: now, lastCallAt: 0, closingAt: 0, roundOverAt: 0 } };
 }
@@ -569,7 +570,7 @@ export async function handleRoomRequest(userId: string | null, body: unknown, de
         const opened: RoomRow = { ...room, clock: { lastAt: t, lastCallAt: t, closingAt: 0, roundOverAt: 0 } };
         // Coin tables and public Carta rooms need their first state / timer stored right away.
         if (isCoinGame(req.game) || (req.game === 'carta' && req.settings.public)) {
-          const next = isCoinGame(req.game) ? newTable(opened, t, randomInt) : opened;
+          const next = isCoinGame(req.game) ? newTable(opened, t) : opened;
           const version = await deps.store.commit(next, viewsFor({ ...next, version: next.version + 1 }, t, []));
           return { ok: true, view: viewFor({ ...next, version }, members[0], t) };
         }

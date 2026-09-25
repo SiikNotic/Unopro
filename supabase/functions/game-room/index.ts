@@ -580,6 +580,185 @@ function cryptoIndex(n) {
 var DIFFICULTIES = ["easy", "normal", "hard"];
 var BINGO_SPEEDS = ["slow", "normal", "fast"];
 
+// src/casino/cards.ts
+var SUITS = ["S", "H", "D", "C"];
+var RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
+function createShoe(decks) {
+  const shoe = [];
+  for (let d = 0; d < decks; d++) for (const suit of SUITS) for (const rank of RANKS) shoe.push({ id: `${rank}${suit}-${d}`, rank, suit });
+  return shoe;
+}
+
+// src/casino/table/fair.ts
+var K = new Uint32Array([
+  1116352408,
+  1899447441,
+  3049323471,
+  3921009573,
+  961987163,
+  1508970993,
+  2453635748,
+  2870763221,
+  3624381080,
+  310598401,
+  607225278,
+  1426881987,
+  1925078388,
+  2162078206,
+  2614888103,
+  3248222580,
+  3835390401,
+  4022224774,
+  264347078,
+  604807628,
+  770255983,
+  1249150122,
+  1555081692,
+  1996064986,
+  2554220882,
+  2821834349,
+  2952996808,
+  3210313671,
+  3336571891,
+  3584528711,
+  113926993,
+  338241895,
+  666307205,
+  773529912,
+  1294757372,
+  1396182291,
+  1695183700,
+  1986661051,
+  2177026350,
+  2456956037,
+  2730485921,
+  2820302411,
+  3259730800,
+  3345764771,
+  3516065817,
+  3600352804,
+  4094571909,
+  275423344,
+  430227734,
+  506948616,
+  659060556,
+  883997877,
+  958139571,
+  1322822218,
+  1537002063,
+  1747873779,
+  1955562222,
+  2024104815,
+  2227730452,
+  2361852424,
+  2428436474,
+  2756734187,
+  3204031479,
+  3329325298
+]);
+function sha256(data) {
+  const h = new Uint32Array([1779033703, 3144134277, 1013904242, 2773480762, 1359893119, 2600822924, 528734635, 1541459225]);
+  const bitLen = data.length * 8;
+  const padded = new Uint8Array(data.length + 9 + 63 >> 6 << 6);
+  padded.set(data);
+  padded[data.length] = 128;
+  const view = new DataView(padded.buffer);
+  view.setUint32(padded.length - 4, bitLen >>> 0);
+  view.setUint32(padded.length - 8, Math.floor(bitLen / 4294967296));
+  const w = new Uint32Array(64);
+  for (let off = 0; off < padded.length; off += 64) {
+    for (let i = 0; i < 16; i++) w[i] = view.getUint32(off + i * 4);
+    for (let i = 16; i < 64; i++) {
+      const a2 = w[i - 15], b2 = w[i - 2];
+      const s0 = (a2 >>> 7 | a2 << 25) ^ (a2 >>> 18 | a2 << 14) ^ a2 >>> 3;
+      const s1 = (b2 >>> 17 | b2 << 15) ^ (b2 >>> 19 | b2 << 13) ^ b2 >>> 10;
+      w[i] = w[i - 16] + s0 + w[i - 7] + s1 >>> 0;
+    }
+    let [a, b, c, d, e, f, g, hh] = h;
+    for (let i = 0; i < 64; i++) {
+      const S1 = (e >>> 6 | e << 26) ^ (e >>> 11 | e << 21) ^ (e >>> 25 | e << 7);
+      const ch = e & f ^ ~e & g;
+      const t1 = hh + S1 + ch + K[i] + w[i] >>> 0;
+      const S0 = (a >>> 2 | a << 30) ^ (a >>> 13 | a << 19) ^ (a >>> 22 | a << 10);
+      const maj = a & b ^ a & c ^ b & c;
+      const t2 = S0 + maj >>> 0;
+      hh = g;
+      g = f;
+      f = e;
+      e = d + t1 >>> 0;
+      d = c;
+      c = b;
+      b = a;
+      a = t1 + t2 >>> 0;
+    }
+    h[0] = h[0] + a >>> 0;
+    h[1] = h[1] + b >>> 0;
+    h[2] = h[2] + c >>> 0;
+    h[3] = h[3] + d >>> 0;
+    h[4] = h[4] + e >>> 0;
+    h[5] = h[5] + f >>> 0;
+    h[6] = h[6] + g >>> 0;
+    h[7] = h[7] + hh >>> 0;
+  }
+  const out = new Uint8Array(32);
+  const ov = new DataView(out.buffer);
+  for (let i = 0; i < 8; i++) ov.setUint32(i * 4, h[i]);
+  return out;
+}
+function hmacSha256(key, message) {
+  const k = key.length > 64 ? sha256(key) : key;
+  const ipad = new Uint8Array(64 + message.length);
+  const opad = new Uint8Array(64 + 32);
+  for (let i = 0; i < 64; i++) {
+    const b = k[i] ?? 0;
+    ipad[i] = b ^ 54;
+    opad[i] = b ^ 92;
+  }
+  ipad.set(message, 64);
+  opad.set(sha256(ipad), 64);
+  return sha256(opad);
+}
+var enc = new TextEncoder();
+var toHex = (b) => [...b].map((x) => x.toString(16).padStart(2, "0")).join("");
+var fromHex = (hex) => Uint8Array.from(hex.match(/../g) ?? [], (x) => parseInt(x, 16));
+var seedHash = (seed) => toHex(sha256(fromHex(seed)));
+function newSeed() {
+  const b = new Uint8Array(32);
+  crypto.getRandomValues(b);
+  return toHex(b);
+}
+function fairInts(seed, label) {
+  const key = fromHex(seed);
+  let counter = 0;
+  let block = new Uint8Array(0);
+  let pos = 32;
+  const u32 = () => {
+    if (pos >= 32) {
+      block = hmacSha256(key, enc.encode(`${label}:${counter++}`));
+      pos = 0;
+    }
+    const v = (block[pos] << 24 | block[pos + 1] << 16 | block[pos + 2] << 8 | block[pos + 3]) >>> 0;
+    pos += 4;
+    return v;
+  };
+  return (n) => {
+    const limit = Math.floor(4294967296 / n) * n;
+    for (; ; ) {
+      const v = u32();
+      if (v < limit) return v % n;
+    }
+  };
+}
+function fairShuffle(items, seed, label) {
+  const out = items.slice();
+  const int = fairInts(seed, label);
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = int(i + 1);
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
 // src/game/engine/types.ts
 var COLORS = ["RED", "YELLOW", "GREEN", "BLUE"];
 
@@ -1259,23 +1438,6 @@ function applyAction(state, action) {
   return { ok: true, state: s };
 }
 
-// src/casino/cards.ts
-var SUITS = ["S", "H", "D", "C"];
-var RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
-function createShoe(decks) {
-  const shoe = [];
-  for (let d = 0; d < decks; d++) for (const suit of SUITS) for (const rank of RANKS) shoe.push({ id: `${rank}${suit}-${d}`, rank, suit });
-  return shoe;
-}
-function shuffle2(items, rng) {
-  const out = [...items];
-  for (let i = out.length - 1; i > 0; i--) {
-    const j = Math.floor(rng.next() * (i + 1));
-    [out[i], out[j]] = [out[j], out[i]];
-  }
-  return out;
-}
-
 // src/casino/blackjack.ts
 function cardValue(card) {
   if (card.rank === "A") return 11;
@@ -1313,19 +1475,14 @@ function outcomeFor(hand, dealer) {
 var BJ_TIMING = { betting: 15e3, turn: 2e4, dealerStep: 800, settled: 7e3 };
 var BJ_LIMITS = { min: 10, max: 5e3 };
 var DECKS = 6;
-var RESHUFFLE_BELOW = 60;
+var bjShoe = (seed) => fairShuffle(createShoe(DECKS), seed, "blackjack:shoe");
 function createBjTable(seed, now) {
-  const rng = createRng(seed);
-  const shoe = shuffle2(createShoe(DECKS), rng);
-  return { kind: "blackjack", round: 1, phase: "waiting", phaseAt: now, shoe, rngState: rng.state(), dealer: [], seats: [], turn: 0 };
+  return { kind: "blackjack", round: 1, phase: "waiting", phaseAt: now, seed, shoe: [], drawn: [], last: null, dealer: [], seats: [], turn: 0 };
 }
 function draw(t) {
-  if (t.shoe.length === 0) {
-    const rng = createRng(t.rngState);
-    t.shoe = shuffle2(createShoe(DECKS), rng);
-    t.rngState = rng.state();
-  }
-  return t.shoe.pop();
+  const card = t.shoe.pop();
+  t.drawn.push(card.id);
+  return card;
 }
 function canBet(t, seat, amount) {
   if (t.phase !== "waiting" && t.phase !== "betting") return "phase";
@@ -1395,7 +1552,7 @@ function markPaid(t, seat) {
   return { ...t, seats: t.seats.map((s) => s.seat === seat ? { ...s, paid: true } : s) };
 }
 var unpaid = (t) => t.phase === "settled" ? t.seats.filter((s) => !s.paid && s.payout > 0) : [];
-function advanceBj(table, now, present) {
+function advanceBj(table, now, present, fresh = newSeed) {
   let t = table;
   for (let guard = 0; guard < 80; guard++) {
     if (t.phase === "betting") {
@@ -1404,11 +1561,8 @@ function advanceBj(table, now, present) {
       if (!everyoneIn && now < due) break;
       const at = everyoneIn ? Math.min(now, due) : due;
       const next = structuredClone(t);
-      if (next.shoe.length < RESHUFFLE_BELOW) {
-        const rng = createRng(next.rngState);
-        next.shoe = shuffle2(createShoe(DECKS), rng);
-        next.rngState = rng.state();
-      }
+      next.shoe = bjShoe(next.seed);
+      next.drawn = [];
       for (let i = 0; i < 2; i++) {
         for (const s of next.seats) s.hand.cards.push(draw(next));
         next.dealer.push(draw(next));
@@ -1445,12 +1599,18 @@ function advanceBj(table, now, present) {
     }
     if (t.phase === "settled") {
       if (now < t.phaseAt + BJ_TIMING.settled || unpaid(t).length) break;
-      t = { ...t, round: t.round + 1, phase: "waiting", phaseAt: t.phaseAt + BJ_TIMING.settled, dealer: [], seats: [], turn: 0 };
+      const last = { round: t.round, seed: t.seed, hash: seedHash(t.seed), drawn: t.drawn };
+      t = { ...t, round: t.round + 1, phase: "waiting", phaseAt: t.phaseAt + BJ_TIMING.settled, seed: fresh(), shoe: [], drawn: [], last, dealer: [], seats: [], turn: 0 };
       continue;
     }
     break;
   }
   return t;
+}
+function bjFair(t) {
+  const hash2 = seedHash(t.seed);
+  const revealed = t.phase === "settled" ? { round: t.round, seed: t.seed, hash: hash2, drawn: t.drawn } : t.last;
+  return { round: t.round, hash: hash2, revealed };
 }
 function bjTableView(t) {
   const hidden = t.phase === "betting" || t.phase === "playing";
@@ -1469,7 +1629,8 @@ function bjTableView(t) {
       return { seat: s.seat, name: s.name, bet: s.bet, cards: s.hand.cards, total, soft, done: s.hand.done, doubled: s.hand.doubled, outcome: s.outcome, payout: s.payout };
     }),
     turn: current(t)?.seat ?? null,
-    limits: BJ_LIMITS
+    limits: BJ_LIMITS,
+    fair: bjFair(t)
   };
 }
 
@@ -1520,8 +1681,9 @@ function totalPayout(bets, n) {
 var RT_TIMING = { betting: 2e4, spin: 7e3, result: 7e3 };
 var RT_LIMITS = { maxPerRound: 1e5, maxBetsPerSlip: 40, maxSlips: 6 };
 var BET_TYPES = ["straight", "red", "black", "even", "odd", "low", "high", "dozen", "column"];
+var rtPocket = (seed) => fairInts(seed, "roulette:pocket")(POCKETS);
 function createRtTable(seed, now) {
-  return { kind: "roulette", round: 1, phase: "waiting", phaseAt: now, rngState: seed >>> 0, pocket: null, seats: [], history: [] };
+  return { kind: "roulette", round: 1, phase: "waiting", phaseAt: now, seed, last: null, pocket: null, seats: [], history: [] };
 }
 function parseSlip(x) {
   if (!Array.isArray(x) || x.length === 0 || x.length > RT_LIMITS.maxBetsPerSlip) return null;
@@ -1573,15 +1735,13 @@ function markPaid2(t, seat) {
   return { ...t, seats: t.seats.map((s) => s.seat === seat ? { ...s, paid: true } : s) };
 }
 var unpaid2 = (t) => t.phase === "result" ? t.seats.filter((s) => !s.paid && s.payout > 0) : [];
-function advanceRt(table, now) {
+function advanceRt(table, now, fresh = newSeed) {
   let t = table;
   for (let guard = 0; guard < 20; guard++) {
     if (t.phase === "betting") {
       const due = t.phaseAt + RT_TIMING.betting;
       if (now < due) break;
-      const rng = createRng(t.rngState);
-      const pocket = Math.floor(rng.next() * POCKETS);
-      t = { ...t, phase: "spinning", phaseAt: due, pocket, rngState: rng.state() };
+      t = { ...t, phase: "spinning", phaseAt: due, pocket: rtPocket(t.seed) };
       continue;
     }
     if (t.phase === "spinning") {
@@ -1602,12 +1762,18 @@ function advanceRt(table, now) {
     }
     if (t.phase === "result") {
       if (now < t.phaseAt + RT_TIMING.result || unpaid2(t).length) break;
-      t = { ...t, round: t.round + 1, phase: "waiting", phaseAt: t.phaseAt + RT_TIMING.result, pocket: null, seats: [] };
+      const last = { round: t.round, seed: t.seed, hash: seedHash(t.seed), pocket: t.pocket };
+      t = { ...t, round: t.round + 1, phase: "waiting", phaseAt: t.phaseAt + RT_TIMING.result, seed: fresh(), last, pocket: null, seats: [] };
       continue;
     }
     break;
   }
   return t;
+}
+function rtFair(t) {
+  const hash2 = seedHash(t.seed);
+  const revealed = t.phase === "result" && t.pocket !== null ? { round: t.round, seed: t.seed, hash: hash2, pocket: t.pocket } : t.last;
+  return { round: t.round, hash: hash2, revealed };
 }
 function rtTableView(t) {
   const deadline = t.phase === "betting" ? t.phaseAt + RT_TIMING.betting : t.phase === "spinning" ? t.phaseAt + RT_TIMING.spin : t.phase === "result" ? t.phaseAt + RT_TIMING.result : null;
@@ -1620,7 +1786,8 @@ function rtTableView(t) {
     pocket: t.phase === "spinning" || t.phase === "result" ? t.pocket : null,
     seats: t.seats.map((s) => ({ seat: s.seat, name: s.name, bets: s.bets, total: s.total, payout: t.phase === "result" ? s.payout : 0 })),
     history: t.history,
-    limits: RT_LIMITS
+    limits: RT_LIMITS,
+    fair: rtFair(t)
   };
 }
 
@@ -2351,11 +2518,11 @@ function cryptoInt(n) {
   while (buf[0] >= limit);
   return buf[0] % n;
 }
-function newSeed(randomInt) {
+function newSeed2(randomInt) {
   return randomInt(65536) * 65536 + randomInt(65536) >>> 0;
 }
 function newMatch(room, now, randomInt) {
-  const seed = newSeed(randomInt);
+  const seed = newSeed2(randomInt);
   let bot = 0;
   const seats = SEATS.slice(0, room.seats).map((seat) => {
     const m = room.members.find((x) => x.seat === seat);
@@ -2366,8 +2533,8 @@ function newMatch(room, now, randomInt) {
   const clock = { lastAt: now, lastCallAt: now - (TIMING.pace[room.settings.speed ?? "normal"] ?? 3800) + TIMING.firstBall, closingAt: 0, roundOverAt: 0 };
   return { ...room, status: "playing", state, clock };
 }
-function newTable(room, now, randomInt) {
-  const seed = newSeed(randomInt);
+function newTable(room, now) {
+  const seed = newSeed();
   const state = room.game === "blackjack" ? createBjTable(seed, now) : createRtTable(seed, now);
   return { ...room, status: "playing", state, clock: { lastAt: now, lastCallAt: 0, closingAt: 0, roundOverAt: 0 } };
 }
@@ -2490,7 +2657,7 @@ async function handleRoomRequest(userId, body, deps) {
         ]);
         const opened = { ...room, clock: { lastAt: t, lastCallAt: t, closingAt: 0, roundOverAt: 0 } };
         if (isCoinGame(req.game) || req.game === "carta" && req.settings.public) {
-          const next = isCoinGame(req.game) ? newTable(opened, t, randomInt) : opened;
+          const next = isCoinGame(req.game) ? newTable(opened, t) : opened;
           const version = await deps.store.commit(next, viewsFor({ ...next, version: next.version + 1 }, t, []));
           return { ok: true, view: viewFor({ ...next, version }, members[0], t) };
         }
@@ -2561,7 +2728,7 @@ async function handleRoomRequest(userId, body, deps) {
         const over = room.state && (room.state.status === "game_over" || room.game === "bingo");
         if (room.status !== "playing" || !over) return fail2("not_playing");
         if (room.game === "domino") {
-          next = { ...room, state: rematch(room.state, newSeed(randomInt)), clock: { ...room.clock, lastAt: t } };
+          next = { ...room, state: rematch(room.state, newSeed2(randomInt)), clock: { ...room.clock, lastAt: t } };
         } else next = newMatch(room, t, randomInt);
         break;
       }
