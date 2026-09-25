@@ -247,6 +247,8 @@ export function AccountProvider({ children }: { children: ReactNode }) {
           seen.add(id);
           const game = c.row.game;
           // Game rounds are shown by the game itself when its animation ends.
+          // Bank grants (a loan, or an ad reward confirmed by the provider's server callback).
+          if (game === 'loan' || game === 'ad_reward') setBalance(Number(c.row.balance_after));
           if (game === 'admin_add' || game === 'admin_remove') {
             setBalance(Number(c.row.balance_after));
             setNotice({ kind: 'coinsAdjusted', amount: Number(c.row.payout) - Number(c.row.stake) });

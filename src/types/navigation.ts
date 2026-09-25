@@ -1,8 +1,8 @@
 import type { GameModeId } from '@/game/rules/modes';
 
-export type Screen = 'home' | 'gameModes' | 'settings' | 'tutorial' | 'play' | 'blackjack' | 'roulette' | 'slots' | 'profile' | 'slotLobby' | 'slotMachine' | 'dominoSetup' | 'domino' | 'bingoSetup' | 'bingo' | 'room' | 'account' | 'staff';
+export type Screen = 'home' | 'gameModes' | 'settings' | 'tutorial' | 'play' | 'blackjack' | 'roulette' | 'slots' | 'profile' | 'slotLobby' | 'slotMachine' | 'dominoSetup' | 'domino' | 'bingoSetup' | 'bingo' | 'room' | 'account' | 'staff' | 'bank';
 
-export const SCREENS: Screen[] = ['home', 'gameModes', 'settings', 'tutorial', 'play', 'blackjack', 'roulette', 'slots', 'profile', 'slotLobby', 'slotMachine', 'dominoSetup', 'domino', 'bingoSetup', 'bingo', 'room', 'account', 'staff'];
+export const SCREENS: Screen[] = ['home', 'gameModes', 'settings', 'tutorial', 'play', 'blackjack', 'roulette', 'slots', 'profile', 'slotLobby', 'slotMachine', 'dominoSetup', 'domino', 'bingoSetup', 'bingo', 'room', 'account', 'staff', 'bank'];
 
 /** Table games with their own setup, room and match screens. */
 export type TableGame = 'domino' | 'bingo';

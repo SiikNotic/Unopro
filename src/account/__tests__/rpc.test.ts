@@ -23,3 +23,10 @@ describe('rpc error mapping', () => {
     expect(init.body).toBe('{}');
   });
 });
+
+describe('rpc cooldown', () => {
+  it('maps P0429 to cooldown with the end time from the error detail', async () => {
+    const r = await rpc('f', {}, cfg, reply(400, { code: 'P0429', message: 'cooldown', details: '2026-09-26 12:00:00+00' }));
+    expect(r).toEqual({ ok: false, code: 'cooldown', detail: '2026-09-26 12:00:00+00' });
+  });
+});

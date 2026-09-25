@@ -9,7 +9,7 @@ import { subscribeLive } from '@/account/live';
 import { ROLE_RANK } from '@/account/accountContext';
 import type { Role } from '@/account/accountContext';
 import { staffApi } from './api';
-import type { AuditRow, BanRow, Overview, StaffUser } from './api';
+import type { AuditRow, BankActivityRow, BanRow, Overview, StaffUser } from './api';
 import { createStaffFeed } from './feed';
 import { ago, fmtDate, fmtNum, shortId, signed } from './format';
 import { RoleBadge, UserDetailPanel } from './UserDetail';
@@ -195,6 +195,31 @@ function AuditList({ rows, onOpen }: { rows: AuditRow[]; onOpen: (id: string) =>
   );
 }
 
+function BankList({ rows, onOpen }: { rows: BankActivityRow[]; onOpen: (id: string) => void }) {
+  const { t, language } = useI18n();
+  if (!rows.length) return <p className="text-sm text-[var(--cz-muted)] p-3">{t('staff.none')}</p>;
+  return (
+    <ul className="sd-list">
+      {rows.map((b) => (
+        <li key={`${b.kind}-${b.id}`}>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="sd-badge">{t(`staff.ledger.${b.kind}`)}</span>
+            <span className={`text-[11px] font-bold ${b.status === 'granted' ? 'text-[var(--cz-gold-hover)]' : 'text-[#f3c4c8]'}`}>{t(`staff.bank.status.${b.status}`)}</span>
+            <span className="text-[11px] text-[var(--cz-muted)]">{fmtDate(b.at, language)}</span>
+          </div>
+          <p className="mt-1">
+            <button type="button" className="font-semibold underline decoration-dotted underline-offset-2" onClick={() => onOpen(b.user_id)}>
+              {b.username ?? shortId(b.user_id)}
+            </button>{' '}
+            · {b.status === 'granted' ? `+${fmtNum(b.amount, language)}` : t(`staff.bank.reason.${b.reason ?? 'other'}`)}
+          </p>
+          <p className="text-[11px] text-[var(--cz-muted)] break-all">{t('staff.bank.reference', { id: b.reference })}</p>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function OverviewTab({ overview, version, onOpen }: { overview: Overview | null; version: number; onOpen: (id: string) => void }) {
   const { t, language } = useI18n();
   const recent = useLoader(() => staffApi.audit(8), [version]);
@@ -288,6 +313,7 @@ function EconomyTab({ overview, version, onOpen }: { overview: Overview | null; 
   const { t, language } = useI18n();
   const top = useLoader(() => staffApi.users('', 'balance', 10), [version]);
   const audit = useLoader(() => staffApi.audit(200), [version]);
+  const bank = useLoader(() => staffApi.bank(100), [version]);
   const adjustments = useMemo(() => (audit.data ?? []).filter((a) => a.action === 'ADD_COINS' || a.action === 'REMOVE_COINS').slice(0, 25), [audit.data]);
   const n = (x: number | undefined) => (overview ? fmtNum(Number(x ?? 0), language) : '…');
   return (
@@ -298,7 +324,16 @@ function EconomyTab({ overview, version, onOpen }: { overview: Overview | null; 
         <Kpi label={t('staff.kpi.staked24h')} value={n(overview?.staked24h)} />
         <Kpi label={t('staff.kpi.paid24h')} value={n(overview?.paid24h)} />
         <Kpi label={t('staff.kpi.adminNet24h')} value={overview ? signed(Number(overview.adminNet24h), language) : '…'} />
+        <Kpi label={t('staff.kpi.loans24h')} value={n(overview?.loans24h)} />
+        <Kpi label={t('staff.kpi.adRewards24h')} value={n(overview?.adRewards24h)} />
+        <Kpi label={t('staff.kpi.bankPaid24h')} value={n(overview?.bankPaid24h)} />
       </div>
+      <section className="sd-card">
+        <h3 className="cz-label px-3 pt-3">{t('staff.bank.title')}</h3>
+        <p className="px-3 text-[11px] text-[var(--cz-muted)]">{t('staff.bank.hint')}</p>
+        <ErrorLine code={bank.error} />
+        {bank.data && <BankList rows={bank.data} onOpen={onOpen} />}
+      </section>
       <section>
         <h3 className="cz-label mb-2">{t('staff.topBalances')}</h3>
         <ErrorLine code={top.error} />

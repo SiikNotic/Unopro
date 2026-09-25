@@ -16,7 +16,23 @@ export interface Overview {
   staked24h: number;
   paid24h: number;
   adminNet24h: number;
+  loans24h?: number;
+  adRewards24h?: number;
+  bankPaid24h?: number;
   at: string;
+}
+
+/** A Bank grant (loan or ad reward) or a rejected ad event. Read-only: corrections are coin adjustments. */
+export interface BankActivityRow {
+  kind: 'loan' | 'ad_reward';
+  id: number;
+  user_id: string;
+  username: string | null;
+  amount: number;
+  status: 'granted' | 'rejected';
+  reason: string | null;
+  at: string;
+  reference: string;
 }
 
 export interface StaffUser {
@@ -103,6 +119,7 @@ export const staffApi = {
     ),
   detail: (userId: string) => rpc<UserDetail>('staff_user_detail', { p_user: userId }),
   audit: (limit = 100, before: number | null = null) => rpc<AuditRow[]>('staff_audit', { p_limit: limit, p_before: before }),
+  bank: (limit = 100) => rpc<BankActivityRow[]>('staff_bank_activity', { p_limit: limit }).then((r) => (r.ok ? { ...r, data: r.data.map((b) => ({ ...b, amount: num(b.amount) })) } : r)),
   bans: (activeOnly: boolean) => rpc<BanRow[]>('staff_bans', { p_active_only: activeOnly }),
   /** `requestId` makes a retried submit a replay instead of a second adjustment. */
   adjustCoins: (target: string, amount: number, reason: string, requestId: string = newId()) =>

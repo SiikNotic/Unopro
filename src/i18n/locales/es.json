@@ -505,7 +505,7 @@
     "otherTab": "Estás jugando en otra pestaña. Aquí las apuestas quedan en pausa para no mezclar saldos.",
     "playHere": "Jugar aquí",
     "accountBadge": "Cuenta",
-    "accountBroke": "Te quedaste sin monedas en tu cuenta. Las monedas de cuenta no se recargan gratis.",
+    "accountBroke": "Te quedaste sin monedas en tu cuenta. Pide un préstamo en el Banco.",
     "guestUpsell": "¿Quieres 1,000 monedas que no se pierden? Crea tu cuenta.",
     "accountErrors": {
       "unauthorized": "Tu sesión caducó. Vuelve a iniciar sesión.",
@@ -1272,7 +1272,9 @@
       "blackjack": "Blackjack",
       "guest_migration": "Fichas de invitado",
       "admin_add": "Ajuste del equipo (+)",
-      "admin_remove": "Ajuste del equipo (−)"
+      "admin_remove": "Ajuste del equipo (−)",
+      "loan": "Préstamo del Banco",
+      "ad_reward": "Recompensa por anuncio"
     },
     "rounds": "Rondas jugadas",
     "bannedPermanent": "Baneo permanente",
@@ -1332,7 +1334,10 @@
       "houseNetHint": "Apostado − pagado",
       "staked24h": "Apostado (24 h)",
       "paid24h": "Pagado (24 h)",
-      "adminNet24h": "Ajustes del equipo (24 h)"
+      "adminNet24h": "Ajustes del equipo (24 h)",
+      "loans24h": "Préstamos 24 h",
+      "adRewards24h": "Anuncios pagados 24 h",
+      "bankPaid24h": "Pagado por el Banco 24 h"
     },
     "recentActions": "Últimas acciones del equipo",
     "ago": {
@@ -1355,6 +1360,80 @@
     "auditNote": "Registro inmutable: no se puede editar ni borrar. Las correcciones se añaden como nuevas entradas.",
     "filter": "Filtrar",
     "all": "Todo",
-    "loadMore": "Cargar más"
+    "loadMore": "Cargar más",
+    "bank": {
+      "title": "Actividad del Banco",
+      "hint": "Solo lectura. Para corregir, usa un ajuste de monedas con motivo (queda en la auditoría).",
+      "reference": "Transacción: {id}",
+      "status": {
+        "granted": "Pagado",
+        "rejected": "Rechazado"
+      },
+      "reason": {
+        "not_registered": "Rechazado: sin cuenta",
+        "banned": "Rechazado: suspendido",
+        "daily_cap": "Rechazado: límite diario",
+        "other": "Rechazado"
+      }
+    }
+  },
+  "bank": {
+    "title": "Banco",
+    "subtitle": "Préstamos y recompensas para tu cuenta",
+    "shortcutHint": "Préstamo diario y recompensas",
+    "goTo": "Ir al Banco",
+    "balance": "Saldo",
+    "balanceAccount": "Monedas de tu cuenta, guardadas en el servidor.",
+    "balanceGuest": "Fichas de invitado en este navegador. El Banco paga solo a cuentas.",
+    "coins": "monedas",
+    "offline": "El Banco necesita conexión con el servidor.",
+    "guestTitle": "Crea una cuenta para recibir monedas",
+    "guestHint": "Tus fichas de invitado pasan a tu cuenta y recibes 1,000 monedas de bienvenida.",
+    "confirmEmail": "Confirma tu correo para usar el Banco.",
+    "banned": "Tu cuenta está suspendida: no puedes recibir monedas del Banco.",
+    "loadError": "No se pudo cargar el Banco.",
+    "history": "Historial del Banco",
+    "historyEmpty": "Todavía no has recibido nada del Banco.",
+    "kind": {
+      "loan": "Préstamo",
+      "ad": "Recompensa por anuncio"
+    },
+    "footer": "El servidor decide cada pago. Monedas virtuales sin valor real.",
+    "loan": {
+      "title": "Préstamo del Banco",
+      "every": "Cada {hours} h",
+      "hint": "Recíbelo una vez cada 24 horas.",
+      "cta": "Recibir {amount}",
+      "claiming": "Procesando…",
+      "cooling": "Préstamo recibido",
+      "nextLabel": "Disponible en",
+      "nextIn": "Disponible en {time}",
+      "granted": "¡Recibiste {amount} monedas!"
+    },
+    "ad": {
+      "title": "Ver anuncio",
+      "length": "≈ 15 s",
+      "hint": "Mira un anuncio completo y recibe monedas.",
+      "cta": "Ver anuncio",
+      "loading": "Cargando anuncio…",
+      "showing": "Anuncio en curso…",
+      "verifying": "Confirmando recompensa…",
+      "done": "+{amount} recibidas",
+      "error": "No se confirmó la recompensa",
+      "unavailable": "Publicidad no disponible",
+      "unavailableHint": "Ahora mismo no hay anuncios disponibles.",
+      "cap": "Límite diario alcanzado",
+      "rewarded": "¡Recibiste {amount} monedas por el anuncio!"
+    },
+    "errors": {
+      "cooldown": "El préstamo todavía no está disponible.",
+      "not_registered": "Crea una cuenta para recibir monedas.",
+      "banned": "Tu cuenta está suspendida.",
+      "network": "Sin conexión. Inténtalo de nuevo: no se cobrará dos veces.",
+      "server": "No se pudo completar. Inténtalo de nuevo.",
+      "invalid": "Solicitud no válida.",
+      "forbidden": "No tienes permiso."
+    },
+    "needAccount": "Requiere una cuenta"
   }
 }

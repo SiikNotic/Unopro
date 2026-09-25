@@ -505,7 +505,7 @@
     "otherTab": "You're playing in another tab. Betting is paused here so balances never mix.",
     "playHere": "Play here",
     "accountBadge": "Account",
-    "accountBroke": "You're out of account coins. Account coins don't refill for free.",
+    "accountBroke": "You're out of account coins. Get a loan at the Bank.",
     "guestUpsell": "Want 1,000 coins you keep? Create your account.",
     "accountErrors": {
       "unauthorized": "Your session expired. Sign in again.",
@@ -1272,7 +1272,9 @@
       "blackjack": "Blackjack",
       "guest_migration": "Guest chips",
       "admin_add": "Staff adjustment (+)",
-      "admin_remove": "Staff adjustment (−)"
+      "admin_remove": "Staff adjustment (−)",
+      "loan": "Bank loan",
+      "ad_reward": "Ad reward"
     },
     "rounds": "Rounds played",
     "bannedPermanent": "Permanent ban",
@@ -1332,7 +1334,10 @@
       "houseNetHint": "Staked − paid",
       "staked24h": "Staked (24 h)",
       "paid24h": "Paid (24 h)",
-      "adminNet24h": "Staff adjustments (24 h)"
+      "adminNet24h": "Staff adjustments (24 h)",
+      "loans24h": "Loans 24h",
+      "adRewards24h": "Paid ads 24h",
+      "bankPaid24h": "Paid by the Bank 24h"
     },
     "recentActions": "Latest staff actions",
     "ago": {
@@ -1355,6 +1360,80 @@
     "auditNote": "Immutable log: entries can't be edited or deleted. Corrections are added as new entries.",
     "filter": "Filter",
     "all": "All",
-    "loadMore": "Load more"
+    "loadMore": "Load more",
+    "bank": {
+      "title": "Bank activity",
+      "hint": "Read-only. To correct, use a coin adjustment with a reason (it's audited).",
+      "reference": "Transaction: {id}",
+      "status": {
+        "granted": "Paid",
+        "rejected": "Rejected"
+      },
+      "reason": {
+        "not_registered": "Rejected: no account",
+        "banned": "Rejected: suspended",
+        "daily_cap": "Rejected: daily limit",
+        "other": "Rejected"
+      }
+    }
+  },
+  "bank": {
+    "title": "Bank",
+    "subtitle": "Loans and rewards for your account",
+    "shortcutHint": "Daily loan and rewards",
+    "goTo": "Go to the Bank",
+    "balance": "Balance",
+    "balanceAccount": "Your account coins, kept on the server.",
+    "balanceGuest": "Guest chips in this browser. The Bank only pays accounts.",
+    "coins": "coins",
+    "offline": "The Bank needs a connection to the server.",
+    "guestTitle": "Create an account to receive coins",
+    "guestHint": "Your guest chips move to your account and you get 1,000 welcome coins.",
+    "confirmEmail": "Confirm your email to use the Bank.",
+    "banned": "Your account is suspended: you can't receive coins from the Bank.",
+    "loadError": "The Bank couldn't be loaded.",
+    "history": "Bank history",
+    "historyEmpty": "You haven't received anything from the Bank yet.",
+    "kind": {
+      "loan": "Loan",
+      "ad": "Ad reward"
+    },
+    "footer": "The server decides every payment. Virtual coins with no real value.",
+    "loan": {
+      "title": "Bank loan",
+      "every": "Every {hours} h",
+      "hint": "Get it once every 24 hours.",
+      "cta": "Get {amount}",
+      "claiming": "Processing…",
+      "cooling": "Loan received",
+      "nextLabel": "Available in",
+      "nextIn": "Available in {time}",
+      "granted": "You received {amount} coins!"
+    },
+    "ad": {
+      "title": "Watch an ad",
+      "length": "≈ 15 s",
+      "hint": "Watch a full ad and receive coins.",
+      "cta": "Watch ad",
+      "loading": "Loading ad…",
+      "showing": "Ad playing…",
+      "verifying": "Confirming reward…",
+      "done": "+{amount} received",
+      "error": "The reward wasn't confirmed",
+      "unavailable": "Ads unavailable",
+      "unavailableHint": "No ads are available right now.",
+      "cap": "Daily limit reached",
+      "rewarded": "You received {amount} coins for the ad!"
+    },
+    "errors": {
+      "cooldown": "The loan isn't available yet.",
+      "not_registered": "Create an account to receive coins.",
+      "banned": "Your account is suspended.",
+      "network": "No connection. Try again: you won't be paid twice.",
+      "server": "Couldn't complete. Try again.",
+      "invalid": "Invalid request.",
+      "forbidden": "You don't have permission."
+    },
+    "needAccount": "Account required"
   }
 }

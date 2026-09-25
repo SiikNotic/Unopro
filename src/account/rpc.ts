@@ -3,7 +3,7 @@
 import { onlineConfig, tokenFor } from '@/games/online/client';
 import type { OnlineConfig } from '@/games/online/client';
 
-export type RpcErrorCode = 'forbidden' | 'invalid' | 'conflict' | 'insufficient_funds' | 'not_found' | 'not_registered' | 'banned' | 'network' | 'server';
+export type RpcErrorCode = 'forbidden' | 'invalid' | 'conflict' | 'insufficient_funds' | 'not_found' | 'not_registered' | 'banned' | 'cooldown' | 'network' | 'server';
 export type RpcResult<T> = { ok: true; data: T } | { ok: false; code: RpcErrorCode; detail: string };
 
 const CODES: Record<string, RpcErrorCode> = {
@@ -14,6 +14,7 @@ const CODES: Record<string, RpcErrorCode> = {
   P0404: 'not_found',
   P0403: 'not_registered',
   P0451: 'banned',
+  P0429: 'cooldown',
 };
 
 export async function rpc<T>(fn: string, args: Record<string, unknown> = {}, cfg: OnlineConfig | null = onlineConfig(), fetchImpl: typeof fetch = (...a) => fetch(...a)): Promise<RpcResult<T>> {
@@ -32,6 +33,9 @@ export async function rpc<T>(fn: string, args: Record<string, unknown> = {}, cfg
   }
   const body = (await res.json().catch(() => null)) as unknown;
   if (res.ok) return { ok: true, data: body as T };
-  const b = (body ?? {}) as { code?: string; message?: string };
-  return { ok: false, code: CODES[b.code ?? ''] ?? 'server', detail: typeof b.message === 'string' ? b.message : '' };
+  const b = (body ?? {}) as { code?: string; message?: string; details?: string };
+  const code = CODES[b.code ?? ''] ?? 'server';
+  // A cooldown carries the moment it ends (database time) in the error detail.
+  const detail = code === 'cooldown' && typeof b.details === 'string' ? b.details : typeof b.message === 'string' ? b.message : '';
+  return { ok: false, code, detail };
 }

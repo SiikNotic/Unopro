@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import type { ReactNode } from 'react';
-import { ArrowLeft, CircleUserRound, Gift, HelpCircle, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, CircleUserRound, Gift, HelpCircle, Landmark, ShieldCheck } from 'lucide-react';
 import { useNavigation } from '@/components/Navigation';
 import { SceneBackground } from '@/components/scene/SceneBackground';
 import { MusicButton } from '@/components/ui/MusicButton';
@@ -110,8 +110,12 @@ export function CasinoFrame({ title, subtitle, back, scenario, backdrop, onHelp,
           </div>
         )}
         {mode === 'account' && account.coins && account.coins.balance < 10 && (
-          <div className="cz-panel p-3 text-sm text-[var(--cz-ivory)] cz-fade-in" role="status">
-            {t('casino.accountBroke')}
+          <div className="cz-panel p-3 flex items-center gap-3 cz-fade-in" role="status">
+            <p className="text-sm text-[var(--cz-ivory)] flex-1 min-w-0">{t('casino.accountBroke')}</p>
+            <button type="button" className="cz-btn cz-btn-primary cz-btn-sm shrink-0" onClick={() => navigate('bank')}>
+              <Landmark className="w-4 h-4" />
+              {t('bank.goTo')}
+            </button>
           </div>
         )}
         {canRefill && allowRefill && activeHere && account.status === 'guest' && (

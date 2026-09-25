@@ -26,6 +26,7 @@ const DominoScreen = lazy(() => import('@/games/domino/ui/DominoScreen').then((m
 const BingoScreen = lazy(() => import('@/games/bingo/ui/BingoScreen').then((m) => ({ default: m.BingoScreen })));
 const AccountScreen = lazy(() => import('@/account/AccountScreen').then((m) => ({ default: m.AccountScreen })));
 const StaffScreen = lazy(() => import('@/staff/StaffScreen').then((m) => ({ default: m.StaffScreen })));
+const BankScreen = lazy(() => import('@/bank/BankScreen').then((m) => ({ default: m.BankScreen })));
 const PremiumSlotScreen = lazy(() => import('@/screens/casino/PremiumSlotScreen').then((m) => ({ default: m.PremiumSlotScreen })));
 
 function ScreenRouter() {
@@ -50,6 +51,7 @@ function ScreenRouter() {
     room: <RoomScreen />,
     account: <AccountScreen />,
     staff: <StaffScreen />,
+    bank: <BankScreen />,
   };
 
   return (

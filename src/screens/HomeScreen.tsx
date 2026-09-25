@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { BookOpen, ChevronRight, CircleUserRound, Coins, Gift, Layers, Play, Settings, ShieldCheck, UserRound } from 'lucide-react';
+import { BookOpen, ChevronRight, CircleUserRound, Coins, Gift, Landmark, Layers, Play, Settings, ShieldCheck, UserRound } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useNavigation } from '@/components/Navigation';
 import { MusicButton } from '@/components/ui/MusicButton';
@@ -249,7 +249,8 @@ export function HomeScreen() {
 
         <section className="lobby-rise" style={{ animationDelay: '180ms' }} aria-labelledby="lobby-more">
           <h2 id="lobby-more" className="cz-label mb-1 px-1">{t('lobby.more')}</h2>
-          <div className="grid sm:grid-cols-3 gap-1 sm:gap-2">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-1 sm:gap-2">
+            <Shortcut icon={Landmark} label={t('bank.title')} hint={t('bank.shortcutHint')} onClick={() => navigate('bank')} />
             <Shortcut icon={BookOpen} label={t('home.tutorial')} hint={t('lobby.tutorialHint')} onClick={() => navigate('tutorial')} />
             <Shortcut icon={UserRound} label={t('lobby.profile')} hint={t('lobby.profileHint')} onClick={() => navigate('profile')} />
             <Shortcut icon={Settings} label={t('home.settings')} hint={t('lobby.settingsHint')} onClick={() => navigate('settings')} />

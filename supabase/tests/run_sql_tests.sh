@@ -21,6 +21,9 @@ psql -q -v ON_ERROR_STOP=1 -d "$DB" -f accounts_test.sql
 psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20260927000000_profiles_staff.sql
 psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20260927000000_profiles_staff.sql
 psql -q -v ON_ERROR_STOP=1 -d "$DB" -f profiles_staff_test.sql
+psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20260928000000_bank.sql
+psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20260928000000_bank.sql
+psql -q -v ON_ERROR_STOP=1 -d "$DB" -f bank_test.sql
 
 # Two players ask for the same username at the same instant: exactly one gets it.
 for u in 21 22 23 24 25 26; do
@@ -58,4 +61,20 @@ wait
 read -r ROUNDS ABAL < <(psql -At -F ' ' -d "$DB" -c "select (select count(*) from public.account_ledger where user_id = '00000000-0000-0000-0000-0000000000dd' and game = 'roulette'), (select balance from public.account_wallets where user_id = '00000000-0000-0000-0000-0000000000dd')")
 echo "account concurrency: rounds=$ROUNDS balance=$ABAL"
 [ "$ROUNDS" = 4 ] && [ "$ABAL" = 0 ] || { echo "ACCOUNT CONCURRENCY TEST FAILED"; exit 1; }
+# Bank: 20 simultaneous loan claims (5 of them replaying one request id) pay exactly one loan of 500,
+# and 10 simultaneous deliveries of one ad reward id pay 100 exactly once.
+BU=00000000-0000-0000-0003-0000000000ee
+psql -q -d "$DB" -c "insert into auth.users (id, email_confirmed_at) values ('$BU', now())"
+LREPLAY=33333333-3333-4333-8333-333333333333
+for i in $(seq 1 20); do
+  if [ "$i" -le 5 ]; then RID=$LREPLAY; else RID=$(cat /proc/sys/kernel/random/uuid); fi
+  psql -q -d "$DB" -c "set role authenticated; select set_config('request.jwt.claim.sub', '$BU', false); select * from public.bank_claim_loan('$RID')" >/dev/null 2>&1 &
+done
+for i in $(seq 1 10); do
+  psql -q -d "$DB" -c "set role service_role; select * from public.bank_grant_ad_reward('$BU', 'admob', 'race-event')" >/dev/null 2>&1 &
+done
+wait
+read -r LOANS ADS BBAL < <(psql -At -F ' ' -d "$DB" -c "select (select count(*) from public.bank_loans where user_id = '$BU'), (select count(*) from public.account_ledger where user_id = '$BU' and game = 'ad_reward'), (select balance from public.account_wallets where user_id = '$BU')")
+echo "bank concurrency: loans=$LOANS ad_payments=$ADS balance=$BBAL"
+[ "$LOANS" = 1 ] && [ "$ADS" = 1 ] && [ "$BBAL" = 600 ] || { echo "BANK CONCURRENCY TEST FAILED"; exit 1; }
 echo "all SQL tests passed"

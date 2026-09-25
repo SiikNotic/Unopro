@@ -1,0 +1,106 @@
+/* The Bank: a vault of brushed steel, walnut and gold. */
+.bk { --bk-gold: #e3bf73; --bk-gold-deep: #9c7228; --bk-steel: #6f7780; }
+
+.bk-vault {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 24px;
+  border: 1px solid rgba(227, 191, 115, 0.35);
+  background:
+    radial-gradient(120% 90% at 0% 0%, rgba(227, 191, 115, 0.16), transparent 60%),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.025) 0 2px, transparent 2px 5px),
+    linear-gradient(160deg, #2a2d33, #16181c 70%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 18px 40px -24px rgba(0, 0, 0, 0.9);
+  overflow: hidden;
+}
+.bk-door { flex: none; width: clamp(76px, 22vw, 108px); aspect-ratio: 1; border-radius: 50%; padding: 6px;
+  background: conic-gradient(from 20deg, #8b939c, #3b4047, #a9b1b9, #454b52, #8b939c);
+  box-shadow: 0 8px 22px -8px rgba(0, 0, 0, 0.9), inset 0 0 0 2px rgba(0, 0, 0, 0.35); }
+.bk-door-ring { width: 100%; height: 100%; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(circle at 35% 30%, #4a5058, #1d2025 70%);
+  box-shadow: inset 0 0 0 3px rgba(227, 191, 115, 0.55), inset 0 6px 14px rgba(0, 0, 0, 0.6); }
+.bk-wheel { position: relative; width: 70%; height: 70%; animation: bk-spin 18s linear infinite; }
+.bk-spoke { position: absolute; left: 50%; top: 0; width: 4px; height: 100%; margin-left: -2px; border-radius: 2px;
+  background: linear-gradient(var(--bk-gold), var(--bk-gold-deep)); }
+.bk-hub { position: absolute; inset: 28%; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  color: #2a1d08; background: radial-gradient(circle at 35% 30%, #f5dc9f, var(--bk-gold-deep)); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6); }
+.bk-hub svg { width: 60%; height: 60%; }
+@keyframes bk-spin { to { transform: rotate(360deg); } }
+
+.bk-label { font-size: 10px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--bk-gold); }
+.bk-balance { display: flex; align-items: center; gap: 8px; margin: 2px 0; font-family: var(--font-display, inherit); font-weight: 800;
+  font-size: clamp(26px, 8vw, 36px); line-height: 1.1; color: #fff; }
+.bk-bounce { animation: bk-bounce 600ms cubic-bezier(0.3, 1.6, 0.5, 1); }
+@keyframes bk-bounce { 0% { transform: scale(1); } 35% { transform: scale(1.14); color: #ffe4a3; } 100% { transform: scale(1); } }
+
+.bk-msg { padding: 10px 14px; border-radius: 14px; font-size: 14px; }
+.bk-msg-ok { background: rgba(227, 191, 115, 0.14); border: 1px solid rgba(227, 191, 115, 0.45); color: #ffe7b0; }
+.bk-msg-err { background: rgba(190, 60, 70, 0.14); border: 1px solid rgba(220, 90, 100, 0.45); color: #ffd0d0; }
+
+.bk-guest { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 14px; border-radius: 18px;
+  border: 1px solid rgba(227, 191, 115, 0.45); background: linear-gradient(120deg, rgba(227, 191, 115, 0.2), rgba(227, 191, 115, 0.05)); }
+.bk-guest > div { flex: 1 1 calc(100% - 40px); }
+.bk-guest-btn { flex: 1 1 100%; }
+@media (min-width: 560px) { .bk-guest > div { flex-basis: 0; } .bk-guest-btn { flex: none; } }
+
+.bk-card { position: relative; display: flex; flex-direction: column; gap: 8px; min-height: 250px; padding: 16px; border-radius: 22px;
+  overflow: hidden; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 16px 36px -22px rgba(0, 0, 0, 0.95); transition: filter 300ms, opacity 300ms; }
+.bk-card::after { content: ''; position: absolute; inset: 6px; border-radius: 17px; border: 1px solid rgba(227, 191, 115, 0.35); pointer-events: none; }
+.bk-wood {
+  background:
+    radial-gradient(90% 70% at 85% 0%, rgba(255, 210, 130, 0.22), transparent 60%),
+    repeating-linear-gradient(97deg, rgba(0, 0, 0, 0.12) 0 3px, transparent 3px 11px, rgba(255, 255, 255, 0.03) 11px 13px, transparent 13px 22px),
+    linear-gradient(160deg, #6b3e1f, #3a1f0e 75%);
+}
+.bk-metal {
+  background:
+    radial-gradient(90% 70% at 85% 0%, rgba(255, 255, 255, 0.14), transparent 60%),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 4px),
+    linear-gradient(160deg, #4a5059, #22262c 75%);
+}
+/* Cooling down: dimmed but still attractive. */
+.bk-card-rest { filter: saturate(0.55) brightness(0.85); }
+.bk-card-rest .bk-countdown { color: #ffe4a3; }
+/* No ad available: grey. */
+.bk-card-off { filter: grayscale(1) brightness(0.8); opacity: 0.85; }
+
+.bk-card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.bk-badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 9px; border-radius: 999px; font-size: 10px; font-weight: 800;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--bk-gold); background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(227, 191, 115, 0.4); }
+.bk-card-title { font-family: var(--font-display, inherit); font-weight: 800; font-size: 19px; color: #fff; line-height: 1.15; }
+.bk-amount { font-family: var(--font-display, inherit); font-weight: 900; font-size: clamp(30px, 9vw, 40px); line-height: 1;
+  background: linear-gradient(180deg, #fff1c7, var(--bk-gold) 55%, var(--bk-gold-deep)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.bk-amount span { font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; -webkit-text-fill-color: rgba(255, 255, 255, 0.7); }
+
+.bk-cool { display: flex; align-items: center; gap: 12px; min-height: 2.5em; }
+.bk-ring { flex: none; width: 44px; height: 44px; transform: rotate(-90deg); }
+.bk-ring-bg { fill: none; stroke: rgba(255, 255, 255, 0.12); stroke-width: 4; }
+.bk-ring-fg { fill: none; stroke: var(--bk-gold); stroke-width: 4; stroke-linecap: round; transition: stroke-dasharray 900ms linear; }
+.bk-countdown { font-family: var(--font-display, inherit); font-weight: 800; font-size: 22px; color: #fff; letter-spacing: 0.04em; }
+
+.bk-hist-icon { flex: none; width: 32px; height: 32px; border-radius: 10px; display: flex; align-items: center; justify-content: center;
+  color: var(--bk-gold); background: rgba(227, 191, 115, 0.1); border: 1px solid rgba(227, 191, 115, 0.3); }
+
+/* Coin shower */
+.bk-burst { position: absolute; inset: 0; pointer-events: none; }
+.bk-burst-coin { position: absolute; left: 50%; top: 60%; width: 18px; height: 18px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff2c4, var(--bk-gold) 45%, var(--bk-gold-deep)); box-shadow: 0 0 0 1px rgba(90, 60, 10, 0.6);
+  animation: bk-coin 1100ms cubic-bezier(0.2, 0.7, 0.3, 1) forwards; animation-delay: calc(var(--i) * 35ms);
+  --dx: calc((var(--i) - 5.5) * 22px); }
+.bk-burst-amount { position: absolute; right: 16px; top: 12px; font-family: var(--font-display, inherit); font-weight: 900; font-size: 22px;
+  color: #ffe4a3; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7); animation: bk-float 1500ms ease-out forwards; }
+@keyframes bk-coin {
+  0% { transform: translate(-50%, 0) scale(0.4); opacity: 0; }
+  20% { opacity: 1; }
+  60% { transform: translate(calc(-50% + var(--dx)), -80px) scale(1) rotateY(360deg); opacity: 1; }
+  100% { transform: translate(calc(-50% + var(--dx)), 20px) scale(0.8) rotateY(720deg); opacity: 0; }
+}
+@keyframes bk-float { 0% { transform: translateY(8px); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(-24px); opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .bk-wheel, .bk-bounce, .bk-burst-coin, .bk-burst-amount { animation: none; }
+}
+:root[data-motion='off'] .bk-wheel { animation: none; }
