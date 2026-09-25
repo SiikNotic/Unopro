@@ -38,5 +38,11 @@ jobs:
           code=$(curl -s -o /tmp/out.json -w '%{http_code}' -X PATCH "https://api.supabase.com/v1/projects/$PROJECT_REF/config/auth" \
             -H "Authorization: Bearer $TOKEN" -H 'content-type: application/json' -d "$body")
           echo "Supabase answered $code"
+          if [ "$code" = "403" ]; then
+            # The token can deploy functions but may not change Auth settings: turn CAPTCHA on in the dashboard
+            # (Authentication → Attack Protection → CAPTCHA, provider Turnstile) or use a token that can.
+            echo "::warning::SUPABASE_ACCESS_TOKEN cannot change Auth settings (auth_config_write). Enable CAPTCHA in the Supabase dashboard."
+            exit 0
+          fi
           [ "$code" = "200" ] || { jq 'del(.security_captcha_secret)' /tmp/out.json 2>/dev/null || true; exit 1; }
           jq '{security_captcha_enabled, security_captcha_provider}' /tmp/out.json
