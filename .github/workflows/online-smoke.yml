@@ -1,0 +1,37 @@
+name: Online smoke test
+
+# Checks the deployed game-room function from outside, with a throwaway anonymous (guest) session:
+# it must answer, know the coin tables, and refuse them to a guest (coins need a registered account).
+on:
+  push:
+    branches: ['**']
+    paths: ['supabase/functions/game-room/**', '.github/workflows/online-smoke.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    if: vars.VITE_SUPABASE_URL != ''
+    steps:
+      - name: game-room answers and guards the coin tables
+        env:
+          URL: ${{ vars.VITE_SUPABASE_URL }}
+          KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+        run: |
+          set -eu
+          ORIGIN=https://siiknotic.github.io
+          CODE=$(curl -s -o /dev/null -w '%{http_code}' -X OPTIONS -H "Origin: $ORIGIN" "$URL/functions/v1/game-room")
+          echo "OPTIONS -> $CODE"; [ "$CODE" = 204 ]
+          TOKEN=$(curl -s -X POST "$URL/auth/v1/signup" -H "apikey: $KEY" -H 'content-type: application/json' -d '{}' | python3 -c 'import json,sys; print(json.load(sys.stdin)["access_token"])')
+          call() { curl -s -X POST "$URL/functions/v1/game-room" -H "apikey: $KEY" -H "Authorization: Bearer $TOKEN" -H "Origin: $ORIGIN" -H 'content-type: application/json' -d "$1"; }
+          for game in blackjack roulette; do
+            OUT=$(call "{\"op\":\"quick\",\"game\":\"$game\",\"name\":\"Smoke\"}")
+            echo "quick $game (guest) -> $OUT"
+            echo "$OUT" | grep -q '"code":"not_registered"'
+          done
+          OUT=$(call '{"op":"sync","code":"ZZZZZ"}')
+          echo "sync unknown room -> $OUT"
+          echo "$OUT" | grep -q '"ok":false'
