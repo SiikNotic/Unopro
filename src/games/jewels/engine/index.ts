@@ -1,6 +1,7 @@
 export * from './types';
 export { LEVELS, levelById } from './levels';
-export type { LevelDef } from './levels';
-export { createGame, trySwap, hint, goalProgress, goalsDone, starsFor, specialFor, boardFrom, SCORE } from './resolve';
+export type { LevelDef, Difficulty } from './levels';
+export { createGame, trySwap, applyBooster, boosterArea, hint, goalProgress, goalsDone, starsFor, specialFor, boardFrom, effectArea } from './resolve';
 export type { GoalProgress } from './resolve';
-export { findGroups, findMove, findRuns, isProductive } from './board';
+export { SCORE, groupPoints, cascadeFactor } from './scoring';
+export { findGroups, findMove, findRuns, isProductive, reshuffle, generateBoard } from './board';

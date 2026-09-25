@@ -1614,7 +1614,7 @@
     }
   },
   "jewels": {
-    "tagline": "Match. Discover. Shine.",
+    "tagline": "The jewels of the gods await you at the summit.",
     "play": "Play",
     "levels": "Levels",
     "levelN": "Level {n}",
@@ -1630,10 +1630,10 @@
     "hud": "Level status",
     "goalAria": "{current} of {target}",
     "boardAria": "Jewel board. Tap a jewel and then a neighbour, or swipe to swap them.",
-    "cascade": "Cascade ×{n}",
+    "cascade": "Combo ×{n}!",
     "won": "Level complete!",
-    "lost": "Out of moves",
-    "lostHint": "So close. Try again: every game is different.",
+    "lost": "Level failed",
+    "lostHint": "The gods never give up. Try again: every game is different.",
     "best": "Best score: {n}",
     "starsAria": "{n} of 3 stars",
     "next": "Next level",
@@ -1641,10 +1641,42 @@
     "replay": "Replay",
     "lockedAria": "Level {n}, locked",
     "levelAria": "Level {n}, {stars} of 3 stars",
-    "moreSoon": "More levels coming soon.",
-    "entry": "Jewellery",
-    "entryHint": "Single-player jewel puzzle",
-    "entryTag": "Single player · Puzzle"
+    "entry": "Jewellery: Olympus",
+    "entryHint": "Single-player Olympus jewel puzzle",
+    "entryTag": "Single player · Puzzle",
+    "aimAria": "Choose where to use {booster}. Tap the power-up again to cancel.",
+    "boosters": "Power-ups",
+    "boosterAria": "{name}: {n} left",
+    "booster": {
+      "hammer": "Hammer",
+      "shuffle": "Divine Shuffle",
+      "lightning": "Lightning",
+      "olympus": "Olympus Power"
+    },
+    "boosterHint": {
+      "hammer": "Tap a jewel to smash it (or crack a marble seal).",
+      "shuffle": "Rearranges the whole board.",
+      "lightning": "Tap a cell: lightning crosses its row and column.",
+      "olympus": "Tap a jewel: every jewel of that kind vanishes."
+    },
+    "goalName": {
+      "collect": "Collect jewels",
+      "score": "Score",
+      "ice": "Break the crystal",
+      "stone": "Break the marble seals",
+      "matches": "Make matches",
+      "combos": "Chain combos",
+      "specials": "Set off specials"
+    },
+    "chapter": {
+      "0": "The Steps of Olympus",
+      "1": "The Crystal Gardens",
+      "2": "The Halls of the Gods",
+      "3": "The Throne of Olympus"
+    },
+    "reward": "Reward: +1 {name}",
+    "mapTitle": "The ascent to Olympus",
+    "virtualNote": "Power-ups belong to the game: they are never bought and never become coins."
   },
   "poker": {
     "name": "Poker",

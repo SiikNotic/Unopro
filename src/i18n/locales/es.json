@@ -1614,7 +1614,7 @@
     }
   },
   "jewels": {
-    "tagline": "Combina. Descubre. Brilla.",
+    "tagline": "Las joyas de los dioses te esperan en la cima.",
     "play": "Jugar",
     "levels": "Niveles",
     "levelN": "Nivel {n}",
@@ -1630,10 +1630,10 @@
     "hud": "Estado del nivel",
     "goalAria": "{current} de {target}",
     "boardAria": "Tablero de joyas. Toca una joya y luego una vecina, o desliza para intercambiarlas.",
-    "cascade": "Cascada ×{n}",
+    "cascade": "¡Combo ×{n}!",
     "won": "¡Nivel completado!",
-    "lost": "Sin movimientos",
-    "lostHint": "Te faltó poco. Prueba otra vez: cada partida es distinta.",
+    "lost": "Nivel no superado",
+    "lostHint": "Los dioses no se rinden. Prueba otra vez: cada partida es distinta.",
     "best": "Mejor puntuación: {n}",
     "starsAria": "{n} de 3 estrellas",
     "next": "Siguiente nivel",
@@ -1641,10 +1641,42 @@
     "replay": "Repetir",
     "lockedAria": "Nivel {n}, bloqueado",
     "levelAria": "Nivel {n}, {stars} de 3 estrellas",
-    "moreSoon": "Pronto habrá más niveles.",
-    "entry": "Jewellery",
-    "entryHint": "Puzzle de joyas para un jugador",
-    "entryTag": "Un jugador · Puzzle"
+    "entry": "Jewellery: Olympus",
+    "entryHint": "Puzzle de joyas del Olimpo para un jugador",
+    "entryTag": "Un jugador · Puzzle",
+    "aimAria": "Elige dónde usar {booster}. Toca de nuevo el potenciador para cancelar.",
+    "boosters": "Potenciadores",
+    "boosterAria": "{name}: {n} disponibles",
+    "booster": {
+      "hammer": "Martillo",
+      "shuffle": "Barajado divino",
+      "lightning": "Rayo",
+      "olympus": "Poder del Olimpo"
+    },
+    "boosterHint": {
+      "hammer": "Toca una joya para romperla (o agrietar un sello de mármol).",
+      "shuffle": "Reordena todo el tablero.",
+      "lightning": "Toca una casilla: el rayo cruza su fila y su columna.",
+      "olympus": "Toca una joya: todas las de ese tipo desaparecen."
+    },
+    "goalName": {
+      "collect": "Recoger joyas",
+      "score": "Puntuación",
+      "ice": "Romper cristal",
+      "stone": "Romper sellos de mármol",
+      "matches": "Hacer combinaciones",
+      "combos": "Encadenar combos",
+      "specials": "Activar especiales"
+    },
+    "chapter": {
+      "0": "Los Escalones del Olimpo",
+      "1": "Los Jardines de Cristal",
+      "2": "Las Salas de los Dioses",
+      "3": "El Trono del Olimpo"
+    },
+    "reward": "Recompensa: +1 {name}",
+    "mapTitle": "El ascenso al Olimpo",
+    "virtualNote": "Los potenciadores son del juego: no se compran y no se convierten en monedas."
   },
   "poker": {
     "name": "Póker",

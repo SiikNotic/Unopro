@@ -27,14 +27,14 @@ export function JewelsEntry({ onOpen }: { onOpen: () => void }) {
       type="button"
       onClick={onOpen}
       className="group relative w-full overflow-hidden rounded-[22px] border border-[rgba(216,178,106,0.4)] text-left transition-transform active:scale-[0.99]"
-      style={{ background: 'radial-gradient(110% 120% at 85% 20%, #5a2f9a 0%, #25154a 50%, #0e0a1c 100%)' }}
+      style={{ background: 'radial-gradient(90% 110% at 80% 10%, #f3dcaa 0%, #5f86c6 32%, #1b3470 62%, #0a1433 100%)' }}
       aria-label={`${t('jewels.entry')}: ${t('jewels.entryHint')}`}
     >
-      <span className="absolute inset-0" style={{ background: 'radial-gradient(40% 60% at 82% 40%, rgba(241,213,143,0.28), transparent 70%)' }} aria-hidden />
+      <span className="absolute inset-0" style={{ background: 'repeating-conic-gradient(from 0deg at 82% 18%, rgba(255,244,210,0.12) 0deg 6deg, transparent 6deg 18deg)' }} aria-hidden />
       <span className="relative flex items-center gap-4 p-4">
         <span className="min-w-0 flex-1">
           <span className="block text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--cz-gold-hover)]">{t('jewels.entryTag')}</span>
-          <span className="block mt-1 text-[30px] leading-none font-bold" style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", color: '#f6e2ae' }}>
+          <span className="block mt-1 text-[30px] leading-none font-bold" style={{ fontFamily: "'Cinzel', 'Cormorant Garamond', Georgia, serif", color: '#fff1c4', textShadow: '0 2px 8px rgba(0,0,0,0.6)', fontSize: 26 }}>
             {t('jewels.entry')}
           </span>
           <span className="block mt-1.5 text-sm text-white/75">{t('jewels.tagline')}</span>

@@ -1,13 +1,13 @@
-// Jewellery sounds, synthesised on the app's shared audio bus (no files to load, nothing to release: each
+// Jewellery: Olympus sounds, synthesised on the app's shared audio bus (no files to load, nothing to release: each
 // note is a short-lived oscillator). Sound on/off and volume are the app's preferences (sfx.ts).
 // A small voice limiter keeps cascades from stacking dozens of sounds at once.
 import { withAudio } from '@/audio/sfx';
-import { bell, noise, note, tone } from '@/audio/voices';
+import { bell, noise, note, pluck, tone } from '@/audio/voices';
 import type { Voice } from '@/audio/voices';
 
-export type JewelSound = 'select' | 'swap' | 'invalid' | 'match' | 'special' | 'blast' | 'cascade' | 'win' | 'lose' | 'star';
+export type JewelSound = 'select' | 'swap' | 'invalid' | 'match' | 'special' | 'blast' | 'cascade' | 'win' | 'lose' | 'star' | 'click' | 'stone' | 'lightning' | 'divine' | 'hammer' | 'shuffle';
 
-const MIN_GAP_MS: Partial<Record<JewelSound, number>> = { match: 70, blast: 90, cascade: 90 };
+const MIN_GAP_MS: Partial<Record<JewelSound, number>> = { match: 70, blast: 90, cascade: 90, lightning: 110, stone: 90, divine: 150 };
 const WINDOW_MS = 300;
 const MAX_IN_WINDOW = 6;
 const last = new Map<JewelSound, number>();
@@ -36,6 +36,29 @@ const SOUNDS: Record<JewelSound, (v: Voice, t: number, level: number) => void> =
   },
   cascade: (v, t, level) => tone(v, t, note(10 + level * 2), 0.12, { gain: 0.03, type: 'triangle', to: note(14 + level * 2) }),
   star: (v, t, level) => bell(v, t, note(19 + level * 4), 0.06, 1),
+  click: (v, t) => tone(v, t, 1320, 0.035, { gain: 0.025, type: 'triangle' }),
+  // A marble seal cracking: a dry knock and grit.
+  stone: (v, t) => {
+    tone(v, t, 220, 0.09, { gain: 0.08, type: 'triangle', to: 120 });
+    noise(v, t, 0.12, { type: 'bandpass', freq: 1800, to: 700, gain: 0.07, q: 1.5 });
+  },
+  // Lightning: a bright crack and a falling electric sweep.
+  lightning: (v, t) => {
+    noise(v, t, 0.2, { type: 'highpass', freq: 2500, to: 5200, gain: 0.08 });
+    tone(v, t, 1900, 0.22, { gain: 0.03, type: 'sawtooth', to: 240, lowpass: 3800 });
+    tone(v, t + 0.02, 70, 0.3, { gain: 0.08, to: 45, type: 'sine' });
+  },
+  // Divine light: a rising golden chord.
+  divine: (v, t) => {
+    [0, 4, 7, 12, 16].forEach((n, i) => bell(v, t + i * 0.05, note(n + 17), 0.035, 1.3));
+    tone(v, t, note(5), 1.1, { gain: 0.03, type: 'sine', attack: 0.2 });
+  },
+  hammer: (v, t) => {
+    tone(v, t, 160, 0.16, { gain: 0.12, type: 'triangle', to: 70 });
+    noise(v, t, 0.08, { type: 'bandpass', freq: 900, gain: 0.06 });
+    bell(v, t + 0.04, note(22), 0.02, 0.4);
+  },
+  shuffle: (v, t) => [0, 3, 7, 10, 14, 17].forEach((n, i) => pluck(v, t + i * 0.045, note(n + 12), 0.02, 0.5)),
   win: (v, t) => [0, 4, 7, 12, 16, 19, 24].forEach((n, i) => bell(v, t + i * 0.08, note(n + 12), 0.05, 1.1)),
   lose: (v, t) => [7, 3, 0, -5].forEach((n, i) => tone(v, t + i * 0.16, note(n), 0.3, { gain: 0.05, type: 'triangle', lowpass: 1600 })),
 };

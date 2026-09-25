@@ -1,12 +1,13 @@
-// The board: jewels, ice, beams and rings, the spark canvas, and touch input (tap → tap, or swipe).
-// One set of pointer handlers for the whole board (no listener per jewel).
-import { memo, useEffect, useRef } from 'react';
+// The board: marble-and-gold frame, crystal, jewels, lightning / waves / divine light, score pops, the spark
+// canvas, and touch input (tap → tap, or swipe). One set of pointer handlers for the whole board (no
+// listener per jewel).
+import { memo, useEffect, useMemo, useRef } from 'react';
 import type { CSSProperties } from 'react';
 import { useI18n } from '@/i18n';
-import type { Pos } from '../engine';
+import type { Booster, Pos } from '../engine';
 import { JewelView } from './Jewel';
 import { SparkLayer } from './particles';
-import type { Effect, VPiece } from './useJewelGame';
+import type { Effect, ScorePop, VPiece } from './useJewelGame';
 
 interface BoardProps {
   rows: number;
@@ -15,10 +16,14 @@ interface BoardProps {
   pieces: VPiece[];
   ice: boolean[][];
   effects: Effect[];
+  pops: ScorePop[];
   combo: { id: number; n: number } | null;
   moveMs: number;
   selected: Pos | null;
+  armed: Booster | null;
   busy: boolean;
+  glints: boolean;
+  celebrate: boolean;
   sparkCap: number;
   sparks: React.MutableRefObject<SparkLayer | null>;
   onTap: (p: Pos) => void;
@@ -26,19 +31,37 @@ interface BoardProps {
 }
 
 const IceLayer = memo(function IceLayer({ ice }: { ice: boolean[][] }) {
-  return (
-    <>
-      {ice.flatMap((row, r) => row.map((on, c) => (on ? <span key={`${r}-${c}`} className="jw-ice" style={{ transform: `translate3d(${c * 100}%, ${r * 100}%, 0)` }} /> : null)))}
-    </>
-  );
+  return <>{ice.flatMap((row, r) => row.map((on, c) => (on ? <span key={`${r}-${c}`} className="jw-ice" style={{ transform: `translate3d(${c * 100}%, ${r * 100}%, 0)` }} /> : null)))}</>;
 });
 
 const Cells = memo(function Cells({ rows, cols }: { rows: number; cols: number }) {
   // One background pattern instead of rows×cols elements.
-  return <div className="jw-cells" style={{ backgroundSize: `${100 / cols}% ${100 / rows}%` } as CSSProperties} aria-hidden />;
+  return <div className="jw-cells" style={{ backgroundSize: `${(100 / cols) * 2}% ${(100 / rows) * 2}%` } as CSSProperties} aria-hidden />;
 });
 
-export function JewelBoard({ rows, cols, size, pieces, ice, effects, combo, moveMs, selected, busy, sparkCap, sparks, onTap, onSwipe }: BoardProps) {
+/** A jagged lightning path across `len` cells (deterministic per effect id). */
+function boltPath(id: number, len: number): string {
+  const n = Math.max(6, len * 2);
+  let seed = id * 9301 + 49297;
+  const rnd = () => ((seed = (seed * 233280 + 49297) % 1000003) / 1000003) * 2 - 1;
+  const pts = Array.from({ length: n + 1 }, (_, i) => `${((i / n) * 100).toFixed(1)} ${(50 + (i === 0 || i === n ? 0 : rnd() * 34)).toFixed(1)}`);
+  return `M${pts.join(' L')}`;
+}
+
+const Bolt = memo(function Bolt({ e, cell, rows, cols }: { e: Effect; cell: number; rows: number; cols: number }) {
+  const row = e.type === 'boltRow';
+  const d = useMemo(() => boltPath(e.id, row ? cols : rows), [e.id, row, cols, rows]);
+  const style: CSSProperties = row ? { top: e.r * cell, left: 0, width: cols * cell, height: cell } : { left: e.c * cell, top: 0, width: rows * cell, height: cell, transform: `rotate(90deg) translateY(-100%)`, transformOrigin: 'top left' };
+  return (
+    <svg className="jw-bolt" style={style} viewBox="0 0 100 100" preserveAspectRatio="none">
+      <path d={d} className="jw-bolt-glow" />
+      <path d={d} className="jw-bolt-core" />
+    </svg>
+  );
+});
+
+export function JewelBoard(props: BoardProps) {
+  const { rows, cols, size, pieces, ice, effects, pops, combo, moveMs, selected, armed, busy, glints, celebrate, sparkCap, sparks, onTap, onSwipe } = props;
   const { t } = useI18n();
   const canvas = useRef<HTMLCanvasElement>(null);
   const cell = size / cols;
@@ -67,65 +90,84 @@ export function JewelBoard({ rows, cols, size, pieces, ice, effects, combo, move
   };
 
   return (
-    <div
-      className={`jw-board${busy ? ' is-busy' : ''}`}
-      style={{ width: size, height, '--jw-cols': cols, '--jw-rows': rows, '--jw-move': `${moveMs}ms` } as CSSProperties}
-      role="application"
-      aria-label={t('jewels.boardAria')}
-      onPointerDown={(e) => {
-        const p = cellAt(e);
-        if (!p) return;
-        gesture.current = { id: e.pointerId, x: e.clientX, y: e.clientY, cell: p, done: false };
-        e.currentTarget.setPointerCapture?.(e.pointerId);
-      }}
-      onPointerMove={(e) => {
-        const g = gesture.current;
-        if (!g || g.done || g.id !== e.pointerId) return;
-        const dx = e.clientX - g.x;
-        const dy = e.clientY - g.y;
-        if (Math.max(Math.abs(dx), Math.abs(dy)) < cell * 0.32) return;
-        g.done = true;
-        const to = Math.abs(dx) > Math.abs(dy) ? { r: g.cell.r, c: g.cell.c + Math.sign(dx) } : { r: g.cell.r + Math.sign(dy), c: g.cell.c };
-        if (to.r >= 0 && to.c >= 0 && to.r < rows && to.c < cols) onSwipe(g.cell, to);
-      }}
-      onPointerUp={(e) => {
-        const g = gesture.current;
-        gesture.current = null;
-        if (g && !g.done && g.id === e.pointerId) onTap(g.cell);
-      }}
-      onPointerCancel={() => (gesture.current = null)}
-    >
-      <Cells rows={rows} cols={cols} />
-      <div className="jw-layer">
-        <IceLayer ice={ice} />
+    <div className={`ol-frame${celebrate ? ' is-celebrate' : ''}`} style={{ '--cell': `${cell}px` } as CSSProperties}>
+      <svg className="ol-crest" viewBox="0 0 120 40" aria-hidden>
+        <path d="M60 8 C44 4 26 8 6 20 C24 18 38 20 50 26 Z" fill="url(#jw-gold-line)" />
+        <path d="M60 8 C76 4 94 8 114 20 C96 18 82 20 70 26 Z" fill="url(#jw-gold-line)" />
+        <use href="#jw3" x="44" y="2" width="32" height="32" />
+      </svg>
+      {(['tl', 'tr', 'bl', 'br'] as const).map((k) => (
+        <svg key={k} className={`ol-corner is-${k}`} viewBox="0 0 40 40" aria-hidden>
+          <path d="M4 36 V12 C4 7 7 4 12 4 H36" fill="none" stroke="url(#jw-gold-line)" strokeWidth="4" />
+          <path d="M10 30 C10 20 14 14 24 10 M14 32 C16 26 20 22 28 20" fill="none" stroke="#e6c26c" strokeWidth="2" strokeLinecap="round" />
+          <circle cx="10" cy="10" r="3.4" fill="#fff3c8" />
+        </svg>
+      ))}
+      <div
+        className={`jw-board${busy ? ' is-busy' : ''}${armed ? ` is-armed is-${armed}` : ''}`}
+        style={{ width: size, height, '--jw-cols': cols, '--jw-rows': rows, '--jw-move': `${moveMs}ms` } as CSSProperties}
+        role="application"
+        aria-label={armed ? t('jewels.aimAria', { booster: t(`jewels.booster.${armed}`) }) : t('jewels.boardAria')}
+        onPointerDown={(e) => {
+          const p = cellAt(e);
+          if (!p) return;
+          gesture.current = { id: e.pointerId, x: e.clientX, y: e.clientY, cell: p, done: false };
+          e.currentTarget.setPointerCapture?.(e.pointerId);
+        }}
+        onPointerMove={(e) => {
+          const g = gesture.current;
+          if (!g || g.done || g.id !== e.pointerId || armed) return;
+          const dx = e.clientX - g.x;
+          const dy = e.clientY - g.y;
+          if (Math.max(Math.abs(dx), Math.abs(dy)) < cell * 0.32) return;
+          g.done = true;
+          const to = Math.abs(dx) > Math.abs(dy) ? { r: g.cell.r, c: g.cell.c + Math.sign(dx) } : { r: g.cell.r + Math.sign(dy), c: g.cell.c };
+          if (to.r >= 0 && to.c >= 0 && to.r < rows && to.c < cols) onSwipe(g.cell, to);
+        }}
+        onPointerUp={(e) => {
+          const g = gesture.current;
+          gesture.current = null;
+          if (g && !g.done && g.id === e.pointerId) onTap(g.cell);
+        }}
+        onPointerCancel={() => (gesture.current = null)}
+      >
+        <Cells rows={rows} cols={cols} />
+        <div className="jw-layer">
+          <IceLayer ice={ice} />
+        </div>
+        {selected && <span className="jw-select" style={{ transform: `translate3d(${selected.c * 100}%, ${selected.r * 100}%, 0)` }} aria-hidden />}
+        <div className="jw-layer">
+          {pieces.map((p) => (
+            <JewelView key={p.id} kind={p.kind} special={p.special} hp={p.hp} r={p.r} c={p.c} phase={p.phase} selected={!!selected && selected.r === p.r && selected.c === p.c} glint={glints && p.id % 7 === 0} dropFrom={p.dropFrom} dropMs={moveMs} />
+          ))}
+        </div>
+        <div className="jw-fx" aria-hidden>
+          {effects.map((f) =>
+            f.type === 'boltRow' || f.type === 'boltCol' ? (
+              <Bolt key={f.id} e={f} cell={cell} rows={rows} cols={cols} />
+            ) : f.type === 'hammer' ? (
+              <span key={f.id} className="jw-hammer" style={{ left: (f.c + 0.5) * cell, top: (f.r + 0.5) * cell, width: cell * 1.6, height: cell * 1.6 }} />
+            ) : (
+              <span
+                key={f.id}
+                className={`jw-wave ${f.type === 'divine' ? 'is-divine' : ''}`}
+                style={{ left: (f.c + 0.5) * cell, top: (f.r + 0.5) * cell, width: cell * (f.size ?? 1.5) * 2, height: cell * (f.size ?? 1.5) * 2 }}
+              />
+            )
+          )}
+          {pops.map((p) => (
+            <span key={p.id} className={`jw-pop${p.big ? ' is-big' : ''}`} style={{ left: (p.c + 0.5) * cell, top: (p.r + 0.5) * cell }}>
+              +{p.points.toLocaleString()}
+            </span>
+          ))}
+          {combo && combo.n >= 2 && (
+            <span key={combo.id} className="jw-combo">
+              {t('jewels.cascade', { n: combo.n })}
+            </span>
+          )}
+        </div>
+        <canvas ref={canvas} className="jw-sparks" aria-hidden />
       </div>
-      {selected && <span className="jw-select" style={{ transform: `translate3d(${selected.c * 100}%, ${selected.r * 100}%, 0)` }} aria-hidden />}
-      <div className="jw-layer">
-        {pieces.map((p) => (
-          <JewelView key={p.id} kind={p.kind} special={p.special} r={p.r} c={p.c} phase={p.phase} selected={!!selected && selected.r === p.r && selected.c === p.c} dropFrom={p.dropFrom} dropMs={moveMs} />
-        ))}
-      </div>
-      <div className="jw-fx" aria-hidden>
-        {effects.map((f) =>
-          f.type === 'row' ? (
-            <span key={f.id} className="jw-beam is-row" style={{ top: f.r * cell, height: cell }} />
-          ) : f.type === 'col' ? (
-            <span key={f.id} className="jw-beam is-col" style={{ left: f.c * cell, width: cell }} />
-          ) : (
-            <span
-              key={f.id}
-              className={`jw-ring ${f.type === 'flash' ? 'is-flash' : ''}`}
-              style={{ left: (f.c + 0.5) * cell, top: (f.r + 0.5) * cell, width: cell * (f.size ?? 1.5) * 2, height: cell * (f.size ?? 1.5) * 2 }}
-            />
-          )
-        )}
-        {combo && combo.n >= 2 && (
-          <span key={combo.id} className="jw-combo">
-            {t('jewels.cascade', { n: combo.n })}
-          </span>
-        )}
-      </div>
-      <canvas ref={canvas} className="jw-sparks" aria-hidden />
     </div>
   );
 }

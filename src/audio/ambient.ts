@@ -115,15 +115,23 @@ export const AMBIENT: Record<AmbientId, Pattern> = {
       if (i % 16 === 12 && r() < 0.5) bell(v, t, note(roots[bar] + 19), 0.006, 0.8);
     },
   },
-  // Jewellery: slow, glassy pads with a crystal arpeggio drifting over them.
+  // Jewellery: Olympus: a lyre in the Dorian mode over a low drone and soft string pads, with a distant temple bell.
   jewels: {
-    beat: 0.42,
+    beat: 0.46,
     play: (v, t, i, r) => {
       const bar = Math.floor(i / 16) % 4;
-      const roots = [-9, -5, -7, -2]; // C, E-minor-ish, D, G
-      if (i % 16 === 0) chord(v, t, [0, 7, 11, 16].map((n) => roots[bar] - 12 + n), 7.2, 'sine', 0.012);
-      if (i % 2 === 0 && r() < 0.75) bell(v, t, note(roots[bar] + 12 + [0, 4, 7, 11, 14][(i / 2 + bar) % 5]), 0.008, 0.9);
-      if (i % 8 === 4 && r() < 0.4) tone(v, t, note(roots[bar] + 31), 1.2, { gain: 0.004, attack: 0.3 });
+      const roots = [-10, -12, -7, -9]; // D, C, F, E (Dorian colour)
+      const scale = [0, 2, 3, 5, 7, 9, 10, 12, 14];
+      if (i % 16 === 0) {
+        tone(v, t, note(roots[bar] - 24), 7.4, { gain: 0.03, type: 'sine', attack: 1.4 });
+        chord(v, t, [0, 7, 12, 15].map((n) => roots[bar] - 12 + n), 7.4, 'triangle', 0.007, 1400);
+      }
+      // Lyre: arpeggio up and down the mode, sometimes resting.
+      if (i % 2 === 0 && r() < 0.8) {
+        const step = [0, 2, 4, 6, 7, 6, 4, 2][(i / 2) % 8];
+        pluck(v, t, note(roots[bar] + 12 + scale[step]), 0.022, 1.1);
+      }
+      if (i % 32 === 24 && r() < 0.6) bell(v, t, note(roots[bar] + 24), 0.006, 2.2);
     },
   },
   // Bingo: a bright, bouncy groove. Pumping bass, offbeat chords, handclaps on 2 and 4, glockenspiel hooks.

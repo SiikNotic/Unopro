@@ -1,7 +1,7 @@
 // Board helpers: runs and groups of matching jewels, possible moves, generation and reshuffling.
 import type { Rng } from '@/games/shared/rng';
 import type { Board, Jewel, Pos } from './types';
-import { PRISM_KIND } from './types';
+import { STONE_KIND } from './types';
 
 export const key = (r: number, c: number) => r * 64 + c;
 export const cloneBoard = (b: Board): Board => b.map((row) => row.slice());
@@ -98,7 +98,7 @@ function lineAt(board: Board, p: Pos): number {
 export function isProductive(board: Board, a: Pos, b: Pos): boolean {
   const ja = board[a.r][a.c];
   const jb = board[b.r][b.c];
-  if (!ja || !jb) return false;
+  if (!ja || !jb || ja.kind === STONE_KIND || jb.kind === STONE_KIND) return false;
   if (ja.special === 'prism' || jb.special === 'prism' || (ja.special && jb.special)) return true;
   board[a.r][a.c] = jb;
   board[b.r][b.c] = ja;
@@ -122,15 +122,25 @@ export function findMove(board: Board): [Pos, Pos] | null {
 
 export const randomKind = (rng: Rng, kinds: number) => Math.floor(rng.next() * kinds) % kinds;
 
-/** A full board with no match on it and at least one legal move. */
-export function generateBoard(rows: number, cols: number, kinds: number, rng: Rng, nextId: () => number): Board {
+/**
+ * A full board with no match on it and at least one legal move. `stones` marks marble seals ('1' / '2' =
+ * hits) by row; they never match, so placing them can't create one.
+ */
+export function generateBoard(rows: number, cols: number, kinds: number, rng: Rng, nextId: () => number, stones?: string[]): Board {
   for (let attempt = 0; attempt < 200; attempt++) {
     const board: Board = Array.from({ length: rows }, () => Array<Jewel | null>(cols).fill(null));
     for (let r = 0; r < rows; r++)
       for (let c = 0; c < cols; c++) {
+        const hp = Number(stones?.[r]?.[c]);
+        if (hp === 1 || hp === 2) {
+          board[r][c] = { id: 0, kind: STONE_KIND, special: null, hp };
+          continue;
+        }
         const banned = new Set<number>();
-        if (c >= 2 && board[r][c - 1]!.kind === board[r][c - 2]!.kind) banned.add(board[r][c - 1]!.kind);
-        if (r >= 2 && board[r - 1][c]!.kind === board[r - 2][c]!.kind) banned.add(board[r - 1][c]!.kind);
+        const k1 = c >= 2 ? board[r][c - 1]!.kind : -9;
+        if (k1 >= 0 && k1 === board[r][c - 2]!.kind) banned.add(k1);
+        const k2 = r >= 2 ? board[r - 1][c]!.kind : -9;
+        if (k2 >= 0 && k2 === board[r - 2][c]!.kind) banned.add(k2);
         const allowed = Array.from({ length: kinds }, (_, k) => k).filter((k) => !banned.has(k));
         board[r][c] = { id: 0, kind: allowed[Math.floor(rng.next() * allowed.length) % allowed.length], special: null };
       }
@@ -142,9 +152,10 @@ export function generateBoard(rows: number, cols: number, kinds: number, rng: Rn
   throw new Error('could not generate a playable board');
 }
 
-/** Rearranges the same jewels until there is no match and at least one move (when no move is left). */
+/** Rearranges the same jewels until there is no match and at least one move (marble seals stay put). */
 export function reshuffle(board: Board, rng: Rng): Board {
-  const jewels = board.flat().filter((j): j is Jewel => !!j);
+  const movable = (j: Jewel | null): j is Jewel => !!j && j.kind !== STONE_KIND;
+  const jewels = board.flat().filter(movable);
   for (let attempt = 0; attempt < 300; attempt++) {
     const pool = jewels.slice();
     for (let i = pool.length - 1; i > 0; i--) {
@@ -152,7 +163,7 @@ export function reshuffle(board: Board, rng: Rng): Board {
       [pool[i], pool[k]] = [pool[k], pool[i]];
     }
     let n = 0;
-    const next: Board = board.map((row) => row.map((j) => (j ? pool[n++] : null)));
+    const next: Board = board.map((row) => row.map((j) => (movable(j) ? pool[n++] : j)));
     if (findRuns(next).length === 0 && findMove(next)) return next;
   }
   return board;
@@ -161,7 +172,7 @@ export function reshuffle(board: Board, rng: Rng): Board {
 /** The most common kind on the board (a prism set off by another special takes this one). */
 export function commonestKind(board: Board): number {
   const counts = new Map<number, number>();
-  for (const row of board) for (const j of row) if (j && j.kind !== PRISM_KIND) counts.set(j.kind, (counts.get(j.kind) ?? 0) + 1);
+  for (const row of board) for (const j of row) if (j && j.kind >= 0) counts.set(j.kind, (counts.get(j.kind) ?? 0) + 1);
   let best = 0;
   let max = -1;
   for (const [k, n] of [...counts.entries()].sort((a, b) => a[0] - b[0]))

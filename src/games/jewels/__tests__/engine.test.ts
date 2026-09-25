@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { boardFrom, createGame, findGroups, findMove, goalProgress, hint, LEVELS, levelById, specialFor, starsFor, trySwap, SCORE } from '../engine';
 import type { Board, JewelState, Step } from '../engine';
-import { EMPTY_PROGRESS, normalizeProgress, recordResult } from '../progress';
+import { EMPTY_PROGRESS, MAX_BOOSTERS, normalizeProgress, recordResult, spendBooster, STARTING_BOOSTERS } from '../progress';
 
 /** A game on a hand-made board (refills stay deterministic from the seed). */
 function game(rows: string[], patch: Partial<JewelState> = {}): JewelState {
   const board = boardFrom(rows);
-  const base = createGame({ id: 99, rows: board.length, cols: board[0].length, kinds: 6, moves: 10, goals: [{ type: 'score', target: 1e9 }], stars: [1, 2, 3] }, 7);
+  const base = createGame({ id: 99, rows: board.length, cols: board[0].length, kinds: 6, moves: 10, goals: [{ type: 'score', target: 1e9 }], stars: [1, 2, 3], difficulty: 'easy', reward: 'hammer' }, 7);
   return { ...base, board, nextId: 1000, ...patch };
 }
 const clears = (steps: Step[]) => steps.filter((s): s is Extract<Step, { type: 'clear' }> => s.type === 'clear');
@@ -18,6 +18,8 @@ describe('board generation', () => {
     for (const level of LEVELS)
       for (let seed = 1; seed <= 30; seed++) {
         const s = createGame(level, seed);
+        const stones = (level.stones ?? []).join('').replace(/\./g, '').length;
+        expect(s.stonesTotal).toBe(stones);
         expect(s.board).toHaveLength(level.rows);
         expect(s.board[0]).toHaveLength(level.cols);
         expect(noNulls(s.board)).toBe(true);
@@ -25,6 +27,7 @@ describe('board generation', () => {
         expect(findMove(s.board)).not.toBeNull();
         expect(new Set(s.board.flat().map((j) => j!.id)).size).toBe(level.rows * level.cols);
         expect(Math.max(...s.board.flat().map((j) => j!.kind))).toBeLessThan(level.kinds);
+        for (const j of s.board.flat()) if (j!.kind === -2) expect(j!.hp).toBeGreaterThanOrEqual(1);
       }
   });
 
@@ -58,7 +61,7 @@ describe('moves', () => {
     if (!r.ok) return;
     const first = clears(r.steps)[0];
     expect(first.cleared.map((j) => j.kind)).toEqual([0, 0, 0]);
-    expect(first.points).toBe(3 * SCORE.jewel);
+    expect(first.points).toBe(SCORE.match[3]);
     expect(r.state.movesLeft).toBe(s.movesLeft - 1);
     expect(noNulls(r.state.board)).toBe(true);
     expect(count(r.state.board)).toBe(25);
@@ -189,18 +192,19 @@ describe('goals, end and progress', () => {
     if (r.ok) expect(trySwap(r.state, { r: 0, c: 0 }, { r: 0, c: 1 })).toMatchObject({ ok: false, reason: 'not_playing' });
   });
 
-  it('ice breaks under cleared jewels', () => {
-    const level = levelById(5);
+  it('crystal breaks under cleared jewels', () => {
+    const level = levelById(6);
     let s = createGame(level, 3);
-    expect(s.iceLeft).toBe(20);
-    for (let i = 0; i < 24 && s.status === 'playing'; i++) {
+    const total = s.iceTotal;
+    expect(total).toBe(16);
+    for (let i = 0; i < 20 && s.status === 'playing'; i++) {
       const m = hint(s)!;
       const r = trySwap(s, m[0], m[1]);
       if (!r.ok) break;
       s = r.state;
     }
-    expect(s.iceLeft).toBeLessThan(20);
-    expect(goalProgress(s)[0].current).toBe(20 - s.iceLeft);
+    expect(s.iceLeft).toBeLessThan(total);
+    expect(goalProgress(s)[0].current).toBe(total - s.iceLeft);
   });
 
   it('stars follow the thresholds', () => {
@@ -223,14 +227,27 @@ describe('goals, end and progress', () => {
     expect(play()).toEqual(play());
   });
 
-  it('progress: winning unlocks the next level and keeps the best score; storage is validated', () => {
-    let p = recordResult(EMPTY_PROGRESS, 1, true, 4000, 2);
-    expect(p).toEqual({ unlocked: 2, current: 2, best: { 1: { score: 4000, stars: 2 } } });
-    p = recordResult(p, 1, true, 3000, 3);
+  it('progress: winning unlocks the next level, keeps the best score, rewards the first win; storage is validated', () => {
+    let o = recordResult(EMPTY_PROGRESS, 1, true, 4000, 2);
+    expect(o.reward).toBe(LEVELS[0].reward);
+    let p = o.progress;
+    expect(p).toMatchObject({ unlocked: 2, current: 2, best: { 1: { score: 4000, stars: 2 } } });
+    expect(p.boosters[LEVELS[0].reward]).toBe(EMPTY_PROGRESS.boosters[LEVELS[0].reward] + 1);
+    o = recordResult(p, 1, true, 3000, 3);
+    expect(o.reward).toBeNull();
+    p = o.progress;
     expect(p.best[1]).toEqual({ score: 4000, stars: 3 });
-    p = recordResult(p, 2, false, 100, 0);
+    p = recordResult(p, 2, false, 100, 0).progress;
     expect(p).toMatchObject({ unlocked: 2, current: 2 });
-    expect(normalizeProgress({ unlocked: 999, current: 5, best: { 1: { score: -5, stars: 9 }, x: 1 } })).toEqual({ unlocked: 1, current: 1, best: { 1: { score: 0, stars: 3 } } });
+    expect(normalizeProgress({ unlocked: 999, current: 5, best: { 1: { score: -5, stars: 9 }, x: 1 }, boosters: { hammer: 99, shuffle: -3, lightning: 'x' } })).toEqual({
+      unlocked: 1,
+      current: 1,
+      best: { 1: { score: 0, stars: 3 } },
+      boosters: { hammer: MAX_BOOSTERS, shuffle: 0, lightning: 0, olympus: 0 },
+    });
+    expect(normalizeProgress(null).boosters).toEqual(STARTING_BOOSTERS);
     expect(normalizeProgress(JSON.parse(JSON.stringify(p)))).toEqual(p);
+    expect(spendBooster(p, 'hammer').boosters.hammer).toBe(p.boosters.hammer - 1);
+    expect(spendBooster({ ...p, boosters: { ...p.boosters, olympus: 0 } }, 'olympus').boosters.olympus).toBe(0);
   });
 });
