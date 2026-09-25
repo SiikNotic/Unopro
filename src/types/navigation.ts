@@ -1,8 +1,8 @@
 import type { GameModeId } from '@/game/rules/modes';
 
-export type Screen = 'home' | 'gameModes' | 'settings' | 'tutorial' | 'play' | 'blackjack' | 'roulette' | 'slots' | 'profile' | 'slotLobby' | 'slotMachine' | 'dominoSetup' | 'domino' | 'bingoSetup' | 'bingo' | 'room' | 'account' | 'staff' | 'bank' | 'cartaOnline' | 'blackjackTable' | 'rouletteTable' | 'cartaSetup' | 'blackjackSetup' | 'rouletteSetup';
+export type Screen = 'home' | 'gameModes' | 'settings' | 'tutorial' | 'play' | 'blackjack' | 'roulette' | 'slots' | 'profile' | 'slotLobby' | 'slotMachine' | 'dominoSetup' | 'domino' | 'bingoSetup' | 'bingo' | 'room' | 'account' | 'staff' | 'bank' | 'cartaOnline' | 'blackjackTable' | 'rouletteTable' | 'cartaSetup' | 'blackjackSetup' | 'rouletteSetup' | 'jewels' | 'jewelsPlay';
 
-export const SCREENS: Screen[] = ['home', 'gameModes', 'settings', 'tutorial', 'play', 'blackjack', 'roulette', 'slots', 'profile', 'slotLobby', 'slotMachine', 'dominoSetup', 'domino', 'bingoSetup', 'bingo', 'room', 'account', 'staff', 'bank', 'cartaOnline', 'blackjackTable', 'rouletteTable', 'cartaSetup', 'blackjackSetup', 'rouletteSetup'];
+export const SCREENS: Screen[] = ['home', 'gameModes', 'settings', 'tutorial', 'play', 'blackjack', 'roulette', 'slots', 'profile', 'slotLobby', 'slotMachine', 'dominoSetup', 'domino', 'bingoSetup', 'bingo', 'room', 'account', 'staff', 'bank', 'cartaOnline', 'blackjackTable', 'rouletteTable', 'cartaSetup', 'blackjackSetup', 'rouletteSetup', 'jewels', 'jewelsPlay'];
 
 /** Table games with their own setup, room and match screens. */
 export type TableGame = 'domino' | 'bingo';
@@ -24,6 +24,10 @@ export interface ScreenParams {
   room?: string;
   /** Setup screen opened on its online mode. */
   online?: boolean;
+  /** Jewellery level to play. */
+  level?: number;
+  /** Jewellery home opened on its level map. */
+  levels?: boolean;
 }
 
 export type ScreenChangeEvent = { from: Screen | null; to: Screen };

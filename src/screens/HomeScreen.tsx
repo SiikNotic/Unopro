@@ -13,6 +13,7 @@ import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useViewport } from '@/hooks/useViewport';
 import type { Screen } from '@/types/navigation';
 import { GamesHub } from '@/games/shared/ui/GamesHub';
+import { JewelsEntry } from '@/games/jewels/JewelsEntry';
 import { useAccount } from '@/account/useAccount';
 import { usePlayerName } from '@/account/usePlayerName';
 
@@ -228,6 +229,13 @@ export function HomeScreen() {
             <p className="text-xs text-[var(--cz-muted)]">{t('hub.hint')}</p>
           </div>
           <GamesHub />
+        </section>
+
+        <section className="lobby-rise" style={{ animationDelay: '90ms' }} aria-labelledby="lobby-solo">
+          <h2 id="lobby-solo" className="font-display font-bold text-lg text-white mb-3">
+            {t('gameModes.puzzleTitle')}
+          </h2>
+          <JewelsEntry onOpen={() => navigate('jewels')} />
         </section>
 
         <section className="lobby-rise" style={{ animationDelay: '120ms' }} aria-labelledby="lobby-games">

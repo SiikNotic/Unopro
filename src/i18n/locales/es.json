@@ -66,7 +66,9 @@
       }
     },
     "tableTitle": "Juegos de mesa",
-    "tableSubtitle": "Contra bots en este dispositivo o en línea."
+    "tableSubtitle": "Contra bots en este dispositivo o en línea.",
+    "puzzleTitle": "Un jugador",
+    "puzzleSubtitle": "Partidas rápidas, a tu ritmo."
   },
   "settings": {
     "title": "Ajustes",
@@ -1587,5 +1589,38 @@
       "checksum": "La descarga no coincide con la versión publicada, así que no se instaló. Inténtalo de nuevo.",
       "failed": "No se pudo descargar la actualización. Revisa tu conexión e inténtalo de nuevo."
     }
+  },
+  "jewels": {
+    "tagline": "Combina. Descubre. Brilla.",
+    "play": "Jugar",
+    "levels": "Niveles",
+    "levelN": "Nivel {n}",
+    "level": "Nivel",
+    "settings": "Ajustes",
+    "sound": "Sonido",
+    "music": "Música",
+    "animations": "Animaciones y efectos",
+    "goal": "Objetivo",
+    "moves": "Movimientos",
+    "score": "Puntuación",
+    "progress": "Progreso de estrellas",
+    "hud": "Estado del nivel",
+    "goalAria": "{current} de {target}",
+    "boardAria": "Tablero de joyas. Toca una joya y luego una vecina, o desliza para intercambiarlas.",
+    "cascade": "Cascada ×{n}",
+    "won": "¡Nivel completado!",
+    "lost": "Sin movimientos",
+    "lostHint": "Te faltó poco. Prueba otra vez: cada partida es distinta.",
+    "best": "Mejor puntuación: {n}",
+    "starsAria": "{n} de 3 estrellas",
+    "next": "Siguiente nivel",
+    "retry": "Reintentar",
+    "replay": "Repetir",
+    "lockedAria": "Nivel {n}, bloqueado",
+    "levelAria": "Nivel {n}, {stars} de 3 estrellas",
+    "moreSoon": "Pronto habrá más niveles.",
+    "entry": "Jewellery",
+    "entryHint": "Puzzle de joyas para un jugador",
+    "entryTag": "Un jugador · Puzzle"
   }
 }

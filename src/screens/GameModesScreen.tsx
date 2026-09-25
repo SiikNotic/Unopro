@@ -9,6 +9,7 @@ import { SlotSymbolIcon } from '@/components/casino/slotSymbols';
 import { useI18n } from '@/i18n';
 import { useWallet } from '@/casino/useWallet';
 import { BingoArt, DominoArt } from '@/games/shared/ui/GameArt';
+import { GemMark } from '@/games/jewels/JewelsEntry';
 import type { Screen } from '@/types/navigation';
 
 /** Every multiplayer game opens its setup (GameSetupScreen); the slot machines are single-player. */
@@ -81,6 +82,23 @@ export function GameModesScreen() {
               </button>
             ))}
           </div>
+        </section>
+
+        <section className="animate-slide-up" style={{ animationDelay: '0.02s' }}>
+          <div className="mb-2 px-1">
+            <h2 className="font-display font-bold text-white text-base">{t('gameModes.puzzleTitle')}</h2>
+            <p className="text-xs text-[var(--cz-muted)]">{t('gameModes.puzzleSubtitle')}</p>
+          </div>
+          <button type="button" className="cz-row" onClick={() => navigate('jewels')}>
+            <span className="cz-row-icon bg-[rgba(120,70,190,0.3)] border-[rgba(216,178,106,0.4)]">
+              <GemMark size={30} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block font-display font-bold text-white text-[15px]">{t('jewels.entry')}</span>
+              <span className="block text-xs text-[var(--cz-muted)] mt-0.5 leading-snug">{t('jewels.entryHint')}</span>
+            </span>
+            <ChevronRight className="w-5 h-5 text-[var(--cz-muted)] shrink-0" aria-hidden />
+          </button>
         </section>
 
         {online && (

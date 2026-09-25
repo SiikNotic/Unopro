@@ -36,3 +36,5 @@ Only games listed here may skip `GameSetupScreen` (confirmed by the product owne
 
 - **Slots** (Tragamonedas, all machines): single-player, confirmed 2026-09-25. They keep their own lobby
   (`SlotLobbyScreen`).
+- **Jewellery** (match-3): single-player, confirmed 2026-09-25. Its own front door (`JewelsHome`: Play /
+  Levels / settings), no setup screen.

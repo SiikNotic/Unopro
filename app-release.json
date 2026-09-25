@@ -2,6 +2,7 @@
   "version": "1.2.0",
   "notes": {
     "es": [
+      "Nuevo juego: Jewellery, un puzzle de joyas para un jugador con 12 niveles, joyas especiales, combos y cascadas.",
       "Nueva pantalla de configuración para Carta, Dominó, Bingo, Blackjack y Ruleta: jugadores, asientos, dificultad, reglas y escenario en un mismo diseño.",
       "Carta contra bots: de 2 a 6 jugadores, equipos 2 vs 2 o 3 vs 3, partida a 250 o 500 puntos y reglas opcionales (acumular +2/+4, robar hasta poder jugar).",
       "Multijugador en línea: Carta, Blackjack y Ruleta con otros jugadores (Jugar ahora o sala privada con código).",
@@ -10,6 +11,7 @@
       "La app se actualiza con cada nueva versión de la web."
     ],
     "en": [
+      "New game: Jewellery, a single-player jewel puzzle with 12 levels, special jewels, combos and cascades.",
       "New setup screen for Carta, Domino, Bingo, Blackjack and Roulette: players, seats, difficulty, rules and scene in one design.",
       "Carta vs bots: 2 to 6 players, 2 vs 2 or 3 vs 3 teams, games to 250 or 500 points and optional rules (stack +2/+4, draw until you can play).",
       "Online multiplayer: Carta, Blackjack and Roulette with other players (Play now or a private room with a code).",

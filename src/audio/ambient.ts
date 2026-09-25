@@ -7,7 +7,7 @@ import { bell, noise, note, pluck, tone } from './voices';
 import type { Voice } from './voices';
 
 /** Slot machines plus the table games that bring their own music. */
-export type AmbientId = MachineId | 'domino' | 'bingo';
+export type AmbientId = MachineId | 'domino' | 'bingo' | 'jewels';
 
 interface Pattern {
   /** Seconds per beat. */
@@ -101,6 +101,17 @@ export const AMBIENT: Record<AmbientId, Pattern> = {
       pluck(v, t, note(roots[bar] + walk - 12), 0.05, 0.6, 'sine');
       noise(v, t + (i % 2 ? 0.02 : 0), 0.22, { type: 'highpass', freq: 5200, gain: i % 2 ? 0.014 : 0.006, attack: 0.08 });
       if (r() < 0.22) pluck(v, t + 0.36, note(chords[bar][Math.floor(r() * 4)] + 12), 0.018, 0.7);
+    },
+  },
+  // Jewellery: slow, glassy pads with a crystal arpeggio drifting over them.
+  jewels: {
+    beat: 0.42,
+    play: (v, t, i, r) => {
+      const bar = Math.floor(i / 16) % 4;
+      const roots = [-9, -5, -7, -2]; // C, E-minor-ish, D, G
+      if (i % 16 === 0) chord(v, t, [0, 7, 11, 16].map((n) => roots[bar] - 12 + n), 7.2, 'sine', 0.012);
+      if (i % 2 === 0 && r() < 0.75) bell(v, t, note(roots[bar] + 12 + [0, 4, 7, 11, 14][(i / 2 + bar) % 5]), 0.008, 0.9);
+      if (i % 8 === 4 && r() < 0.4) tone(v, t, note(roots[bar] + 31), 1.2, { gain: 0.004, attack: 0.3 });
     },
   },
   // Bingo: a bright, bouncy groove. Pumping bass, offbeat chords, handclaps on 2 and 4, glockenspiel hooks.

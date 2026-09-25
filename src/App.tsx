@@ -37,6 +37,9 @@ const CartaOnline = lazy(() => import('@/games/online/CartaOnline').then((m) => 
 const BlackjackTableScreen = lazy(() => import('@/casino/table/BlackjackTableScreen').then((m) => ({ default: m.BlackjackTableScreen })));
 const RouletteTableScreen = lazy(() => import('@/casino/table/RouletteTableScreen').then((m) => ({ default: m.RouletteTableScreen })));
 const BankScreen = lazy(() => import('@/bank/BankScreen').then((m) => ({ default: m.BankScreen })));
+// Jewellery (single-player match-3) loads only when opened.
+const JewelsHome = lazy(() => import('@/games/jewels/ui/JewelsHome').then((m) => ({ default: m.JewelsHome })));
+const JewelPlayScreen = lazy(() => import('@/games/jewels/ui/JewelPlayScreen').then((m) => ({ default: m.JewelPlayScreen })));
 const PremiumSlotScreen = lazy(() => import('@/screens/casino/PremiumSlotScreen').then((m) => ({ default: m.PremiumSlotScreen })));
 
 function ScreenRouter() {
@@ -68,6 +71,8 @@ function ScreenRouter() {
     cartaSetup: <CartaSetupScreen />,
     blackjackSetup: <BlackjackSetupScreen />,
     rouletteSetup: <RouletteSetupScreen />,
+    jewels: <JewelsHome />,
+    jewelsPlay: <JewelPlayScreen />,
   };
 
   return (

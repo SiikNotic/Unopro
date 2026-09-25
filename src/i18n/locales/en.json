@@ -66,7 +66,9 @@
       }
     },
     "tableTitle": "Table games",
-    "tableSubtitle": "Against bots on this device, or online."
+    "tableSubtitle": "Against bots on this device, or online.",
+    "puzzleTitle": "Single player",
+    "puzzleSubtitle": "Quick games at your own pace."
   },
   "settings": {
     "title": "Settings",
@@ -1587,5 +1589,38 @@
       "checksum": "The download doesn't match the published version, so it wasn't installed. Try again.",
       "failed": "The update couldn't be downloaded. Check your connection and try again."
     }
+  },
+  "jewels": {
+    "tagline": "Match. Discover. Shine.",
+    "play": "Play",
+    "levels": "Levels",
+    "levelN": "Level {n}",
+    "level": "Level",
+    "settings": "Settings",
+    "sound": "Sound",
+    "music": "Music",
+    "animations": "Animations and effects",
+    "goal": "Goal",
+    "moves": "Moves",
+    "score": "Score",
+    "progress": "Star progress",
+    "hud": "Level status",
+    "goalAria": "{current} of {target}",
+    "boardAria": "Jewel board. Tap a jewel and then a neighbour, or swipe to swap them.",
+    "cascade": "Cascade ×{n}",
+    "won": "Level complete!",
+    "lost": "Out of moves",
+    "lostHint": "So close. Try again: every game is different.",
+    "best": "Best score: {n}",
+    "starsAria": "{n} of 3 stars",
+    "next": "Next level",
+    "retry": "Try again",
+    "replay": "Replay",
+    "lockedAria": "Level {n}, locked",
+    "levelAria": "Level {n}, {stars} of 3 stars",
+    "moreSoon": "More levels coming soon.",
+    "entry": "Jewellery",
+    "entryHint": "Single-player jewel puzzle",
+    "entryTag": "Single player · Puzzle"
   }
 }
