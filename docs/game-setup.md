@@ -29,3 +29,10 @@ name and, for coin tables, the account).
 Adding a game: write `configs/<game>.tsx` returning a `GameSetupConfig` with only the options its engine
 supports, add a screen in `SetupScreens.tsx`, and route its entries to it. A game with no scenarios yet
 simply leaves `scenario` out; adding them later is one selector in its config.
+
+## Confirmed single-player games
+
+Only games listed here may skip `GameSetupScreen` (confirmed by the product owner):
+
+- **Slots** (Tragamonedas, all machines): single-player, confirmed 2026-09-25. They keep their own lobby
+  (`SlotLobbyScreen`).
