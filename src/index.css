@@ -707,3 +707,12 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5), 0 0 0 2px #7a4e0a;
 }
 .music-slider:focus-visible { outline: 2px solid rgba(243, 236, 220, 0.9); outline-offset: 3px; border-radius: 8px; }
+
+/* Cloudflare Turnstile: only visible when it needs the player to interact (see src/account/captcha.ts). */
+.captcha-host {
+  position: fixed;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 24px);
+  transform: translateX(-50%);
+  z-index: 200;
+}

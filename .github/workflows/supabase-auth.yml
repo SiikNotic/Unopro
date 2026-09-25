@@ -1,0 +1,42 @@
+name: Supabase Auth bot protection
+
+# Turns on CAPTCHA (Cloudflare Turnstile) in Supabase Auth once both keys exist, so sign-ups, sign-ins,
+# password resets and anonymous guest sessions need a token solved in the app (src/account/captcha.ts).
+#   Repository Variable  VITE_TURNSTILE_SITE_KEY   (public site key; the web and app builds read it)
+#   Repository Secret    TURNSTILE_SECRET_KEY      (secret key; only sent to Supabase, never to the app)
+#   Repository Secret    SUPABASE_ACCESS_TOKEN     (already used to deploy the functions)
+# It runs after the web deploy on the default branch, so the site already sends tokens when Supabase starts
+# requiring them. Without the keys it only says so and changes nothing.
+on:
+  workflow_run:
+    workflows: ['CI and GitHub Pages']
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PROJECT_REF: mdwkigzorhvktgqlffck
+
+jobs:
+  captcha:
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enable CAPTCHA in Supabase Auth
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SECRET: ${{ secrets.TURNSTILE_SECRET_KEY }}
+          SITE_KEY: ${{ vars.VITE_TURNSTILE_SITE_KEY }}
+        run: |
+          if [ -z "$TOKEN" ] || [ -z "$SECRET" ] || [ -z "$SITE_KEY" ]; then
+            echo "VITE_TURNSTILE_SITE_KEY, TURNSTILE_SECRET_KEY or SUPABASE_ACCESS_TOKEN is missing: CAPTCHA left as it is."
+            exit 0
+          fi
+          body=$(jq -n --arg s "$SECRET" '{security_captcha_enabled: true, security_captcha_provider: "turnstile", security_captcha_secret: $s}')
+          code=$(curl -s -o /tmp/out.json -w '%{http_code}' -X PATCH "https://api.supabase.com/v1/projects/$PROJECT_REF/config/auth" \
+            -H "Authorization: Bearer $TOKEN" -H 'content-type: application/json' -d "$body")
+          echo "Supabase answered $code"
+          [ "$code" = "200" ] || { jq 'del(.security_captcha_secret)' /tmp/out.json 2>/dev/null || true; exit 1; }
+          jq '{security_captcha_enabled, security_captcha_provider}' /tmp/out.json

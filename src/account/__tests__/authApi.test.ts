@@ -73,6 +73,28 @@ describe('auth api', () => {
     expect(url.searchParams.get('code_challenge_method')).toBe('s256');
   });
 
+  it('sends the CAPTCHA token with sign-up, sign-in and reset; a failed solve is its own error', async () => {
+    const bodies: Record<string, unknown>[] = [];
+    const fetchImpl = (async (_url: string, init: RequestInit) => {
+      bodies.push(JSON.parse(String(init.body)));
+      return new Response(JSON.stringify({ access_token: 't', refresh_token: 'r', expires_in: 3600, user: { id: 'u' } }), { status: 200 });
+    }) as typeof fetch;
+    const api = createAuthApi({ authUrl: 'https://p/auth/v1', apiKey: 'k' }, fetchImpl, Date.now, async () => 'tok');
+    await api.signUp('a@b.co', 'secret123', '');
+    await api.signIn('a@b.co', 'secret123');
+    await api.sendPasswordReset('a@b.co');
+    for (const b of bodies) expect(b.gotrue_meta_security).toEqual({ captcha_token: 'tok' });
+    // Without CAPTCHA configured, nothing extra is sent.
+    bodies.length = 0;
+    await createAuthApi({ authUrl: 'https://p/auth/v1', apiKey: 'k' }, fetchImpl, Date.now, async () => undefined).signIn('a@b.co', 'x');
+    expect(bodies[0]).not.toHaveProperty('gotrue_meta_security');
+    const failing = createAuthApi({ authUrl: 'https://p/auth/v1', apiKey: 'k' }, fetchImpl, Date.now, async () => {
+      throw new Error('captcha_failed');
+    });
+    await expect(failing.signIn('a@b.co', 'x')).rejects.toMatchObject({ code: 'captcha' });
+    expect(authErrorOf(400, { error_code: 'captcha_failed', msg: 'captcha protection: request disallowed' }).code).toBe('captcha');
+  });
+
   it('reports a network failure as such', async () => {
     const api = createAuthApi({ authUrl: 'https://p/auth/v1', apiKey: 'k' }, (async () => {
       throw new TypeError('offline');

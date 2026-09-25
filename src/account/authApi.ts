@@ -2,6 +2,7 @@
 // Discord through the PKCE flow (the browser keeps a one-time secret; the code that comes back in the
 // URL is useless without it). The session is stored where the guest session lived, so online rooms and
 // the casino server see the signed-in player from then on.
+import { captchaField, captchaToken } from './captcha';
 import { storage } from '@/storage';
 import { SESSION_KEY } from '@/casino/premium/anonAuth';
 
@@ -39,6 +40,7 @@ export type AuthErrorCode =
   | 'rate_limited'
   | 'provider_disabled'
   | 'signups_disabled'
+  | 'captcha'
   | 'banned'
   | 'network'
   | 'unknown';
@@ -87,6 +89,7 @@ export function authErrorOf(status: number, body: unknown): AuthError {
   if (code === 'weak_password' || msg.includes('password should')) return new AuthError('weak_password');
   if (code === 'email_address_invalid' || code === 'validation_failed' || msg.includes('invalid format')) return new AuthError('invalid_email');
   if (code === 'invalid_credentials' || code === 'invalid_grant' || msg.includes('invalid login')) return new AuthError('invalid_credentials');
+  if (code === 'captcha_failed' || msg.includes('captcha')) return new AuthError('captcha');
   if (code === 'signup_disabled' || msg.includes('signups not allowed')) return new AuthError('signups_disabled');
   if (code === 'provider_disabled' || code === 'validation_failed' || msg.includes('provider is not enabled')) return new AuthError('provider_disabled');
   return new AuthError('unknown');
@@ -134,7 +137,12 @@ export function decodeJwt(token: string): Record<string, unknown> | null {
   }
 }
 
-export function createAuthApi(cfg: AuthConfig, fetchImpl: typeof fetch = (...a) => fetch(...a), now: () => number = Date.now) {
+export function createAuthApi(
+  cfg: AuthConfig,
+  fetchImpl: typeof fetch = (...a) => fetch(...a),
+  now: () => number = Date.now,
+  captcha: () => Promise<string | undefined> = captchaToken
+) {
   const nowSec = () => Math.floor(now() / 1000);
 
   async function call(path: string, init: RequestInit & { token?: string } = {}): Promise<unknown> {
@@ -152,6 +160,15 @@ export function createAuthApi(cfg: AuthConfig, fetchImpl: typeof fetch = (...a) 
     return body;
   }
 
+  /** Bot protection (only when CAPTCHA is configured): a solve that fails reads as its own error. */
+  async function human(): Promise<Awaited<ReturnType<typeof captchaField>>> {
+    try {
+      return await captchaField(captcha);
+    } catch {
+      throw new AuthError('captcha');
+    }
+  }
+
   const sessionFrom = (body: unknown) => (body && typeof body === 'object' ? toSession(body as Record<string, unknown>, nowSec()) : null);
 
   return {
@@ -160,7 +177,7 @@ export function createAuthApi(cfg: AuthConfig, fetchImpl: typeof fetch = (...a) 
       const { challenge } = await newPkce();
       const body = await call(`/signup?redirect_to=${encodeURIComponent(appReturnUrl())}`, {
         method: 'POST',
-        body: JSON.stringify({ email, password, data: { name }, code_challenge: challenge, code_challenge_method: 's256' }),
+        body: JSON.stringify({ email, password, data: { name }, code_challenge: challenge, code_challenge_method: 's256', ...(await human()) }),
       });
       const session = sessionFrom(body);
       // GoTrue answers an already-registered address with a fake user and no identities (so addresses
@@ -171,7 +188,7 @@ export function createAuthApi(cfg: AuthConfig, fetchImpl: typeof fetch = (...a) 
     },
 
     async signIn(email: string, password: string): Promise<Session> {
-      const s = sessionFrom(await call('/token?grant_type=password', { method: 'POST', body: JSON.stringify({ email, password }) }));
+      const s = sessionFrom(await call('/token?grant_type=password', { method: 'POST', body: JSON.stringify({ email, password, ...(await human()) }) }));
       if (!s) throw new AuthError('unknown');
       return s;
     },
@@ -213,13 +230,13 @@ export function createAuthApi(cfg: AuthConfig, fetchImpl: typeof fetch = (...a) 
     },
 
     async resendConfirmation(email: string): Promise<void> {
-      await call(`/resend?redirect_to=${encodeURIComponent(appReturnUrl())}`, { method: 'POST', body: JSON.stringify({ type: 'signup', email }) });
+      await call(`/resend?redirect_to=${encodeURIComponent(appReturnUrl())}`, { method: 'POST', body: JSON.stringify({ type: 'signup', email, ...(await human()) }) });
     },
 
     async sendPasswordReset(email: string): Promise<void> {
       const { challenge } = await newPkce();
       // The marker in the return URL tells the app to ask for the new password after the exchange.
-      await call(`/recover?redirect_to=${encodeURIComponent(`${appReturnUrl()}?reset=1`)}`, { method: 'POST', body: JSON.stringify({ email, code_challenge: challenge, code_challenge_method: 's256' }) });
+      await call(`/recover?redirect_to=${encodeURIComponent(`${appReturnUrl()}?reset=1`)}`, { method: 'POST', body: JSON.stringify({ email, code_challenge: challenge, code_challenge_method: 's256', ...(await human()) }) });
     },
 
     async updatePassword(token: string, password: string): Promise<void> {

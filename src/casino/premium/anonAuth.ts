@@ -1,6 +1,7 @@
 // Minimal anonymous sign-in against a Supabase Auth (GoTrue) endpoint, without the SDK. The server
 // identifies the player only from the resulting JWT; the browser never tells it who it is.
 import { storage } from '@/storage';
+import { captchaField, captchaToken } from '@/account/captcha';
 
 /** One Supabase session per browser: an anonymous guest's, or a registered player's (see src/account). */
 export const SESSION_KEY = 'carta.slots.session';
@@ -25,6 +26,8 @@ export interface AnonAuthOptions {
   apiKey: string;
   fetchImpl?: typeof fetch;
   now?: () => number;
+  /** Bot protection token for the anonymous sign-up (when CAPTCHA is configured). */
+  captcha?: () => Promise<string | undefined>;
 }
 
 /** One sign-in in flight per auth server, shared by every client (a second one would create a second player). */
@@ -54,7 +57,7 @@ export function createAnonAuth(opts: AnonAuthOptions): () => Promise<string | nu
       if (isSession(saved)) next = await request('/token?grant_type=refresh_token', { refresh_token: saved.refresh_token });
       // Anonymous sign-in only when there is no account yet: a failed refresh must not silently swap
       // the player for a brand-new one with a fresh balance.
-      else next = await request('/signup', {});
+      else next = await request('/signup', await captchaField(opts.captcha ?? captchaToken));
     } catch {
       return null;
     }

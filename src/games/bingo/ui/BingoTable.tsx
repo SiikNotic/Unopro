@@ -14,10 +14,12 @@ import type { BingoScene } from '@/games/shared/setup';
 import { CENTER, completedLines, letterOf, nearLines } from '../engine';
 import type { BingoAction, BingoEvent, BingoView } from '../engine';
 import { Ball, Cage, MasterBoard } from './BingoParts';
+import { callBall, stopCaller } from './bingoCaller';
 import './bingo.css';
 import '@/games/shared/fonts.css';
 
 const SEAT_COLORS = ['#d9265f', '#2f86e8', '#2fb36a', '#f59f1c'];
+const CONFETTI = ['#e8414f', '#f59f1c', '#2fb36a', '#2f86e8', '#8c52e0', '#ffffff'];
 
 /** Everything the bingo hall needs, whoever runs the round: this device or the online room server. */
 export interface BingoSession {
@@ -96,23 +98,17 @@ export function BingoTable({ session }: { session: BingoSession }) {
   // ---------- events ----------
   const speak = useCallback(
     (n: number) => {
-      if (!preferences.sound || typeof speechSynthesis === 'undefined') return;
-      try {
-        const u = new SpeechSynthesisUtterance(`${letterOf(n)}, ${n}`);
-        u.lang = language === 'es' ? 'es-ES' : 'en-US';
-        u.rate = 1.05;
-        u.volume = Math.min(1, preferences.sfxVolume + 0.1);
-        speechSynthesis.cancel();
-        speechSynthesis.speak(u);
-      } catch {
-        /* voices are optional */
-      }
+      if (!preferences.sound) return;
+      callBall(n, `${letterOf(n)}, ${n}`, language === 'es' ? 'es' : 'en', Math.min(1, preferences.sfxVolume + 0.15));
     },
     [preferences.sound, preferences.sfxVolume, language]
   );
+  // The call waits for the ball to land; leaving the hall cancels a pending call and silences the voice.
+  const callTimer = useRef(0);
   useEffect(
     () => () => {
-      if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel();
+      window.clearTimeout(callTimer.current);
+      stopCaller();
     },
     []
   );
@@ -123,7 +119,8 @@ export function BingoTable({ session }: { session: BingoSession }) {
       if (e.type === 'called') {
         fire('ballDrop');
         fire('numberCalled', { delay: 0.45 });
-        window.setTimeout(() => speak(e.number), 650);
+        window.clearTimeout(callTimer.current);
+        callTimer.current = window.setTimeout(() => speak(e.number), 650);
         setNote(null);
       } else if (e.type === 'marked' && e.playerId === me) {
         fire('mark');
@@ -181,7 +178,7 @@ export function BingoTable({ session }: { session: BingoSession }) {
   return (
     <div className="bg">
       <GameSceneBackground scene={scene} />
-      <FxLayer kind="confetti" colors={['#e8414f', '#f59f1c', '#2fb36a', '#2f86e8', '#8c52e0', '#ffffff']} />
+      <FxLayer kind="confetti" colors={CONFETTI} />
       <header className="bg-top">
         <button type="button" className="cz-btn cz-btn-secondary cz-icon-btn" onClick={session.onBack} aria-label={t('common.back')}>
           <ArrowLeft className="w-5 h-5" />

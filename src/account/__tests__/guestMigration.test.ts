@@ -27,7 +27,7 @@ function fakeServer() {
     done = true;
     if (seenGuests.has(args.p_guest_id)) return { ok: true, data: [{ balance: (balance += 1000), bonus_granted: true, migrated: 0, guest_status: 'used_elsewhere' }] };
     seenGuests.add(args.p_guest_id);
-    const moved = Math.min(args.p_guest_balance, 25000);
+    const moved = Math.min(args.p_guest_balance, 5000);
     balance += moved + 1000;
     return { ok: true, data: [{ balance, bonus_granted: true, migrated: moved, guest_status: moved < args.p_guest_balance ? 'capped' : 'migrated' }] };
   };
@@ -38,7 +38,7 @@ describe('guest → account (client side)', () => {
     [0, 1000],
     [500, 1500],
     [1275, 2275],
-    [10000, 11000],
+    [5000, 6000],
   ])('guest with %i → account with %i, and the chips leave the guest wallet', async (guest, final) => {
     setGuest(guest);
     const r = await registerWithGuest(fakeServer());

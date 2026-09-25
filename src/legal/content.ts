@@ -127,7 +127,7 @@ function es(): LegalDoc[] {
         {
           h: 'Con quién se comparten',
           p: [
-            'Proveedores que prestan el servicio: Supabase (servidor, base de datos y autenticación), GitHub (alojamiento web y descargas de la app), Google (AdMob en Android; inicio de sesión con Google si lo eliges) y Discord (si inicias sesión con Discord). Cada uno trata los datos según su propia política.',
+            'Proveedores que prestan el servicio: Supabase (servidor, base de datos y autenticación), GitHub (alojamiento web y descargas de la app), Google (AdMob en Android; inicio de sesión con Google si lo eliges), Discord (si inicias sesión con Discord) y Cloudflare (Turnstile, la verificación anti-bots al registrarte, iniciar sesión o crear una sesión de invitado en línea, cuando está activada; recibe tu IP y datos del navegador para distinguir personas de bots). Cada uno trata los datos según su propia política.',
             'El equipo de moderación de Carta Casino puede ver el correo, nombre de usuario, saldo e historial de una cuenta para atender incidencias y prevenir abusos; sus acciones quedan registradas.',
             'No vendemos tus datos. Otros jugadores solo ven tu nombre de usuario en las salas en línea.',
           ],
@@ -276,7 +276,7 @@ function en(): LegalDoc[] {
         {
           h: 'Who we share with',
           p: [
-            'Providers that run the service: Supabase (server, database and authentication), GitHub (web hosting and app downloads), Google (AdMob on Android; Google sign-in if you choose it) and Discord (if you sign in with Discord). Each processes data under its own policy.',
+            'Providers that run the service: Supabase (server, database and authentication), GitHub (web hosting and app downloads), Google (AdMob on Android; Google sign-in if you choose it), Discord (if you sign in with Discord) and Cloudflare (Turnstile, the anti-bot check when you sign up, sign in or start an online guest session, when enabled; it receives your IP and browser data to tell people from bots). Each processes data under its own policy.',
             'Carta Casino\'s moderation team can see an account\'s email, username, balance and history to handle issues and prevent abuse; their actions are logged.',
             'We don\'t sell your data. Other players only see your username in online rooms.',
           ],

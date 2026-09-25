@@ -1319,6 +1319,7 @@
       "rate_limited": "Too many tries. Wait a bit and try again.",
       "provider_disabled": "That sign-in method isn't enabled yet.",
       "signups_disabled": "Sign-ups are closed for now.",
+      "captcha": "We couldn't check that you're a person. Please try again.",
       "network": "Can't reach the server. Check your internet.",
       "link": "The link isn't valid or has expired. Ask for a new one.",
       "unknown": "Something went wrong. Try again.",

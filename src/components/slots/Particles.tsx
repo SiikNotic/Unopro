@@ -66,12 +66,17 @@ export function Particles({ burstId, count, kind, colors }: ParticlesProps) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const parts = useRef<P[]>([]);
   const frame = useRef(0);
+  // Kind, colours and count are read when a burst fires: a caller passing a new colours array on every render
+  // must not re-run the effect (that used to spawn a fresh burst on each render, forever).
+  const look = useRef({ kind, colors, count });
+  look.current = { kind, colors, count };
 
   useEffect(() => () => cancelAnimationFrame(frame.current), []);
 
   useEffect(() => {
     const el = canvas.current;
     const ctx = el?.getContext('2d');
+    const { kind, colors, count } = look.current;
     if (!el || !ctx || burstId === 0 || count <= 0) return;
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     const w = window.innerWidth;
@@ -152,7 +157,7 @@ export function Particles({ burstId, count, kind, colors }: ParticlesProps) {
     };
     cancelAnimationFrame(frame.current);
     frame.current = requestAnimationFrame(step);
-  }, [burstId, count, kind, colors]);
+  }, [burstId]);
 
   return <canvas ref={canvas} className="fixed inset-0 z-40 pointer-events-none w-full h-full" aria-hidden />;
 }

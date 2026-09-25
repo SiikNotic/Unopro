@@ -1319,6 +1319,7 @@
       "rate_limited": "Demasiados intentos. Espera un poco y vuelve a probar.",
       "provider_disabled": "Ese método de inicio de sesión aún no está activado.",
       "signups_disabled": "Los registros están cerrados por ahora.",
+      "captcha": "No pudimos comprobar que eres una persona. Inténtalo de nuevo.",
       "network": "Sin conexión con el servidor. Revisa tu internet.",
       "link": "El enlace no es válido o ya caducó. Pide uno nuevo.",
       "unknown": "Algo salió mal. Vuelve a intentarlo.",
