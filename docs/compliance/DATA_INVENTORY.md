@@ -31,3 +31,8 @@ Construido a partir del código (package.json, imports, AndroidManifest, funcion
   sala (`room_views`) no incluyen ids internos ni emails.
 - Staff (rol en base de datos): email, nombre, saldo, historial, baneos, para moderación (`staff_*` en
   `supabase/migrations/20260927000000_profiles_staff.sql`); cada acción queda en `admin_audit`.
+
+## Aceptación de términos
+
+- Tabla `public.terms_acceptances` (Supabase): `user_id`, versión de los textos, confirmación de 18+ y fecha. Se crea cuando el jugador acepta (al registrarse o, para cuentas anteriores, en la pantalla "Antes de jugar"). Se borra con la cuenta (`on delete cascade`). No es legible desde la app; solo `my_account()` devuelve la versión aceptada del propio jugador.
+- La edad no se verifica con documentos: es una declaración del usuario (**LEGAL REVIEW REQUIRED** si algún mercado exige verificación).

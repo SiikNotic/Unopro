@@ -1716,5 +1716,23 @@
     "goToAccount": "Go to Account to delete it",
     "webCopy": "Public copy:",
     "understood": "Got it"
+  },
+  "gate": {
+    "title": "Welcome to Carta Casino",
+    "subtitle": "Create your account or sign in to play.",
+    "consentLegend": "Conditions to create an account",
+    "adult": "I confirm I am 18 or older.",
+    "accept": "I have read and accept the",
+    "terms": "Terms of Use",
+    "privacy": "the Privacy Policy",
+    "and": "and",
+    "virtual": "the Virtual Currency Rules",
+    "virtualNote": "Carta Casino uses virtual coins only: no real money, no prizes, no purchases and no cash-out.",
+    "consentRequired": "To create your account you must confirm you are 18 or older and accept the terms.",
+    "termsTitle": "Before you play",
+    "termsSubtitle": "One more step, only once.",
+    "termsText": "To keep playing, please confirm your age and accept the current terms.",
+    "acceptAndPlay": "Accept and play",
+    "acceptFailed": "We couldn't save your acceptance. Check your connection and try again."
   }
 }

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { Coins, Eye, EyeOff, Gift, LayoutDashboard, LogOut, Mail, ShieldCheck, UserRound } from 'lucide-react';
+import { Coins, Eye, EyeOff, Gift, LayoutDashboard, LogOut, Mail, UserRound } from 'lucide-react';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { useNavigation } from '@/components/Navigation';
 import { useI18n } from '@/i18n';
@@ -12,6 +12,9 @@ import type { AuthErrorCode, OAuthProvider } from './authApi';
 import { UsernameEditor } from './UsernameEditor';
 import { BanNotice } from './BanNotice';
 import { ROLE_RANK } from './accountContext';
+import { ConsentBox } from '@/legal/ConsentBox';
+import { consentGiven, rememberConsent } from '@/legal/consent';
+import type { Consent } from '@/legal/consent';
 import './account.css';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -50,8 +53,11 @@ function PasswordInput({ id, value, onChange, autoComplete, invalid }: { id: str
 
 const codeOf = (e: unknown): AuthErrorCode => (e instanceof AuthError ? e.code : 'unknown');
 
-/** Sign in or create an account (email, Google, Discord). */
-function SignInPanel() {
+/**
+ * Sign in or create an account (email, Google, Discord). Creating one (by email, or with Google / Discord,
+ * which can create one) needs the 18+ confirmation and the acceptance of the legal texts.
+ */
+export function SignInPanel() {
   const { t } = useI18n();
   const account = useAccount();
   const [tab, setTab] = useState<'signin' | 'signup'>('signup');
@@ -62,12 +68,26 @@ function SignInPanel() {
   const [error, setError] = useState<AuthErrorCode | 'short_password' | 'bad_email' | null>(null);
   const [sent, setSent] = useState<null | 'confirm' | 'reset'>(null);
   const [resent, setResent] = useState(false);
+  const [consent, setConsent] = useState<Consent>({ adult: false, terms: false });
+  const [consentMissing, setConsentMissing] = useState(false);
+  /** Creating an account needs both boxes; remembered so the server records it after the redirect. */
+  const consented = () => {
+    if (!consentGiven(consent)) {
+      setConsentMissing(true);
+      document.querySelector('.ac-consent')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return false;
+    }
+    setConsentMissing(false);
+    rememberConsent();
+    return true;
+  };
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     if (busy) return;
     if (!EMAIL_RE.test(email.trim())) return setError('bad_email');
     if (password.length < PASSWORD_MIN) return setError('short_password');
+    if (tab === 'signup' && !consented()) return;
     setBusy('form');
     setError(null);
     try {
@@ -81,6 +101,7 @@ function SignInPanel() {
   };
 
   const provider = async (p: OAuthProvider) => {
+    if (!consented()) return;
     setBusy(p);
     setError(null);
     try {
@@ -159,6 +180,15 @@ function SignInPanel() {
         <p className="mt-1 text-sm text-white/75 max-w-[34ch]">{t('account.pitchText')}</p>
       </div>
 
+      <ConsentBox
+        value={consent}
+        onChange={(c) => {
+          setConsent(c);
+          if (consentGiven(c)) setConsentMissing(false);
+        }}
+        invalid={consentMissing}
+      />
+
       <div className="flex flex-col gap-2.5">
         <button type="button" className="ac-provider ac-google" onClick={() => void provider('google')} disabled={!!busy} aria-busy={busy === 'google'}>
           <GoogleLogo /> {t('account.withGoogle')}
@@ -207,9 +237,6 @@ function SignInPanel() {
           </button>
         )}
       </form>
-      <p className="flex items-start gap-2 text-xs text-[var(--cz-muted)]">
-        <ShieldCheck className="w-4 h-4 shrink-0 mt-px" aria-hidden /> {t('account.guestNote')}
-      </p>
     </section>
   );
 }

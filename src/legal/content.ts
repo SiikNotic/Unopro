@@ -104,7 +104,8 @@ function es(): LegalDoc[] {
         {
           h: 'Datos que tratamos',
           p: [
-            'Si juegas sin cuenta, tus preferencias, monedas de invitado y progreso se guardan solo en tu dispositivo (almacenamiento local del navegador o de la app).',
+            'Tus preferencias y progreso de juegos locales se guardan en tu dispositivo (almacenamiento local del navegador o de la app).',
+            'Al crear tu cuenta guardamos tu confirmación de edad y la aceptación de los textos legales (versión y fecha).',
             'Si usas funciones en línea sin cuenta (salas en línea, tragamonedas premium), nuestro servidor crea un identificador anónimo para esa sesión.',
             'Si creas una cuenta: correo electrónico y contraseña (la contraseña la guarda el servicio de autenticación de forma cifrada), o los datos que Google o Discord nos envían si inicias sesión con ellos (normalmente correo, nombre, imagen de perfil e identificador del proveedor).',
             'Datos de juego de la cuenta: nombre de usuario, saldo de monedas, historial de partidas (juego, apuesta, resultado, fecha), préstamos, recompensas por anuncios, salas en línea en curso, última actividad y, si corresponde, sanciones y registros de moderación.',
@@ -157,7 +158,7 @@ function es(): LegalDoc[] {
       sections: [
         { h: 'El servicio', p: ['Carta Casino es un servicio de entretenimiento con juegos de casino simulados y juegos de cartas y mesa. No es un servicio de apuestas con dinero real.', 'Estos términos son un borrador técnico y requieren REVISIÓN LEGAL antes de publicarse.'] },
         { h: 'Monedas virtuales', p: [VIRTUAL_STATEMENT.es, 'No existe retiro ni canje de monedas. Podemos ajustar saldos por errores o abusos.'] },
-        { h: 'Cuentas', p: ['Eres responsable de tu cuenta y de mantener segura tu contraseña. El nombre de usuario no debe ser ofensivo ni suplantar a otras personas. Puedes eliminar tu cuenta cuando quieras.'] },
+        { h: 'Cuentas', p: [`Para jugar necesitas una cuenta. Al crearla confirmas que tienes al menos ${f.age} años y aceptas estos Términos, la Política de privacidad y las Reglas de moneda virtual; guardamos la fecha y la versión de los textos que aceptaste. Eres responsable de tu cuenta y de mantener segura tu contraseña. El nombre de usuario no debe ser ofensivo ni suplantar a otras personas. Puedes eliminar tu cuenta cuando quieras.`] },
         {
           h: 'Uso prohibido',
           p: ['Está prohibido hacer trampas, usar bots o automatización, explotar errores, manipular el cliente o las comunicaciones, crear cuentas para acumular bonificaciones, comerciar con monedas o cuentas, y acosar a otros jugadores.'],
@@ -256,7 +257,8 @@ function en(): LegalDoc[] {
         {
           h: 'Data we process',
           p: [
-            'If you play without an account, your preferences, guest coins and progress are stored only on your device (browser or app local storage).',
+            'Your preferences and local game progress are stored on your device (browser or app local storage).',
+            'When you create your account we keep your age confirmation and your acceptance of the legal texts (version and date).',
             'If you use online features without an account (online rooms, premium slots), our server creates an anonymous identifier for that session.',
             'If you create an account: email and password (the password is stored hashed by the authentication service), or the data Google or Discord send us if you sign in with them (usually email, name, profile picture and provider identifier).',
             'Account game data: username, coin balance, game history (game, stake, result, date), loans, ad rewards, online rooms in progress, last activity and, where applicable, sanctions and moderation records.',
@@ -303,7 +305,7 @@ function en(): LegalDoc[] {
       sections: [
         { h: 'The service', p: ['Carta Casino is an entertainment service with simulated casino games and card and table games. It is not a real-money gambling service.', 'These terms are a technical draft and require LEGAL REVIEW before publication.'] },
         { h: 'Virtual coins', p: [VIRTUAL_STATEMENT.en, 'There is no withdrawal or redemption of coins. We may adjust balances for bugs or abuse.'] },
-        { h: 'Accounts', p: ['You are responsible for your account and for keeping your password safe. Usernames must not be offensive or impersonate others. You can delete your account at any time.'] },
+        { h: 'Accounts', p: [`You need an account to play. When you create it you confirm you are at least ${f.age} years old and accept these Terms, the Privacy Policy and the Virtual Currency Rules; we keep the date and version of the texts you accepted. You are responsible for your account and for keeping your password safe. Usernames must not be offensive or impersonate others. You can delete your account at any time.`] },
         { h: 'Prohibited use', p: ['Cheating, bots or automation, exploiting bugs, tampering with the client or its traffic, creating accounts to farm bonuses, trading coins or accounts, and harassing other players are prohibited.'] },
         { h: 'Suspension', p: ['We may suspend or close accounts that break these terms. Sanctions are logged with their reason.'] },
         { h: 'Intellectual property', p: ['Carta Casino\'s design, graphics, sounds and code belong to its owner or licensors. No real casino brands or materials are used.'] },

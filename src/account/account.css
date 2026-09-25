@@ -82,3 +82,41 @@
 @media (max-width: 379px) {
   .ac-coin-stack { transform: scale(0.7); transform-origin: top right; opacity: 0.55; }
 }
+
+/* Sign-up consent (18+ and legal texts). */
+.ac-consent {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(216, 178, 106, 0.35);
+  background: rgba(0, 0, 0, 0.28);
+}
+.ac-consent.is-invalid {
+  border-color: rgba(239, 83, 80, 0.8);
+}
+.ac-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 14px;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.88);
+  cursor: pointer;
+}
+.ac-check input {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin-top: 1px;
+  accent-color: var(--cz-gold);
+}
+.ac-legal-link {
+  display: inline;
+  padding: 0;
+  color: var(--cz-gold-hover);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font-weight: 600;
+}

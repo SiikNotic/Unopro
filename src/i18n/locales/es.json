@@ -1716,5 +1716,23 @@
     "goToAccount": "Ir a Cuenta para eliminarla",
     "webCopy": "Copia pública:",
     "understood": "Entendido"
+  },
+  "gate": {
+    "title": "Bienvenido a Carta Casino",
+    "subtitle": "Crea tu cuenta o inicia sesión para jugar.",
+    "consentLegend": "Condiciones para crear una cuenta",
+    "adult": "Confirmo que tengo 18 años o más.",
+    "accept": "He leído y acepto los",
+    "terms": "Términos de uso",
+    "privacy": "la Política de privacidad",
+    "and": "y",
+    "virtual": "las Reglas de moneda virtual",
+    "virtualNote": "Carta Casino usa solo monedas virtuales: sin dinero real, sin premios, sin compras y sin canje por dinero.",
+    "consentRequired": "Para crear tu cuenta tienes que confirmar que tienes 18 años o más y aceptar los términos.",
+    "termsTitle": "Antes de jugar",
+    "termsSubtitle": "Un paso más, solo una vez.",
+    "termsText": "Para seguir jugando necesitamos que confirmes tu edad y aceptes las condiciones actuales.",
+    "acceptAndPlay": "Aceptar y jugar",
+    "acceptFailed": "No pudimos guardar tu aceptación. Revisa tu conexión e inténtalo de nuevo."
   }
 }

@@ -6,7 +6,7 @@ export const LEGAL_CONFIG = {
   /** Public contact email for privacy requests and support. */
   contactEmail: null as string | null,
   /** Minimum age to use the app, decided with legal advice for each market. */
-  minimumAge: null as number | null,
+  minimumAge: 18 as number | null,
   /** Date the texts were last updated (ISO). */
   updated: '2026-09-25',
   /** Where the public copies live (GitHub Pages). */

@@ -13,6 +13,7 @@ import type { RpcResult } from './rpc';
 import { registerWithGuest } from './guest';
 import type { RegisterResult } from './guest';
 import { subscribeLive } from './live';
+import { takePendingConsent, TERMS_VERSION } from '@/legal/consent';
 import type { AccountBan, AccountProfile, Role } from './accountContext';
 
 interface MyAccount {
@@ -24,6 +25,10 @@ interface MyAccount {
   bonusClaimed: boolean;
   migrated: boolean;
   ban: AccountBan | null;
+  /** Version of the texts this player accepted (null: none yet). Absent on a server without terms. */
+  termsAccepted?: string | null;
+  /** Version the server requires. */
+  termsVersion?: string;
 }
 
 /** The name a new profile starts from: the guest's local name, else the Google / Discord name. */
@@ -60,6 +65,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   const [recovering, setRecovering] = useState(false);
   const [profile, setProfile] = useState<AccountProfile | null>(null);
   const [ban, setBan] = useState<AccountBan | null>(null);
+  const [termsNeeded, setTermsNeeded] = useState(false);
   const loadSeq = useRef(0);
 
   /** Reads balance, username, role and ban from the database (the only source of truth for them). */
@@ -73,6 +79,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     setCoins({ balance: me.balance, bonusClaimed: me.bonusClaimed, registered: me.registered, migrated: me.migrated });
     setProfile({ userId: me.userId, username: me.username, role: me.role });
     setBan(me.ban);
+    setTermsNeeded(typeof me.termsVersion === 'string' && me.termsAccepted !== me.termsVersion);
     setCoinsError(false);
     return me;
   }, [cfg]);
@@ -113,6 +120,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       setCoins(null);
       setProfile(null);
       setBan(null);
+      setTermsNeeded(false);
       setStatus('guest');
       return;
     }
@@ -165,10 +173,29 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     if (!u.confirmed) return;
     await rpc('ensure_profile', { p_suggested: suggestedName(u) }, cfg);
     if (seq !== loadSeq.current) return;
-    const me = await readAccount();
+    let me = await readAccount();
     if (seq !== loadSeq.current || !me) return;
+    const needsTerms = typeof me.termsVersion === 'string' && me.termsAccepted !== me.termsVersion;
+    if (needsTerms) {
+      // Ticked at sign-up on this device (before the email confirmation or the Google / Discord
+      // redirect): record it now. Otherwise the app asks for it before anything else.
+      if (!takePendingConsent()) return;
+      const r = await rpc('accept_terms', { p_version: TERMS_VERSION, p_adult: true }, cfg);
+      if (seq !== loadSeq.current || !r.ok) return;
+      me = await readAccount();
+      if (seq !== loadSeq.current || !me) return;
+    }
     if (me.registered && !me.ban && (!me.bonusClaimed || !me.migrated)) await claimBonus();
   }, [cfg, api, claimBonus, readAccount]);
+
+  /** The player confirms they are 18+ and accepts the texts (the server records it), then gets their welcome coins. */
+  const acceptTerms = useCallback(async (): Promise<boolean> => {
+    const r = await rpc('accept_terms', { p_version: TERMS_VERSION, p_adult: true }, cfg);
+    if (!r.ok) return false;
+    const me = await readAccount();
+    if (me && me.registered && !me.ban && (!me.bonusClaimed || !me.migrated)) await claimBonus();
+    return true;
+  }, [cfg, readAccount, claimBonus]);
 
   /** Applies what a redirect from Supabase brought back (OAuth, email confirmation, password reset). */
   const applyReturn = useCallback(
@@ -326,6 +353,8 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       coinsError,
       profile,
       ban,
+      termsNeeded,
+      acceptTerms,
       setUsername,
       notice,
       recovering,
@@ -389,7 +418,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       setBalance,
       claimBonus,
     };
-  }, [api, cfg, status, user, coins, coinsError, profile, ban, setUsername, notice, recovering, refreshCoins, claimBonus, setBalance]);
+  }, [api, cfg, status, user, coins, coinsError, profile, ban, termsNeeded, acceptTerms, setUsername, notice, recovering, refreshCoins, claimBonus, setBalance]);
 
   return <AccountContext.Provider value={value}>{children}</AccountContext.Provider>;
 }

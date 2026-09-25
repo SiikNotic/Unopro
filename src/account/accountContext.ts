@@ -44,6 +44,10 @@ export interface AccountContextValue {
   profile: AccountProfile | null;
   /** Set while the account is suspended (read from the server). */
   ban: AccountBan | null;
+  /** True while the signed-in player hasn't accepted the current terms (read from the server). */
+  termsNeeded: boolean;
+  /** Records the player's 18+ confirmation and acceptance on the server. */
+  acceptTerms: () => Promise<boolean>;
   /** Changes the display name (unique, checked by the database). */
   setUsername: (name: string) => Promise<RpcResult<string>>;
   notice: AccountNotice | null;

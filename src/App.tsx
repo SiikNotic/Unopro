@@ -16,6 +16,7 @@ import { ProfileScreen } from '@/screens/ProfileScreen';
 import { WalletProvider } from '@/casino/WalletProvider';
 import { AccountProvider } from '@/account/AccountProvider';
 import { AccountOverlay } from '@/account/AccountOverlay';
+import { AccessGate } from '@/account/AccessGate';
 import { SocialCasinoNotice } from '@/legal/SocialCasinoNotice';
 import type { Screen } from '@/types/navigation';
 
@@ -86,9 +87,11 @@ function ScreenRouter() {
   return (
     <main className="relative min-h-screen w-full">
       <Background />
-      <Suspense fallback={<div className="min-h-screen" aria-busy="true" />}>{screens[currentScreen]}</Suspense>
+      <AccessGate>
+        <Suspense fallback={<div className="min-h-screen" aria-busy="true" />}>{screens[currentScreen]}</Suspense>
+        <SocialCasinoNotice />
+      </AccessGate>
       <AccountOverlay />
-      <SocialCasinoNotice />
       <UpdateDialog />
     </main>
   );

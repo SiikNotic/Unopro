@@ -9,6 +9,8 @@ const OFF: AccountContextValue = {
   coinsError: false,
   profile: null,
   ban: null,
+  termsNeeded: false,
+  acceptTerms: async () => false,
   setUsername: async () => ({ ok: false, code: 'server', detail: '' }),
   notice: null,
   dismissNotice: () => {},
