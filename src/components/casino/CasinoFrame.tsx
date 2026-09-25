@@ -20,6 +20,8 @@ interface CasinoFrameProps {
   title: string;
   subtitle?: string;
   back: Screen;
+  /** Replaces the back button's navigation (e.g. leave an online table first). */
+  onBack?: () => void;
   scenario: ScenarioId;
   /** Replaces the animated scene with a custom backdrop. */
   backdrop?: ReactNode;
@@ -42,7 +44,7 @@ interface CasinoFrameProps {
  * Shared shell for every casino game: a top bar that always says where you are and how to go back,
  * the table in the middle and the controls in a dock under the thumb. Respects notches and home bars.
  */
-export function CasinoFrame({ title, subtitle, back, scenario, backdrop, onHelp, dock, maxWidth = 'max-w-3xl', balanceOverride, allowRefill = true, error, children }: CasinoFrameProps) {
+export function CasinoFrame({ title, subtitle, back, onBack, scenario, backdrop, onHelp, dock, maxWidth = 'max-w-3xl', balanceOverride, allowRefill = true, error, children }: CasinoFrameProps) {
   const { back: goBack } = useNavigation();
   const { t } = useI18n();
   const { balance, canRefill, refill, activeHere, playHere, mode } = useWallet();
@@ -65,7 +67,7 @@ export function CasinoFrame({ title, subtitle, back, scenario, backdrop, onHelp,
 
       <header className="cz-topbar cz-safe-x">
         <div className={`mx-auto w-full ${maxWidth} flex items-center gap-2`}>
-          <button type="button" onClick={() => goBack(back)} className="cz-btn cz-btn-quiet cz-btn-sm -ml-2 px-2 shrink-0" aria-label={t('casino.backToGames')}>
+          <button type="button" onClick={() => (onBack ? onBack() : goBack(back))} className="cz-btn cz-btn-quiet cz-btn-sm -ml-2 px-2 shrink-0" aria-label={t('casino.backToGames')}>
             <ArrowLeft className="w-5 h-5" />
             <span className="hidden sm:inline">{t('casino.games')}</span>
           </button>

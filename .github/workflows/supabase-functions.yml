@@ -1,0 +1,48 @@
+name: Deploy Supabase functions
+
+# Deploys the edge functions (the bundled index.ts files in supabase/functions) to the Supabase project when
+# they change on the default branch. Needs the repository secret SUPABASE_ACCESS_TOKEN (a personal access
+# token from https://supabase.com/dashboard/account/tokens); without it the job only says so.
+# Database migrations are applied separately (they are reviewed and applied by hand).
+on:
+  push:
+    branches: ['**']
+    paths: ['supabase/functions/**', '.github/workflows/supabase-functions.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-functions
+  cancel-in-progress: false
+
+env:
+  PROJECT_REF: mdwkigzorhvktgqlffck
+
+jobs:
+  deploy:
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Token present?
+        id: token
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          if [ -n "$TOKEN" ]; then echo "ok=true" >> "$GITHUB_OUTPUT"; else echo "SUPABASE_ACCESS_TOKEN is not set: nothing deployed."; fi
+      - uses: actions/setup-node@v7
+        if: steps.token.outputs.ok == 'true'
+        with:
+          node-version: 22
+      - name: Deploy
+        if: steps.token.outputs.ok == 'true'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          # Each function's index.ts is self-contained (built by `npm run functions:build`).
+          npx --yes supabase@2 functions deploy game-room --project-ref "$PROJECT_REF" --use-api
+          npx --yes supabase@2 functions deploy casino --project-ref "$PROJECT_REF" --use-api
+          # Called by Google, not by the app: it checks Google's signature instead of a Supabase JWT.
+          npx --yes supabase@2 functions deploy admob-ssv --project-ref "$PROJECT_REF" --use-api --no-verify-jwt

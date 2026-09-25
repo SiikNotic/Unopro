@@ -48,7 +48,23 @@
     "players": "{min}–{max} jugadores",
     "cartaTitle": "Carta",
     "cartaSubtitle": "El juego de cartas contra bots",
-    "casinoSubtitle": "Con fichas virtuales compartidas"
+    "casinoSubtitle": "Con fichas virtuales compartidas",
+    "onlineTitle": "Multijugador en línea",
+    "onlineSubtitle": "Juega con otras personas en tiempo real",
+    "online": {
+      "carta": {
+        "name": "Carta en línea",
+        "description": "Partida rápida o sala con código. Los bots llenan los asientos vacíos."
+      },
+      "blackjack": {
+        "name": "Mesa de Blackjack",
+        "description": "Hasta 5 jugadores contra la casa, con las monedas de tu cuenta."
+      },
+      "roulette": {
+        "name": "Mesa de Ruleta",
+        "description": "Una rueda para todos; cada quien apuesta sus monedas."
+      }
+    }
   },
   "settings": {
     "title": "Ajustes",
@@ -253,7 +269,7 @@
     "drawnPlayable": "Puedes jugar la carta robada o pasar",
     "mustAnswerStack": "Responde con otra carta de robo o roba {count}",
     "pickCard": "Toca una carta para jugarla",
-    "roundOver": "Fin de la ronda {round}",
+    "roundOver": "Ronda terminada. Enseguida empieza la siguiente.",
     "gameOver": "¡Fin de la partida!",
     "winsRound": "{name} gana la ronda",
     "teamWinsRound": "Equipo {team} gana la ronda ({name})",
@@ -261,7 +277,7 @@
     "points": "+{points} puntos",
     "cardsLeft": "Puntos en mano",
     "totalScore": "Total",
-    "nextRound": "Siguiente ronda",
+    "nextRound": "Podrás apostar en la próxima ronda.",
     "restart": "Nueva partida",
     "events": {
       "played": "{name} juega {card}",
@@ -293,7 +309,39 @@
     "roundShort": "Ronda {round}",
     "teamLabel": "Equipo {team}",
     "yourScoreLabel": "Tus puntos",
-    "mustDraw": "No tienes jugada: toca el mazo para robar"
+    "mustDraw": "No tienes jugada: toca el mazo para robar",
+    "subtitle": "Mesa multijugador · monedas de cuenta",
+    "players": "Jugadores",
+    "addChip": "Añadir ficha de {amount}",
+    "betFor": "Apostar {amount}",
+    "pickChips": "Elige fichas (mínimo {min})",
+    "waitYourTurn": "Espera tu turno…",
+    "watching": "En la mesa sin apostar: {names}",
+    "errors": {
+      "rule": "Esa jugada ya no es posible."
+    },
+    "bj": {
+      "title": "Blackjack · Mesa",
+      "waiting": "Esperando la primera apuesta",
+      "betting": "Apuestas abiertas · {s} s",
+      "yourTurn": "¡Tu turno! · {s} s",
+      "turnOf": "Turno de {name} · {s} s",
+      "dealer": "Juega la casa…",
+      "results": "Resultados · nueva ronda en {s} s",
+      "dealerLabel": "Casa",
+      "noCards": "Sin cartas",
+      "emptyRound": "Nadie ha apostado todavía en esta ronda."
+    },
+    "rt": {
+      "title": "Ruleta · Mesa",
+      "waiting": "Esperando la primera apuesta",
+      "betting": "Apuestas abiertas · {s} s",
+      "spinning": "No va más… ¡gira la rueda!",
+      "result": "Salió el {n} · nueva ronda en {s} s",
+      "addMore": "Añade más apuestas",
+      "noMoreBets": "No va más.",
+      "hint": "Toca las casillas para armar tu apuesta y confírmala antes de que cierre."
+    }
   },
   "scenarios": {
     "random": "Aleatorio",
@@ -964,7 +1012,24 @@
     "notReadyAction": "Aún no estoy listo",
     "hostStarts": "El anfitrión empezará la partida cuando todos estén listos.",
     "leave": "Salir de la sala",
-    "accountName": "Es tu nombre de usuario. Puedes cambiarlo en Tu cuenta."
+    "accountName": "Es tu nombre de usuario. Puedes cambiarlo en Tu cuenta.",
+    "onlineTitle": "{game} en línea",
+    "playNow": "Jugar ahora",
+    "quickHint": "Te sentamos con otros jugadores. Si no hay nadie, la partida empieza con bots.",
+    "quickHintCoins": "Te sentamos en una mesa con otros jugadores. Apuestas con las monedas de tu cuenta.",
+    "createPrivate": "Crear sala privada",
+    "joinWithCode": "Unirme con código",
+    "privateRoom": "Sala privada",
+    "coinTableNeedsAccount": "Las mesas con monedas son solo para jugadores con cuenta. Crea tu cuenta o inicia sesión para sentarte.",
+    "seatsNoteTable": "Jugadores que caben en la mesa. Se pueden unir en cualquier momento.",
+    "noServer": "Esta versión no tiene servidor en línea.",
+    "startsIn": "Empieza en {s} s",
+    "publicHint": "Sala pública: la partida empieza sola y los asientos vacíos los juegan bots.",
+    "games": {
+      "carta": "Carta",
+      "blackjack": "Blackjack",
+      "roulette": "Ruleta"
+    }
   },
   "domino": {
     "roundOf": "Ronda {n} · a {target}",
@@ -1097,7 +1162,10 @@
       "not_playing": "La partida no está en juego.",
       "forbidden": "Esa acción no está permitida.",
       "busy": "El servidor no responde. Reintentando…",
-      "rule": "Jugada no válida."
+      "rule": "Jugada no válida.",
+      "insufficient_funds": "No tienes monedas suficientes para esa apuesta.",
+      "not_registered": "Necesitas una cuenta para jugar en las mesas con monedas.",
+      "banned": "Tu cuenta está suspendida."
     },
     "polling": "sincronizando"
   },

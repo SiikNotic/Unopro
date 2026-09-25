@@ -6,7 +6,7 @@ import type { DominoAction } from '@/games/domino/engine';
 import type { BingoAction } from '@/games/bingo/engine';
 
 /** How often each client nudges the server clock (bots, balls, timeouts). The server decides if it's time. */
-const TICK_MS = { lobby: 3000, domino: 1000, bingo: 700 } as const;
+const TICK_MS = { lobby: 3000, domino: 1000, bingo: 700, carta: 800, blackjack: 800, roulette: 1000 } as const;
 
 export interface OnlineRoom {
   view: RoomView | null;
@@ -14,7 +14,7 @@ export interface OnlineRoom {
   seq: number;
   error: RoomErrorCode | null;
   link: LinkState;
-  act: (action: DominoAction | BingoAction) => Promise<{ ok: boolean; code?: RoomErrorCode; detail?: string }>;
+  act: (action: DominoAction | BingoAction | Record<string, unknown>) => Promise<{ ok: boolean; code?: RoomErrorCode; detail?: string }>;
   send: (req: { op: 'ready'; ready: boolean } | { op: 'start' | 'leave' | 'rematch' }) => Promise<boolean>;
 }
 
@@ -81,7 +81,7 @@ export function useOnlineRoom(code: string, config?: OnlineConfig | null): Onlin
   const game = view?.game;
   useEffect(() => {
     if (!status || status === 'closed') return;
-    const every = status === 'lobby' ? TICK_MS.lobby : TICK_MS[game ?? 'domino'];
+    const every = status === 'lobby' ? (game === 'carta' ? 1000 : TICK_MS.lobby) : TICK_MS[game ?? 'domino'];
     const id = window.setInterval(() => {
       if (!document.hidden) void call({ op: status === 'lobby' ? 'sync' : 'tick', code });
     }, every);
@@ -89,7 +89,7 @@ export function useOnlineRoom(code: string, config?: OnlineConfig | null): Onlin
   }, [status, game, code, call]);
 
   const act = useCallback(
-    async (action: DominoAction | BingoAction) => {
+    async (action: DominoAction | BingoAction | Record<string, unknown>) => {
       const res = await call({ op: 'act', code, action });
       return res.ok ? { ok: true } : { ok: false, code: res.code, detail: res.detail };
     },

@@ -2,8 +2,23 @@
 import type { DominoAction, DominoEvent, DominoView } from '@/games/domino/engine';
 import type { BingoAction, BingoEvent, BingoView } from '@/games/bingo/engine';
 import type { BingoSpeed, Difficulty } from '@/games/shared/setup';
+import type { CartaView } from './server/carta';
+import type { BjView } from '@/casino/table/blackjackTable';
+import type { RtView } from '@/casino/table/rouletteTable';
 
-export type RoomGame = 'domino' | 'bingo';
+export type RoomGame = 'domino' | 'bingo' | 'carta' | 'blackjack' | 'roulette';
+/** Games played for account coins (registered, non-banned accounts only). */
+export const COIN_GAMES: readonly RoomGame[] = ['blackjack', 'roulette'];
+/** Games with quick match ("Jugar ahora"). */
+export const QUICK_GAMES: readonly RoomGame[] = ['carta', 'blackjack', 'roulette'];
+/** Seats allowed per game (min, max) and the default for quick match. */
+export const SEAT_RANGE: Record<RoomGame, { min: number; max: number; quick: number }> = {
+  domino: { min: 2, max: 4, quick: 4 },
+  bingo: { min: 1, max: 4, quick: 4 },
+  carta: { min: 2, max: 6, quick: 4 },
+  blackjack: { min: 1, max: 5, quick: 5 },
+  roulette: { min: 1, max: 6, quick: 6 },
+};
 export type RoomStatus = 'lobby' | 'playing' | 'closed';
 
 export interface RoomSettings {
@@ -12,6 +27,8 @@ export interface RoomSettings {
   target?: 100 | 200;
   /** Bingo only. */
   speed?: BingoSpeed;
+  /** Found by quick match. */
+  public?: boolean;
 }
 
 export interface RoomMemberView {
@@ -34,10 +51,17 @@ export interface RoomView {
   version: number;
   /** Server clock when this view was made (ms). */
   serverNow: number;
-  /** Domino: when an idle human's turn is played for them (ms, server clock). */
+  /** Domino / Carta: when an idle human's turn is played for them (ms, server clock). */
   turnDeadline: number | null;
+  /** Public Carta lobby: when the match starts by itself (ms, server clock). */
+  startsAt: number | null;
   domino: DominoView | null;
   bingo: BingoView | null;
+  carta: CartaView | null;
+  blackjack: BjView | null;
+  roulette: RtView | null;
+  /** Coin tables: your account balance after the server's last coin operation for you, if any. */
+  balance: number | null;
   /** Events of the change that produced this view (sanitised for this player). */
   events: (DominoEvent | BingoEvent)[];
 }
@@ -47,7 +71,8 @@ export type RoomRequest =
   | { op: 'join'; code: string; name: string }
   | { op: 'ready'; code: string; ready: boolean }
   | { op: 'start'; code: string }
-  | { op: 'act'; code: string; action: DominoAction | BingoAction }
+  | { op: 'quick'; game: RoomGame; name: string }
+  | { op: 'act'; code: string; action: DominoAction | BingoAction | Record<string, unknown> }
   | { op: 'tick'; code: string }
   | { op: 'sync'; code: string }
   | { op: 'leave'; code: string }
@@ -66,6 +91,9 @@ export type RoomErrorCode =
   | 'not_playing'
   | 'forbidden'
   | 'busy'
-  | 'rule';
+  | 'rule'
+  | 'insufficient_funds'
+  | 'not_registered'
+  | 'banned';
 
 export type RoomResponse = { ok: true; view: RoomView } | { ok: false; code: RoomErrorCode; detail?: string };

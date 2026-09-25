@@ -16,6 +16,9 @@ function createRng(state) {
     }
   };
 }
+function randomSeed() {
+  return Math.floor(Math.random() * 4294967296) >>> 0;
+}
 
 // src/games/shared/rng.ts
 function shuffle(items, rng) {
@@ -128,13 +131,13 @@ function dealRound(prev, leaderId) {
   const tiles = shuffle(fullSet(), rng);
   const players = prev.players.map((p, i) => ({ ...p, hand: tiles.slice(i * HAND_SIZE, (i + 1) * HAND_SIZE) }));
   const boneyard = tiles.slice(players.length * HAND_SIZE);
-  let current;
+  let current2;
   let mustLead = null;
   const leaderSeat = leaderId ? players.findIndex((p) => p.id === leaderId) : -1;
-  if (leaderSeat >= 0) current = leaderSeat;
+  if (leaderSeat >= 0) current2 = leaderSeat;
   else {
     const open = openingTile(players.map((p) => p.hand));
-    current = open.seat;
+    current2 = open.seat;
     mustLead = open.tile.id;
   }
   const state = {
@@ -145,12 +148,12 @@ function dealRound(prev, leaderId) {
     players,
     boneyard,
     line: [],
-    current,
+    current: current2,
     mustLead,
     lacks: Object.fromEntries(players.map((p) => [p.id, []])),
     lastResult: null
   };
-  return { state, events: [{ type: "dealt", round: state.round, leaderId: players[current].id }] };
+  return { state, events: [{ type: "dealt", round: state.round, leaderId: players[current2].id }] };
 }
 function currentPlayer(state) {
   return state.players[state.current];
@@ -284,14 +287,14 @@ function parseDominoAction(raw) {
 // src/games/domino/engine/view.ts
 function dominoView(state, me) {
   const self = state.players.find((p) => p.id === me);
-  const current = state.players[state.current];
+  const current2 = state.players[state.current];
   const view = {
     me,
     hand: self ? self.hand.map((t) => ({ ...t })) : [],
     seats: state.players.map((p) => ({ id: p.id, name: p.name, kind: p.kind, tiles: p.hand.length, score: state.scores[p.id] ?? 0, lacks: [...state.lacks[p.id] ?? []] })),
     line: state.line.map((t) => ({ ...t, tile: { ...t.tile } })),
     boneyardCount: state.boneyard.length,
-    currentId: current.id,
+    currentId: current2.id,
     status: state.status,
     round: state.round,
     targetScore: state.settings.targetScore,
@@ -302,7 +305,7 @@ function dominoView(state, me) {
     turn: state.turn,
     legal: []
   };
-  if (self && state.status === "playing" && current.id === me) {
+  if (self && state.status === "playing" && current2.id === me) {
     view.legal = legalMoves({ playerId: me, hand: self.hand, line: state.line, boneyardCount: state.boneyard.length, mustLead: state.mustLead });
   } else if (self && state.status === "round_over") view.legal = [{ type: "NEXT_ROUND", playerId: me }];
   return view;
@@ -577,6 +580,1517 @@ function cryptoIndex(n) {
 var DIFFICULTIES = ["easy", "normal", "hard"];
 var BINGO_SPEEDS = ["slow", "normal", "fast"];
 
+// src/game/engine/types.ts
+var COLORS = ["RED", "YELLOW", "GREEN", "BLUE"];
+
+// src/game/engine/settings.ts
+var DEFAULT_SETTINGS = {
+  startingCards: 7,
+  targetScore: 500,
+  stacking: false,
+  jumpIn: false,
+  drawUntilPlayable: false,
+  forcePlay: false,
+  unoPenalty: 2,
+  turnTimer: 0,
+  teamMode: false,
+  strictWildDrawFour: true
+};
+var MIN_PLAYERS = 2;
+var MAX_PLAYERS = 10;
+
+// src/game/engine/deck.ts
+var DECK_SIZE = 108;
+function createDeck() {
+  const deck = [];
+  const add = (color, type, value, copy) => {
+    const symbol = type === "NUMBER" ? String(value) : type;
+    const id = color === "WILD" ? `${type}-${copy}` : `${color}-${symbol}-${copy}`;
+    deck.push({ id, color, type, value });
+  };
+  for (const color of COLORS) {
+    add(color, "NUMBER", 0, 0);
+    for (let n = 1; n <= 9; n++) {
+      add(color, "NUMBER", n, 0);
+      add(color, "NUMBER", n, 1);
+    }
+    for (const type of ["SKIP", "REVERSE", "DRAW_TWO"]) {
+      add(color, type, null, 0);
+      add(color, type, null, 1);
+    }
+  }
+  for (let i = 0; i < 4; i++) add("WILD", "WILD", null, i);
+  for (let i = 0; i < 4; i++) add("WILD", "WILD_DRAW_FOUR", null, i);
+  return deck;
+}
+function shuffleDeck(deck, rng) {
+  const result = [...deck];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(rng.next() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+function resetDeck(rng) {
+  return shuffleDeck(createDeck(), rng);
+}
+function recycleDiscardPile(piles, rng) {
+  if (piles.discardPile.length <= 1) return { deck: [...piles.deck], discardPile: [...piles.discardPile] };
+  const top = piles.discardPile[piles.discardPile.length - 1];
+  const rest = piles.discardPile.slice(0, -1);
+  return { deck: [...piles.deck, ...shuffleDeck(rest, rng)], discardPile: [top] };
+}
+function drawCards(piles, count, rng) {
+  let deck = [...piles.deck];
+  let discardPile = [...piles.discardPile];
+  const cards = [];
+  let recycled = 0;
+  while (cards.length < count) {
+    if (deck.length === 0) {
+      if (discardPile.length <= 1) break;
+      ({ deck, discardPile } = recycleDiscardPile({ deck, discardPile }, rng));
+      recycled++;
+    }
+    cards.push(deck.shift());
+  }
+  return { cards, deck, discardPile, recycled };
+}
+function isWild(card) {
+  return card.type === "WILD" || card.type === "WILD_DRAW_FOUR";
+}
+function getCardScore(card) {
+  if (card.type === "NUMBER") return card.value ?? 0;
+  if (isWild(card)) return 50;
+  return 20;
+}
+function getHandScore(hand) {
+  return hand.reduce((sum, card) => sum + getCardScore(card), 0);
+}
+var TYPE_LABELS = {
+  NUMBER: "",
+  SKIP: "Skip",
+  REVERSE: "Reverse",
+  DRAW_TWO: "+2",
+  WILD: "Wild",
+  WILD_DRAW_FOUR: "Wild +4"
+};
+function cardLabel(card) {
+  if (card.type === "NUMBER") return `${card.color} ${card.value}`;
+  if (isWild(card)) return TYPE_LABELS[card.type];
+  return `${card.color} ${TYPE_LABELS[card.type]}`;
+}
+
+// src/game/engine/validation.ts
+function getTopCard(state) {
+  return state.discardPile[state.discardPile.length - 1];
+}
+function getCurrentPlayer(state) {
+  return state.players[state.currentPlayerIndex];
+}
+function getPlayer(state, playerId) {
+  return state.players.find((p) => p.id === playerId);
+}
+function isPlayerTurn(state, playerId) {
+  return getCurrentPlayer(state)?.id === playerId;
+}
+function findHolder(state, cardId) {
+  return state.players.find((p) => p.hand.some((c) => c.id === cardId));
+}
+function matchesTable(card, state, holder) {
+  const top = getTopCard(state);
+  if (!top) return false;
+  if (card.type === "WILD") return true;
+  if (card.type === "WILD_DRAW_FOUR") {
+    if (!state.settings.strictWildDrawFour) return true;
+    const hand = holder?.hand ?? [];
+    return !hand.some((c) => c.id !== card.id && c.color === state.currentColor);
+  }
+  if (card.color === state.currentColor) return true;
+  if (card.type === "NUMBER") return top.type === "NUMBER" && top.value === card.value;
+  return card.type === top.type;
+}
+function canPlayCard(card, state) {
+  if (state.status !== "PLAYING") return false;
+  const pending = state.pendingAction;
+  if (pending?.type === "CHOOSE_COLOR") return false;
+  if (pending?.type === "PLAY_DRAWN_CARD" && pending.cardId !== card.id) return false;
+  if (state.pendingDraw > 0) {
+    const top = getTopCard(state);
+    if (card.type === "WILD_DRAW_FOUR") return true;
+    return card.type === "DRAW_TWO" && top?.type === "DRAW_TWO";
+  }
+  return matchesTable(card, state, findHolder(state, card.id));
+}
+function getPlayableCards(state, playerId) {
+  const player = getPlayer(state, playerId);
+  if (!player) return [];
+  return player.hand.filter((card) => canPlayCard(card, state));
+}
+function hasPlayableCard(state, playerId) {
+  return getPlayableCards(state, playerId).length > 0;
+}
+function canJumpIn(card, state) {
+  const top = getTopCard(state);
+  if (!state.settings.jumpIn || !top || isWild(top) || isWild(card)) return false;
+  if (state.pendingAction || state.pendingDraw > 0) return false;
+  return card.color === top.color && card.type === top.type && card.value === top.value;
+}
+var fail = (error) => ({ valid: false, error });
+var OK = { valid: true };
+function validateAction(state, action) {
+  if (action.type === "RESTART_GAME") return OK;
+  if (action.type === "START_GAME") {
+    return state.status === "WAITING" || state.status === "ROUND_OVER" ? OK : fail(`Cannot start a round while the game is ${state.status}`);
+  }
+  if (state.status !== "PLAYING") return fail(`Game is not being played (status ${state.status})`);
+  const player = getPlayer(state, action.playerId);
+  if (!player) return fail(`Unknown player ${action.playerId}`);
+  const isTurn = isPlayerTurn(state, player.id);
+  const pending = state.pendingAction;
+  switch (action.type) {
+    case "PLAY_CARD": {
+      const card = player.hand.find((c) => c.id === action.cardId);
+      if (!card) return fail(`Card ${action.cardId} is not in ${player.name}'s hand`);
+      if (action.chosenColor !== void 0 && !COLORS.includes(action.chosenColor)) {
+        return fail(`Invalid color ${action.chosenColor}`);
+      }
+      if (!isTurn) {
+        return canJumpIn(card, state) ? OK : fail(`It is not ${player.name}'s turn`);
+      }
+      if (pending?.type === "CHOOSE_COLOR") return fail("A color must be chosen first");
+      if (pending?.type === "PLAY_DRAWN_CARD" && pending.cardId !== card.id) {
+        return fail("After drawing, only the drawn card may be played");
+      }
+      if (!canPlayCard(card, state)) return fail(`Card ${card.id} cannot be played now`);
+      return OK;
+    }
+    case "DRAW_CARD": {
+      if (!isTurn) return fail(`It is not ${player.name}'s turn`);
+      if (pending?.type === "CHOOSE_COLOR") return fail("A color must be chosen first");
+      if (pending?.type === "PLAY_DRAWN_CARD") return fail("Already drew this turn \u2014 play the card or end the turn");
+      if (state.settings.forcePlay && state.pendingDraw === 0 && hasPlayableCard(state, player.id)) {
+        return fail("Force play is on: a playable card must be played");
+      }
+      return OK;
+    }
+    case "CHOOSE_COLOR": {
+      if (pending?.type !== "CHOOSE_COLOR") return fail("No color choice is pending");
+      if (pending.playerId !== player.id) return fail(`Only ${pending.playerId} may choose the color`);
+      if (!COLORS.includes(action.color)) return fail(`Invalid color ${action.color}`);
+      return OK;
+    }
+    case "END_TURN": {
+      if (!isTurn) return fail(`It is not ${player.name}'s turn`);
+      if (pending?.type !== "PLAY_DRAWN_CARD") return fail("You can only end the turn after drawing a playable card");
+      if (state.settings.forcePlay) return fail("Force play is on: the drawn card must be played");
+      return OK;
+    }
+    case "CALL_UNO":
+      return OK;
+    case "CHALLENGE_UNO": {
+      const target = getPlayer(state, action.targetId);
+      if (!target) return fail(`Unknown player ${action.targetId}`);
+      if (target.id === player.id) return fail("You cannot challenge yourself");
+      if (state.settings.unoPenalty <= 0) return fail("UNO penalty is disabled");
+      if (state.unoState.penaltyWindowPlayerId !== target.id) return fail(`${target.name} cannot be penalised now`);
+      return OK;
+    }
+  }
+}
+
+// src/game/engine/log.ts
+function addLog(state, ctx, type, message, extra = {}) {
+  const last = state.log[state.log.length - 1];
+  const entry = {
+    seq: last ? last.seq + 1 : 1,
+    type,
+    roundNumber: state.roundNumber,
+    turnNumber: state.turnNumber,
+    timestamp: ctx.timestamp,
+    message,
+    ...extra
+  };
+  state.log.push(entry);
+}
+
+// src/game/engine/scoring.ts
+function getTeamOf(state, playerId) {
+  const teamId = state.players.find((p) => p.id === playerId)?.teamId;
+  return teamId ? state.teams.find((t) => t.id === teamId) : void 0;
+}
+function areTeammates(state, a, b) {
+  if (!state.settings.teamMode) return false;
+  const ta = getTeamOf(state, a);
+  return !!ta && ta.id === getTeamOf(state, b)?.id;
+}
+function calculateRoundScore(state, winnerId) {
+  const handPoints = {};
+  let points = 0;
+  for (const player of state.players) {
+    handPoints[player.id] = getHandScore(player.hand);
+    if (player.id !== winnerId && !areTeammates(state, player.id, winnerId)) {
+      points += handPoints[player.id];
+    }
+  }
+  const winningTeamId = state.settings.teamMode ? getTeamOf(state, winnerId)?.id ?? null : null;
+  return { roundNumber: state.roundNumber, winnerId, winningTeamId, points, handPoints };
+}
+
+// src/game/engine/uno.ts
+function createUnoState() {
+  return { playersWithOneCard: [], declaredPlayerIds: [], penaltyWindowPlayerId: null, calls: [] };
+}
+var without = (ids, id) => ids.filter((x) => x !== id);
+function syncUnoAfterHandChange(state, player, change) {
+  const uno = state.unoState;
+  if (change === "PLAYED" && player.hand.length === 1) {
+    if (!uno.playersWithOneCard.includes(player.id)) uno.playersWithOneCard.push(player.id);
+    if (!uno.declaredPlayerIds.includes(player.id)) uno.penaltyWindowPlayerId = player.id;
+    return;
+  }
+  if (change === "PLAYED" && player.hand.length > 1) return;
+  uno.playersWithOneCard = without(uno.playersWithOneCard, player.id);
+  uno.declaredPlayerIds = without(uno.declaredPlayerIds, player.id);
+  if (uno.penaltyWindowPlayerId === player.id) uno.penaltyWindowPlayerId = null;
+}
+function isCurrent(state, player) {
+  return state.players[state.currentPlayerIndex]?.id === player.id;
+}
+function closeUnoWindowOnAction(state, actingPlayerId) {
+  const id = state.unoState.penaltyWindowPlayerId;
+  if (id && id !== actingPlayerId) state.unoState.penaltyWindowPlayerId = null;
+}
+function registerUnoCall(state, ctx, player) {
+  const uno = state.unoState;
+  const cards = player.hand.length;
+  let valid = false;
+  let reason;
+  if (cards === 1) {
+    valid = true;
+    reason = "Player has one card";
+  } else if (cards === 2 && isCurrent(state, player) && state.pendingAction?.type !== "CHOOSE_COLOR") {
+    valid = true;
+    reason = "Player announced UNO before playing their second-to-last card";
+  } else {
+    reason = `Player has ${cards} cards`;
+  }
+  uno.calls.push({ playerId: player.id, turnNumber: state.turnNumber, timestamp: ctx.timestamp, valid, reason });
+  if (valid) {
+    if (!uno.declaredPlayerIds.includes(player.id)) uno.declaredPlayerIds.push(player.id);
+    if (uno.penaltyWindowPlayerId === player.id) uno.penaltyWindowPlayerId = null;
+  }
+  addLog(state, ctx, "PLAYER_CALLED_UNO", `${player.name} called UNO (${valid ? "valid" : "invalid"}: ${reason})`, {
+    playerId: player.id
+  });
+}
+
+// src/game/engine/effects.ts
+function reverseDirection(direction) {
+  return direction === "CLOCKWISE" ? "COUNTER_CLOCKWISE" : "CLOCKWISE";
+}
+function getNextPlayerIndex(state, fromIndex = state.currentPlayerIndex, steps = 1) {
+  const n = state.players.length;
+  const delta = state.direction === "CLOCKWISE" ? steps : -steps;
+  return ((fromIndex + delta) % n + n) % n;
+}
+function advanceTurn(state, fromIndex, steps = 1) {
+  state.currentPlayerIndex = getNextPlayerIndex(state, fromIndex, steps);
+  state.pendingAction = null;
+  state.turnNumber += 1;
+}
+function giveCards(state, ctx, playerIndex, count) {
+  const player = state.players[playerIndex];
+  const result = drawCards(state, count, ctx.rng);
+  state.deck = result.deck;
+  state.discardPile = result.discardPile;
+  for (let i = 0; i < result.recycled; i++) {
+    addLog(state, ctx, "DECK_RECYCLED", "Draw pile empty: discard pile shuffled into a new draw pile");
+  }
+  if (result.cards.length < count) {
+    addLog(state, ctx, "DECK_EXHAUSTED", `Only ${result.cards.length} of ${count} cards could be drawn`, {
+      playerId: player.id,
+      amount: result.cards.length
+    });
+  }
+  player.hand.push(...result.cards);
+  player.cardsRemaining = player.hand.length;
+  if (result.cards.length > 0) syncUnoAfterHandChange(state, player, "DREW");
+  return result.cards;
+}
+function applyDrawPenalty(state, ctx, victimIndex, amount) {
+  const victim = state.players[victimIndex];
+  const drawn = giveCards(state, ctx, victimIndex, amount);
+  addLog(state, ctx, "DRAW_PENALTY", `${victim.name} draws ${drawn.length} and loses the turn`, {
+    playerId: victim.id,
+    amount: drawn.length
+  });
+}
+function applyCardEffect(state, ctx, card, playerIndex) {
+  const player = state.players[playerIndex];
+  const n = state.players.length;
+  const roundOver = player.hand.length === 0;
+  let steps = 1;
+  switch (card.type) {
+    case "SKIP": {
+      const skipped = state.players[getNextPlayerIndex(state, playerIndex)];
+      addLog(state, ctx, "PLAYER_SKIPPED", `${skipped.name} is skipped`, { playerId: skipped.id });
+      steps = 2;
+      break;
+    }
+    case "REVERSE": {
+      state.direction = reverseDirection(state.direction);
+      addLog(state, ctx, "DIRECTION_CHANGED", `Direction is now ${state.direction}`, { playerId: player.id });
+      if (n === 2) {
+        const skipped = state.players[getNextPlayerIndex(state, playerIndex)];
+        addLog(state, ctx, "PLAYER_SKIPPED", `${skipped.name} is skipped`, { playerId: skipped.id });
+        steps = 2;
+      }
+      break;
+    }
+    case "DRAW_TWO":
+    case "WILD_DRAW_FOUR": {
+      const amount = card.type === "DRAW_TWO" ? 2 : 4;
+      if (state.settings.stacking && !roundOver) {
+        state.pendingDraw += amount;
+        addLog(state, ctx, "DRAW_PENALTY", `Draw stack is now ${state.pendingDraw}`, { amount: state.pendingDraw });
+      } else {
+        const total = state.pendingDraw + amount;
+        state.pendingDraw = 0;
+        applyDrawPenalty(state, ctx, getNextPlayerIndex(state, playerIndex), total);
+        steps = 2;
+      }
+      break;
+    }
+    default:
+      break;
+  }
+  if (roundOver) {
+    endRound(state, ctx, playerIndex);
+    return;
+  }
+  advanceTurn(state, playerIndex, steps);
+}
+function endRound(state, ctx, winnerIndex) {
+  const winner = state.players[winnerIndex];
+  const result = calculateRoundScore(state, winner.id);
+  state.rounds.push(result);
+  state.winnerId = winner.id;
+  state.pendingAction = null;
+  state.pendingDraw = 0;
+  state.status = "ROUND_OVER";
+  if (result.winningTeamId) {
+    state.teamScores[result.winningTeamId] = (state.teamScores[result.winningTeamId] ?? 0) + result.points;
+  }
+  state.scores[winner.id] = (state.scores[winner.id] ?? 0) + result.points;
+  addLog(state, ctx, "ROUND_ENDED", `${winner.name} wins round ${state.roundNumber} (+${result.points} points)`, {
+    playerId: winner.id,
+    amount: result.points
+  });
+  if (result.winningTeamId && state.teamScores[result.winningTeamId] >= state.settings.targetScore) {
+    state.status = "GAME_OVER";
+    state.gameWinnerTeamId = result.winningTeamId;
+    state.gameWinnerId = winner.id;
+    addLog(state, ctx, "GAME_ENDED", `Team ${result.winningTeamId} wins the game`, { playerId: winner.id });
+  } else if (!state.settings.teamMode && state.scores[winner.id] >= state.settings.targetScore) {
+    state.status = "GAME_OVER";
+    state.gameWinnerId = winner.id;
+    addLog(state, ctx, "GAME_ENDED", `${winner.name} wins the game`, { playerId: winner.id });
+  }
+}
+
+// src/game/engine/game.ts
+var GameConfigError = class extends Error {
+};
+function validateConfig(config, settings) {
+  const { players } = config;
+  if (players.length < MIN_PLAYERS || players.length > MAX_PLAYERS) {
+    throw new GameConfigError(`A game needs ${MIN_PLAYERS}-${MAX_PLAYERS} players (got ${players.length})`);
+  }
+  if (new Set(players.map((p) => p.id)).size !== players.length) {
+    throw new GameConfigError("Player ids must be unique");
+  }
+  if (settings.startingCards < 1 || settings.startingCards * players.length >= DECK_SIZE - 4) {
+    throw new GameConfigError(`Cannot deal ${settings.startingCards} cards to ${players.length} players`);
+  }
+  if (settings.teamMode) {
+    const teamIds = new Set((config.teams ?? []).map((t) => t.id));
+    if (teamIds.size < 2) throw new GameConfigError("Team mode needs at least two teams");
+    for (const p of players) {
+      if (!p.teamId || !teamIds.has(p.teamId)) {
+        throw new GameConfigError(`Player ${p.id} must belong to one of the configured teams`);
+      }
+    }
+  }
+}
+function createGame(config) {
+  const settings = {
+    ...DEFAULT_SETTINGS,
+    ...config.settings,
+    ...config.startingCards !== void 0 ? { startingCards: config.startingCards } : {}
+  };
+  validateConfig(config, settings);
+  const seed = (config.seed ?? randomSeed()) >>> 0;
+  const players = config.players.map((p) => ({
+    id: p.id,
+    name: p.name,
+    type: p.type,
+    hand: [],
+    teamId: p.teamId,
+    isHuman: p.type !== "BOT",
+    cardsRemaining: 0
+  }));
+  const teams = config.teams ?? [];
+  const dealerIndex = config.dealerIndex ?? players.length - 1;
+  const state = {
+    players,
+    teams,
+    settings,
+    status: "WAITING",
+    roundNumber: 0,
+    turnNumber: 0,
+    currentPlayerIndex: 0,
+    // startRound rotates the dealer, so start one seat before the requested dealer.
+    dealerIndex: (dealerIndex - 1 + players.length) % players.length,
+    direction: "CLOCKWISE",
+    deck: [],
+    discardPile: [],
+    currentColor: null,
+    pendingDraw: 0,
+    pendingAction: null,
+    unoState: createUnoState(),
+    winnerId: null,
+    scores: Object.fromEntries(players.map((p) => [p.id, 0])),
+    teamScores: Object.fromEntries(teams.map((t) => [t.id, 0])),
+    rounds: [],
+    gameWinnerId: null,
+    gameWinnerTeamId: null,
+    seed,
+    rngState: seed,
+    log: []
+  };
+  if (config.autoStart === false) return state;
+  return applyAction(state, { type: "START_GAME" }).state;
+}
+function startRound(state, ctx) {
+  const n = state.players.length;
+  state.status = "DEALING";
+  state.roundNumber += 1;
+  state.turnNumber = 1;
+  state.dealerIndex = (state.dealerIndex + 1) % n;
+  state.direction = "CLOCKWISE";
+  state.pendingDraw = 0;
+  state.pendingAction = null;
+  state.winnerId = null;
+  state.unoState = createUnoState();
+  let deck = resetDeck(ctx.rng);
+  for (const player of state.players) player.hand = [];
+  for (let i = 0; i < state.settings.startingCards; i++) {
+    for (let k = 1; k <= n; k++) {
+      state.players[(state.dealerIndex + k) % n].hand.push(deck.shift());
+    }
+  }
+  for (const player of state.players) player.cardsRemaining = player.hand.length;
+  let starter = deck.shift();
+  while (starter.type === "WILD_DRAW_FOUR") {
+    deck = shuffleDeck([...deck, starter], ctx.rng);
+    starter = deck.shift();
+  }
+  state.deck = deck;
+  state.discardPile = [starter];
+  state.currentColor = isWild(starter) ? null : starter.color;
+  state.currentPlayerIndex = getNextPlayerIndex(state, state.dealerIndex);
+  state.status = "PLAYING";
+  addLog(state, ctx, "ROUND_STARTED", `Round ${state.roundNumber} started, dealer ${state.players[state.dealerIndex].name}`);
+  addLog(state, ctx, "STARTING_CARD", `Starting card: ${cardLabel(starter)}`, { card: starter });
+  const first = state.players[state.currentPlayerIndex];
+  switch (starter.type) {
+    case "SKIP":
+      addLog(state, ctx, "PLAYER_SKIPPED", `${first.name} is skipped by the starting card`, { playerId: first.id });
+      state.currentPlayerIndex = getNextPlayerIndex(state, state.currentPlayerIndex);
+      break;
+    case "REVERSE":
+      state.direction = "COUNTER_CLOCKWISE";
+      state.currentPlayerIndex = state.dealerIndex;
+      addLog(state, ctx, "DIRECTION_CHANGED", `Direction is now ${state.direction}`);
+      break;
+    case "DRAW_TWO": {
+      const drawn = giveCards(state, ctx, state.currentPlayerIndex, 2);
+      addLog(state, ctx, "DRAW_PENALTY", `${first.name} draws ${drawn.length} and loses the turn`, {
+        playerId: first.id,
+        amount: drawn.length
+      });
+      state.currentPlayerIndex = getNextPlayerIndex(state, state.currentPlayerIndex);
+      break;
+    }
+    case "WILD":
+      state.pendingAction = { type: "CHOOSE_COLOR", playerId: first.id, cardId: starter.id, reason: "STARTING_CARD" };
+      break;
+    default:
+      break;
+  }
+}
+function reducePlayCard(s, ctx, playerId, cardId, chosenColor) {
+  const playerIndex = s.players.findIndex((p) => p.id === playerId);
+  const player = s.players[playerIndex];
+  const card = player.hand.find((c) => c.id === cardId);
+  closeUnoWindowOnAction(s, playerId);
+  if (playerIndex !== s.currentPlayerIndex) {
+    addLog(s, ctx, "PLAYER_JUMPED_IN", `${player.name} jumps in with ${cardLabel(card)}`, { playerId, card });
+    s.currentPlayerIndex = playerIndex;
+  }
+  player.hand = player.hand.filter((c) => c.id !== cardId);
+  player.cardsRemaining = player.hand.length;
+  s.discardPile.push(card);
+  s.pendingAction = null;
+  addLog(s, ctx, "PLAYER_PLAYED_CARD", `${player.name} played ${cardLabel(card)}`, { playerId, card });
+  syncUnoAfterHandChange(s, player, "PLAYED");
+  if (!isWild(card)) {
+    s.currentColor = card.color;
+    applyCardEffect(s, ctx, card, playerIndex);
+  } else if (chosenColor) {
+    setColor(s, ctx, player, chosenColor);
+    applyCardEffect(s, ctx, card, playerIndex);
+  } else {
+    s.pendingAction = { type: "CHOOSE_COLOR", playerId, cardId, reason: "PLAYED" };
+  }
+}
+function setColor(s, ctx, player, color) {
+  s.currentColor = color;
+  addLog(s, ctx, "COLOR_CHANGED", `${player.name} chose ${color}`, { playerId: player.id, color });
+}
+function reduceChooseColor(s, ctx, playerId, color) {
+  const pending = s.pendingAction;
+  if (pending?.type !== "CHOOSE_COLOR") return;
+  const playerIndex = s.players.findIndex((p) => p.id === playerId);
+  s.pendingAction = null;
+  setColor(s, ctx, s.players[playerIndex], color);
+  if (pending.reason === "PLAYED") {
+    const card = s.discardPile[s.discardPile.length - 1];
+    applyCardEffect(s, ctx, card, playerIndex);
+  }
+}
+function reduceDrawCard(s, ctx, playerId) {
+  const playerIndex = s.currentPlayerIndex;
+  const player = s.players[playerIndex];
+  closeUnoWindowOnAction(s, playerId);
+  if (s.pendingDraw > 0) {
+    const drawn2 = giveCards(s, ctx, playerIndex, s.pendingDraw);
+    s.pendingDraw = 0;
+    addLog(s, ctx, "DRAW_PENALTY", `${player.name} draws ${drawn2.length} and loses the turn`, {
+      playerId,
+      amount: drawn2.length
+    });
+    advanceTurn(s, playerIndex);
+    return;
+  }
+  const drawn = [];
+  let last;
+  do {
+    const [card] = giveCards(s, ctx, playerIndex, 1);
+    if (!card) break;
+    drawn.push(card);
+    last = card;
+  } while (s.settings.drawUntilPlayable && !canPlayCard(last, s));
+  addLog(s, ctx, "PLAYER_DREW_CARD", `${player.name} drew ${drawn.length} card(s)`, { playerId, amount: drawn.length });
+  if (last && canPlayCard(last, s)) {
+    s.pendingAction = { type: "PLAY_DRAWN_CARD", playerId, cardId: last.id };
+    return;
+  }
+  addLog(s, ctx, "PLAYER_PASSED", `${player.name} passes`, { playerId });
+  advanceTurn(s, playerIndex);
+}
+function reduceEndTurn(s, ctx, playerId) {
+  const player = getPlayer(s, playerId);
+  addLog(s, ctx, "PLAYER_PASSED", `${player.name} keeps the drawn card and passes`, { playerId });
+  advanceTurn(s, s.currentPlayerIndex);
+}
+function reduceChallengeUno(s, ctx, playerId, targetId) {
+  const targetIndex = s.players.findIndex((p) => p.id === targetId);
+  const target = s.players[targetIndex];
+  const challenger = getPlayer(s, playerId);
+  s.unoState.penaltyWindowPlayerId = null;
+  const drawn = giveCards(s, ctx, targetIndex, s.settings.unoPenalty);
+  addLog(s, ctx, "UNO_PENALTY", `${challenger.name} caught ${target.name} without UNO: +${drawn.length} cards`, {
+    playerId: targetId,
+    amount: drawn.length
+  });
+}
+function resetForNewGame(s) {
+  s.scores = Object.fromEntries(s.players.map((p) => [p.id, 0]));
+  s.teamScores = Object.fromEntries(s.teams.map((t) => [t.id, 0]));
+  s.rounds = [];
+  s.roundNumber = 0;
+  s.gameWinnerId = null;
+  s.gameWinnerTeamId = null;
+}
+function applyAction(state, action) {
+  const validation = validateAction(state, action);
+  if (!validation.valid) return { ok: false, error: validation.error, state };
+  const s = structuredClone(state);
+  const ctx = { rng: createRng(s.rngState), timestamp: action.timestamp ?? 0 };
+  switch (action.type) {
+    case "PLAY_CARD":
+      reducePlayCard(s, ctx, action.playerId, action.cardId, action.chosenColor);
+      break;
+    case "DRAW_CARD":
+      reduceDrawCard(s, ctx, action.playerId);
+      break;
+    case "CHOOSE_COLOR":
+      reduceChooseColor(s, ctx, action.playerId, action.color);
+      break;
+    case "END_TURN":
+      reduceEndTurn(s, ctx, action.playerId);
+      break;
+    case "CALL_UNO":
+      registerUnoCall(s, ctx, getPlayer(s, action.playerId));
+      break;
+    case "CHALLENGE_UNO":
+      reduceChallengeUno(s, ctx, action.playerId, action.targetId);
+      break;
+    case "START_GAME":
+      startRound(s, ctx);
+      break;
+    case "RESTART_GAME":
+      resetForNewGame(s);
+      startRound(s, ctx);
+      break;
+  }
+  s.rngState = ctx.rng.state();
+  return { ok: true, state: s };
+}
+
+// src/casino/cards.ts
+var SUITS = ["S", "H", "D", "C"];
+var RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
+function createShoe(decks) {
+  const shoe = [];
+  for (let d = 0; d < decks; d++) for (const suit of SUITS) for (const rank of RANKS) shoe.push({ id: `${rank}${suit}-${d}`, rank, suit });
+  return shoe;
+}
+function shuffle2(items, rng) {
+  const out = [...items];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(rng.next() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
+// src/casino/blackjack.ts
+function cardValue(card) {
+  if (card.rank === "A") return 11;
+  if (card.rank === "J" || card.rank === "Q" || card.rank === "K") return 10;
+  return Number(card.rank);
+}
+function handTotal(cards) {
+  let total = 0;
+  let aces = 0;
+  for (const c of cards) {
+    total += cardValue(c);
+    if (c.rank === "A") aces++;
+  }
+  while (total > 21 && aces > 0) {
+    total -= 10;
+    aces--;
+  }
+  return { total, soft: aces > 0 };
+}
+var isBlackjack = (cards) => cards.length === 2 && handTotal(cards).total === 21;
+function outcomeFor(hand, dealer) {
+  const player = handTotal(hand.cards).total;
+  const dealerTotal = handTotal(dealer).total;
+  const natural = isBlackjack(hand.cards) && !hand.fromSplit;
+  const dealerNatural = isBlackjack(dealer);
+  if (natural && !dealerNatural) return { outcome: "blackjack", payout: hand.bet + Math.floor(hand.bet * 1.5) };
+  if (dealerNatural) return natural ? { outcome: "push", payout: hand.bet } : { outcome: "lose", payout: 0 };
+  if (player > 21) return { outcome: "lose", payout: 0 };
+  if (dealerTotal > 21 || player > dealerTotal) return { outcome: "win", payout: hand.bet * 2 };
+  if (player === dealerTotal) return { outcome: "push", payout: hand.bet };
+  return { outcome: "lose", payout: 0 };
+}
+
+// src/casino/table/blackjackTable.ts
+var BJ_TIMING = { betting: 15e3, turn: 2e4, dealerStep: 800, settled: 7e3 };
+var BJ_LIMITS = { min: 10, max: 5e3 };
+var DECKS = 6;
+var RESHUFFLE_BELOW = 60;
+function createBjTable(seed, now) {
+  const rng = createRng(seed);
+  const shoe = shuffle2(createShoe(DECKS), rng);
+  return { kind: "blackjack", round: 1, phase: "waiting", phaseAt: now, shoe, rngState: rng.state(), dealer: [], seats: [], turn: 0 };
+}
+function draw(t) {
+  if (t.shoe.length === 0) {
+    const rng = createRng(t.rngState);
+    t.shoe = shuffle2(createShoe(DECKS), rng);
+    t.rngState = rng.state();
+  }
+  return t.shoe.pop();
+}
+function canBet(t, seat, amount) {
+  if (t.phase !== "waiting" && t.phase !== "betting") return "phase";
+  if (t.seats.some((s) => s.seat === seat)) return "already_bet";
+  if (!Number.isInteger(amount) || amount < BJ_LIMITS.min || amount > BJ_LIMITS.max) return "amount";
+  return null;
+}
+function placeBet(t, seat, userId, name, amount, now) {
+  const next = structuredClone(t);
+  next.seats.push({ seat, userId, name, bet: amount, hand: { cards: [], bet: amount, done: false, doubled: false, fromSplit: false }, outcome: null, payout: 0, paid: false });
+  next.seats.sort((a, b) => a.seat.localeCompare(b.seat));
+  if (next.phase === "waiting") {
+    next.phase = "betting";
+    next.phaseAt = now;
+  }
+  return next;
+}
+var current = (t) => t.phase === "playing" ? t.seats[t.turn] : void 0;
+function canAct(t, seat, action) {
+  const cur = current(t);
+  if (!cur || cur.seat !== seat) return "not_your_turn";
+  if (action === "double" && (cur.hand.cards.length !== 2 || cur.hand.doubled)) return "cannot_double";
+  return null;
+}
+function nextTurn(t, now) {
+  while (t.turn < t.seats.length && t.seats[t.turn].hand.done) t.turn++;
+  if (t.turn >= t.seats.length) {
+    t.phase = "dealer";
+  }
+  t.phaseAt = now;
+}
+function act(t, seat, action, now) {
+  if (canAct(t, seat, action)) return t;
+  const next = structuredClone(t);
+  const s = next.seats[next.turn];
+  if (action === "hit") {
+    s.hand.cards.push(draw(next));
+    const total = handTotal(s.hand.cards).total;
+    if (total >= 21) s.hand.done = true;
+    else {
+      next.phaseAt = now;
+      return next;
+    }
+  } else if (action === "double") {
+    s.hand.bet *= 2;
+    s.bet = s.hand.bet;
+    s.hand.doubled = true;
+    s.hand.cards.push(draw(next));
+    s.hand.done = true;
+  } else {
+    s.hand.done = true;
+  }
+  nextTurn(next, now);
+  return next;
+}
+function settle(t, now) {
+  for (const s of t.seats) {
+    const r = outcomeFor(s.hand, t.dealer);
+    s.outcome = r.outcome;
+    s.payout = r.payout;
+    s.paid = r.payout === 0;
+  }
+  t.phase = "settled";
+  t.phaseAt = now;
+}
+function markPaid(t, seat) {
+  return { ...t, seats: t.seats.map((s) => s.seat === seat ? { ...s, paid: true } : s) };
+}
+var unpaid = (t) => t.phase === "settled" ? t.seats.filter((s) => !s.paid && s.payout > 0) : [];
+function advanceBj(table, now, present) {
+  let t = table;
+  for (let guard = 0; guard < 80; guard++) {
+    if (t.phase === "betting") {
+      const everyoneIn = present.length > 0 && present.every((p) => t.seats.some((s) => s.seat === p));
+      const due = t.phaseAt + BJ_TIMING.betting;
+      if (!everyoneIn && now < due) break;
+      const at = everyoneIn ? Math.min(now, due) : due;
+      const next = structuredClone(t);
+      if (next.shoe.length < RESHUFFLE_BELOW) {
+        const rng = createRng(next.rngState);
+        next.shoe = shuffle2(createShoe(DECKS), rng);
+        next.rngState = rng.state();
+      }
+      for (let i = 0; i < 2; i++) {
+        for (const s of next.seats) s.hand.cards.push(draw(next));
+        next.dealer.push(draw(next));
+      }
+      for (const s of next.seats) if (isBlackjack(s.hand.cards)) s.hand.done = true;
+      if (isBlackjack(next.dealer)) {
+        for (const s of next.seats) s.hand.done = true;
+        settle(next, at);
+      } else {
+        next.phase = "playing";
+        next.turn = 0;
+        nextTurn(next, at);
+      }
+      t = next;
+      continue;
+    }
+    if (t.phase === "playing") {
+      const due = t.phaseAt + BJ_TIMING.turn;
+      if (now < due) break;
+      t = act(t, t.seats[t.turn].seat, "stand", due);
+      continue;
+    }
+    if (t.phase === "dealer") {
+      const due = t.phaseAt + BJ_TIMING.dealerStep;
+      if (now < due) break;
+      const next = structuredClone(t);
+      const allBust = next.seats.every((s) => handTotal(s.hand.cards).total > 21);
+      if (!allBust && handTotal(next.dealer).total < 17) {
+        next.dealer.push(draw(next));
+        next.phaseAt = due;
+      } else settle(next, due);
+      t = next;
+      continue;
+    }
+    if (t.phase === "settled") {
+      if (now < t.phaseAt + BJ_TIMING.settled || unpaid(t).length) break;
+      t = { ...t, round: t.round + 1, phase: "waiting", phaseAt: t.phaseAt + BJ_TIMING.settled, dealer: [], seats: [], turn: 0 };
+      continue;
+    }
+    break;
+  }
+  return t;
+}
+function bjTableView(t) {
+  const hidden = t.phase === "betting" || t.phase === "playing";
+  const dealer = hidden ? t.dealer.map((c, i) => i === 1 ? null : c) : t.dealer;
+  const deadline = t.phase === "betting" ? t.phaseAt + BJ_TIMING.betting : t.phase === "playing" ? t.phaseAt + BJ_TIMING.turn : t.phase === "settled" ? t.phaseAt + BJ_TIMING.settled : null;
+  return {
+    kind: "blackjack",
+    round: t.round,
+    phase: t.phase,
+    phaseAt: t.phaseAt,
+    deadline,
+    dealer,
+    dealerTotal: hidden || t.dealer.length === 0 ? t.dealer[0] ? handTotal([t.dealer[0]]).total : null : handTotal(t.dealer).total,
+    seats: t.seats.map((s) => {
+      const { total, soft } = handTotal(s.hand.cards);
+      return { seat: s.seat, name: s.name, bet: s.bet, cards: s.hand.cards, total, soft, done: s.hand.done, doubled: s.hand.doubled, outcome: s.outcome, payout: s.payout };
+    }),
+    turn: current(t)?.seat ?? null,
+    limits: BJ_LIMITS
+  };
+}
+
+// src/casino/roulette.ts
+var POCKETS = 37;
+var RED_NUMBERS = /* @__PURE__ */ new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
+var PAYOUT = {
+  straight: 35,
+  red: 1,
+  black: 1,
+  even: 1,
+  odd: 1,
+  low: 1,
+  high: 1,
+  dozen: 2,
+  column: 2
+};
+function betWins(bet, n) {
+  if (bet.type === "straight") return bet.value === n;
+  if (n === 0) return false;
+  switch (bet.type) {
+    case "red":
+      return RED_NUMBERS.has(n);
+    case "black":
+      return !RED_NUMBERS.has(n);
+    case "even":
+      return n % 2 === 0;
+    case "odd":
+      return n % 2 === 1;
+    case "low":
+      return n <= 18;
+    case "high":
+      return n >= 19;
+    case "dozen":
+      return Math.ceil(n / 12) === bet.value;
+    case "column":
+      return (n - 1) % 3 + 1 === bet.value;
+  }
+}
+function betPayout(bet, n) {
+  return betWins(bet, n) ? bet.amount * (PAYOUT[bet.type] + 1) : 0;
+}
+function totalPayout(bets, n) {
+  return bets.reduce((sum, b) => sum + betPayout(b, n), 0);
+}
+
+// src/casino/table/rouletteTable.ts
+var RT_TIMING = { betting: 2e4, spin: 7e3, result: 7e3 };
+var RT_LIMITS = { maxPerRound: 1e5, maxBetsPerSlip: 40, maxSlips: 6 };
+var BET_TYPES = ["straight", "red", "black", "even", "odd", "low", "high", "dozen", "column"];
+function createRtTable(seed, now) {
+  return { kind: "roulette", round: 1, phase: "waiting", phaseAt: now, rngState: seed >>> 0, pocket: null, seats: [], history: [] };
+}
+function parseSlip(x) {
+  if (!Array.isArray(x) || x.length === 0 || x.length > RT_LIMITS.maxBetsPerSlip) return null;
+  const out = [];
+  for (const raw of x) {
+    if (!raw || typeof raw !== "object") return null;
+    const b = raw;
+    const type = b.type;
+    if (!BET_TYPES.includes(type) || !Number.isInteger(b.amount) || b.amount < 1 || b.amount > RT_LIMITS.maxPerRound) return null;
+    if (type === "straight") {
+      if (!Number.isInteger(b.value) || b.value < 0 || b.value > 36) return null;
+      out.push({ type, value: b.value, amount: b.amount });
+    } else if (type === "dozen" || type === "column") {
+      if (b.value !== 1 && b.value !== 2 && b.value !== 3) return null;
+      out.push({ type, value: b.value, amount: b.amount });
+    } else out.push({ type, amount: b.amount });
+  }
+  return out;
+}
+var slipTotal = (bets) => bets.reduce((s, b) => s + b.amount, 0);
+function canAddBets(t, seat, bets) {
+  if (t.phase !== "waiting" && t.phase !== "betting") return "phase";
+  const mine = t.seats.find((s) => s.seat === seat);
+  if ((mine?.slips ?? 0) >= RT_LIMITS.maxSlips) return "too_many";
+  if ((mine?.total ?? 0) + slipTotal(bets) > RT_LIMITS.maxPerRound) return "amount";
+  return null;
+}
+function addBets(t, seat, userId, name, bets, now, slipId = `slip-${slipsOf(t, seat)}`) {
+  const next = structuredClone(t);
+  let mine = next.seats.find((s) => s.seat === seat);
+  if (!mine) {
+    mine = { seat, userId, name, bets: [], slips: 0, slipIds: [], total: 0, payout: 0, paid: false };
+    next.seats.push(mine);
+    next.seats.sort((a, b) => a.seat.localeCompare(b.seat));
+  }
+  mine.bets.push(...bets);
+  mine.slips += 1;
+  mine.slipIds.push(slipId);
+  mine.total += slipTotal(bets);
+  if (next.phase === "waiting") {
+    next.phase = "betting";
+    next.phaseAt = now;
+  }
+  return next;
+}
+var slipsOf = (t, seat) => t.seats.find((s) => s.seat === seat)?.slips ?? 0;
+var hasSlip = (t, seat, slipId) => !!t.seats.find((s) => s.seat === seat)?.slipIds.includes(slipId);
+function markPaid2(t, seat) {
+  return { ...t, seats: t.seats.map((s) => s.seat === seat ? { ...s, paid: true } : s) };
+}
+var unpaid2 = (t) => t.phase === "result" ? t.seats.filter((s) => !s.paid && s.payout > 0) : [];
+function advanceRt(table, now) {
+  let t = table;
+  for (let guard = 0; guard < 20; guard++) {
+    if (t.phase === "betting") {
+      const due = t.phaseAt + RT_TIMING.betting;
+      if (now < due) break;
+      const rng = createRng(t.rngState);
+      const pocket = Math.floor(rng.next() * POCKETS);
+      t = { ...t, phase: "spinning", phaseAt: due, pocket, rngState: rng.state() };
+      continue;
+    }
+    if (t.phase === "spinning") {
+      const due = t.phaseAt + RT_TIMING.spin;
+      if (now < due) break;
+      const pocket = t.pocket;
+      t = {
+        ...t,
+        phase: "result",
+        phaseAt: due,
+        history: [pocket, ...t.history].slice(0, 12),
+        seats: t.seats.map((s) => {
+          const payout = totalPayout(s.bets, pocket);
+          return { ...s, payout, paid: payout === 0 };
+        })
+      };
+      continue;
+    }
+    if (t.phase === "result") {
+      if (now < t.phaseAt + RT_TIMING.result || unpaid2(t).length) break;
+      t = { ...t, round: t.round + 1, phase: "waiting", phaseAt: t.phaseAt + RT_TIMING.result, pocket: null, seats: [] };
+      continue;
+    }
+    break;
+  }
+  return t;
+}
+function rtTableView(t) {
+  const deadline = t.phase === "betting" ? t.phaseAt + RT_TIMING.betting : t.phase === "spinning" ? t.phaseAt + RT_TIMING.spin : t.phase === "result" ? t.phaseAt + RT_TIMING.result : null;
+  return {
+    kind: "roulette",
+    round: t.round,
+    phase: t.phase,
+    phaseAt: t.phaseAt,
+    deadline,
+    pocket: t.phase === "spinning" || t.phase === "result" ? t.pocket : null,
+    seats: t.seats.map((s) => ({ seat: s.seat, name: s.name, bets: s.bets, total: s.total, payout: t.phase === "result" ? s.payout : 0 })),
+    history: t.history,
+    limits: RT_LIMITS
+  };
+}
+
+// src/game/controllers/placeholderBot.ts
+function firstColorInHand(state, playerId) {
+  const card = getPlayer(state, playerId)?.hand.find((c) => c.color !== "WILD");
+  return card?.color ?? COLORS[0];
+}
+var placeholderBot = {
+  decide(state, playerId) {
+    if (state.status !== "PLAYING") return null;
+    const pending = state.pendingAction;
+    if (pending?.type === "CHOOSE_COLOR") {
+      return pending.playerId === playerId ? { type: "CHOOSE_COLOR", playerId, color: firstColorInHand(state, playerId) } : null;
+    }
+    if (state.players[state.currentPlayerIndex].id !== playerId) return null;
+    const player = getPlayer(state, playerId);
+    const playable = getPlayableCards(state, playerId);
+    if (player.hand.length === 2 && playable.length > 0 && !state.unoState.declaredPlayerIds.includes(playerId)) {
+      return { type: "CALL_UNO", playerId };
+    }
+    const card = playable[0];
+    if (card) {
+      return {
+        type: "PLAY_CARD",
+        playerId,
+        cardId: card.id,
+        chosenColor: isWild(card) ? firstColorInHand(state, playerId) : void 0
+      };
+    }
+    if (pending?.type === "PLAY_DRAWN_CARD") return { type: "END_TURN", playerId };
+    return { type: "DRAW_CARD", playerId };
+  }
+};
+function getActingPlayerId(state) {
+  if (state.status !== "PLAYING") return null;
+  return state.pendingAction?.playerId ?? state.players[state.currentPlayerIndex].id;
+}
+
+// src/game/bots/playerView.ts
+function createPlayerView(full, playerId) {
+  const state = {
+    ...full,
+    players: full.players.map(
+      (p) => p.id === playerId ? { ...p, hand: p.hand.map((c) => ({ ...c })) } : { ...p, hand: [] }
+    ),
+    teams: full.teams.map((t) => ({ ...t })),
+    settings: { ...full.settings },
+    deck: [],
+    discardPile: full.discardPile.map((c) => ({ ...c })),
+    pendingAction: full.pendingAction?.type === "PLAY_DRAWN_CARD" && full.pendingAction.playerId !== playerId ? { ...full.pendingAction, cardId: "hidden" } : full.pendingAction ? { ...full.pendingAction } : null,
+    unoState: {
+      ...full.unoState,
+      playersWithOneCard: [...full.unoState.playersWithOneCard],
+      declaredPlayerIds: [...full.unoState.declaredPlayerIds],
+      calls: full.unoState.calls.map((c) => ({ ...c }))
+    },
+    scores: { ...full.scores },
+    teamScores: { ...full.teamScores },
+    rounds: full.rounds.map((r) => ({ ...r, handPoints: { ...r.handPoints } })),
+    log: full.log.map((e) => ({ ...e })),
+    seed: 0,
+    rngState: 0
+  };
+  return { playerId, state, deckSize: full.deck.length };
+}
+
+// src/game/bots/profiles.ts
+var DIFFICULTIES2 = {
+  easy: {
+    noise: 10,
+    mistakeRate: 0.3,
+    unoCallRate: 0.55,
+    challengeRate: 0.25,
+    randomColorRate: 0.4,
+    colorWeight: 0.4,
+    shedWeight: 0,
+    wildConserve: 0.3,
+    actionConserve: 0,
+    attack: 0.4,
+    threatThreshold: 1,
+    team: 0.3,
+    readsTable: false
+  },
+  normal: {
+    noise: 2.5,
+    mistakeRate: 0.05,
+    unoCallRate: 0.85,
+    challengeRate: 0.6,
+    randomColorRate: 0.05,
+    colorWeight: 1,
+    shedWeight: 0.6,
+    wildConserve: 1,
+    actionConserve: 0.4,
+    attack: 1,
+    threatThreshold: 2,
+    team: 1,
+    readsTable: false
+  },
+  hard: {
+    noise: 0.6,
+    mistakeRate: 0,
+    unoCallRate: 0.97,
+    challengeRate: 0.9,
+    randomColorRate: 0,
+    colorWeight: 1.3,
+    shedWeight: 1,
+    wildConserve: 1.3,
+    actionConserve: 0.7,
+    attack: 1.3,
+    threatThreshold: 3,
+    team: 1.5,
+    readsTable: true
+  }
+};
+var PERSONALITIES = {
+  balanced: {},
+  aggressive: { attack: 1.8, wildConserve: 0.7, actionConserve: 0.3, threatThreshold: 1 },
+  defensive: { wildConserve: 1.7, actionConserve: 2, attack: 0.8 },
+  risky: { wildConserve: 0.35, actionConserve: 0, attack: 1.3, noise: 1.5 },
+  teamPlayer: { team: 2.2, attack: 1.1 }
+};
+var ADDITIVE = ["threatThreshold", "noise"];
+function resolveProfile(difficulty, personality) {
+  const base = { ...DIFFICULTIES2[difficulty] };
+  for (const [key, value] of Object.entries(PERSONALITIES[personality])) {
+    const current2 = base[key];
+    if (typeof current2 !== "number") continue;
+    base[key] = ADDITIVE.includes(key) ? current2 + value : current2 * value;
+  }
+  return base;
+}
+
+// src/game/bots/knowledge.ts
+function inferMissingColors(state) {
+  const missing = Object.fromEntries(state.players.map((p) => [p.id, /* @__PURE__ */ new Set()]));
+  let color = null;
+  for (const entry of state.log) {
+    if (entry.roundNumber !== state.roundNumber) continue;
+    const pid = entry.playerId;
+    switch (entry.type) {
+      case "STARTING_CARD":
+        color = entry.card && entry.card.color !== "WILD" ? entry.card.color : null;
+        break;
+      case "PLAYER_PLAYED_CARD":
+        if (entry.card && entry.card.color !== "WILD") {
+          color = entry.card.color;
+          if (pid) missing[pid]?.delete(entry.card.color);
+        }
+        break;
+      case "COLOR_CHANGED":
+        color = entry.color ?? color;
+        break;
+      case "PLAYER_DREW_CARD":
+        if (pid && color) missing[pid]?.add(color);
+        break;
+      case "DRAW_PENALTY":
+      case "UNO_PENALTY":
+        if (pid) missing[pid]?.clear();
+        break;
+    }
+  }
+  return missing;
+}
+
+// src/game/bots/strategy.ts
+var isLegal = (state, action) => validateAction(state, action).valid;
+function relation(ctx, index) {
+  const id = ctx.state.players[index].id;
+  if (id === ctx.me) return "self";
+  return areTeammates(ctx.state, id, ctx.me) ? "teammate" : "opponent";
+}
+function threat(ctx, index) {
+  const cards = ctx.state.players[index].cardsRemaining;
+  return cards <= ctx.profile.threatThreshold ? ctx.profile.threatThreshold + 1 - cards : 0;
+}
+function consequences(ctx, card) {
+  const n = ctx.state.players.length;
+  const next = getNextPlayerIndex(ctx.state, ctx.myIndex, 1);
+  const afterNext = getNextPlayerIndex(ctx.state, ctx.myIndex, 2);
+  switch (card.type) {
+    case "SKIP":
+      return { victim: next, delayed: null, turnGoesTo: afterNext };
+    case "DRAW_TWO":
+    case "WILD_DRAW_FOUR":
+      return { victim: next, delayed: null, turnGoesTo: ctx.state.settings.stacking ? next : afterNext };
+    case "REVERSE": {
+      if (n === 2) return { victim: next, delayed: null, turnGoesTo: ctx.myIndex };
+      const previous = getNextPlayerIndex(ctx.state, ctx.myIndex, -1);
+      return { victim: null, delayed: next, turnGoesTo: previous };
+    }
+    default:
+      return { victim: null, delayed: null, turnGoesTo: next };
+  }
+}
+function colorFit(hand, color) {
+  return hand.reduce((sum, c) => sum + (c.color === color ? c.type === "NUMBER" ? 1 : 1.3 : 0), 0);
+}
+function chooseColor(ctx, handAfter, turnGoesTo) {
+  if (ctx.rng.next() < ctx.profile.randomColorRate) return COLORS[Math.floor(ctx.rng.next() * COLORS.length)];
+  let best = COLORS[0];
+  let bestScore = -Infinity;
+  for (const color of COLORS) {
+    let score2 = colorFit(handAfter, color) + ctx.rng.next() * 0.1;
+    if (ctx.missing) {
+      const nextId = ctx.state.players[turnGoesTo].id;
+      const rel = relation(ctx, turnGoesTo);
+      if (rel === "opponent" && ctx.missing[nextId]?.has(color)) score2 += 1.5;
+      if (rel === "teammate" && ctx.missing[nextId]?.has(color)) score2 -= 1.2 * ctx.profile.team;
+    }
+    if (score2 > bestScore) {
+      bestScore = score2;
+      best = color;
+    }
+  }
+  return best;
+}
+function scorePlay(ctx, card, chosenColor, hasNonWildOption) {
+  const { profile, hand } = ctx;
+  const handAfter = hand.filter((c) => c.id !== card.id);
+  if (handAfter.length === 0) return 1e3;
+  const { victim, delayed, turnGoesTo } = consequences(ctx, card);
+  const anyThreat = ctx.state.players.some((_, i) => relation(ctx, i) === "opponent" && threat(ctx, i) > 0);
+  let score2 = 4;
+  const resultingColor = chosenColor ?? card.color;
+  const followers = colorFit(handAfter, resultingColor) + handAfter.filter(isWild).length * 0.5;
+  score2 += profile.colorWeight * 6 * followers / handAfter.length;
+  score2 += profile.shedWeight * (getCardScore(card) / 50) * (anyThreat ? 3 : 1.2);
+  if (isWild(card)) {
+    const handFactor = handAfter.length >= 3 ? 6 : 2;
+    score2 -= profile.wildConserve * handFactor * (hasNonWildOption ? 1 : 0.3) + (card.type === "WILD_DRAW_FOUR" ? 1.5 : 0);
+  }
+  const isAttack = victim !== null;
+  if (isAttack) {
+    const rel = relation(ctx, victim);
+    const power = card.type === "WILD_DRAW_FOUR" ? 1.6 : card.type === "DRAW_TWO" ? 1.3 : 1;
+    if (rel === "opponent") {
+      const t = threat(ctx, victim);
+      score2 += profile.attack * power * (1 + 4 * t);
+      if (t === 0) score2 -= profile.actionConserve * 2.5;
+    } else if (rel === "teammate") {
+      score2 -= profile.team * (6 + 3 * threat(ctx, victim));
+    }
+  } else if (card.type === "REVERSE") {
+    if (delayed !== null) {
+      const rel = relation(ctx, delayed);
+      const t = threat(ctx, delayed);
+      if (rel === "opponent") score2 += profile.attack * 2 * t;
+      if (rel === "teammate") score2 -= profile.team * 3 * t;
+      if (t === 0) score2 -= profile.actionConserve * 1.5;
+    }
+  }
+  if (turnGoesTo !== ctx.myIndex) {
+    const rel = relation(ctx, turnGoesTo);
+    const nextId = ctx.state.players[turnGoesTo].id;
+    if (rel === "teammate") {
+      const cards = ctx.state.players[turnGoesTo].cardsRemaining;
+      const closeness = Math.max(0, 4 - cards);
+      score2 += profile.team * (1 + 2 * closeness);
+      if (ctx.missing?.[nextId]?.has(resultingColor)) score2 -= 2 * profile.team;
+    } else if (rel === "opponent" && profile.readsTable) {
+      score2 -= 1.5 * threat(ctx, turnGoesTo);
+      if (ctx.missing?.[nextId]?.has(resultingColor)) score2 += 3;
+    }
+  }
+  return score2;
+}
+function chooseAction(view, profile, rng) {
+  const state = view.state;
+  const me = view.playerId;
+  if (state.status !== "PLAYING") return null;
+  const myIndex = state.players.findIndex((p) => p.id === me);
+  const hand = state.players[myIndex].hand;
+  const ctx = {
+    view,
+    state,
+    me,
+    myIndex,
+    hand,
+    profile,
+    rng,
+    missing: profile.readsTable ? inferMissingColors(state) : null
+  };
+  const pending = state.pendingAction;
+  if (pending?.type === "CHOOSE_COLOR") {
+    if (pending.playerId !== me) return null;
+    const next = getNextPlayerIndex(state, myIndex, 1);
+    const action = { type: "CHOOSE_COLOR", playerId: me, color: chooseColor(ctx, hand, next) };
+    return isLegal(state, action) ? action : null;
+  }
+  const target = state.unoState.penaltyWindowPlayerId;
+  if (target && target !== me && !areTeammates(state, target, me)) {
+    const challenge = { type: "CHALLENGE_UNO", playerId: me, targetId: target };
+    if (isLegal(state, challenge) && rng.next() < profile.challengeRate) return challenge;
+  }
+  if (state.players[state.currentPlayerIndex].id !== me) return null;
+  const plays = hand.map((card) => {
+    const base = { type: "PLAY_CARD", playerId: me, cardId: card.id };
+    if (!isLegal(state, base)) return null;
+    if (!isWild(card)) return { card, action: base, color: void 0 };
+    const handAfter = hand.filter((c) => c.id !== card.id);
+    const { turnGoesTo } = consequences(ctx, card);
+    const color = chooseColor(ctx, handAfter, turnGoesTo);
+    return { card, action: { ...base, chosenColor: color }, color };
+  }).filter((p) => p !== null && isLegal(state, p.action));
+  const declared = state.unoState.declaredPlayerIds.includes(me);
+  const unoApplies = !declared && (hand.length === 2 && plays.length > 0 || state.unoState.penaltyWindowPlayerId === me);
+  if (unoApplies && rng.next() < profile.unoCallRate) {
+    return { type: "CALL_UNO", playerId: me };
+  }
+  const drawAction = { type: "DRAW_CARD", playerId: me };
+  const passAction = { type: "END_TURN", playerId: me };
+  if (plays.length === 0) {
+    if (isLegal(state, drawAction)) return drawAction;
+    if (isLegal(state, passAction)) return passAction;
+    return null;
+  }
+  if (rng.next() < profile.mistakeRate) return plays[Math.floor(rng.next() * plays.length)].action;
+  const hasNonWild = plays.some((p) => !isWild(p.card));
+  const onlyWilds = !hasNonWild;
+  const anyThreat = state.players.some((_, i) => relation(ctx, i) === "opponent" && threat(ctx, i) > 0);
+  const options = plays.map((p) => ({
+    action: p.action,
+    score: scorePlay(ctx, p.card, p.color, hasNonWild) + rng.next() * profile.noise
+  }));
+  if (isLegal(state, drawAction)) {
+    const saveWild = onlyWilds && hand.length >= 5 && !anyThreat ? profile.wildConserve * 5 - 2 : 0;
+    options.push({ action: drawAction, score: -6 + saveWild + rng.next() * profile.noise });
+  }
+  if (isLegal(state, passAction)) {
+    const drawn = hand.find((c) => pending?.type === "PLAY_DRAWN_CARD" && c.id === pending.cardId);
+    const keepWild = drawn && isWild(drawn) && hand.length >= 4 && !anyThreat ? profile.wildConserve * 4 : 0;
+    options.push({ action: passAction, score: -4 + keepWild + rng.next() * profile.noise });
+  }
+  return options.reduce((best, o) => o.score > best.score ? o : best).action;
+}
+
+// src/game/bots/botController.ts
+function hash(text) {
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+function createBotController(config) {
+  const fallback = config.fallback ?? { difficulty: "normal", personality: "balanced" };
+  const profiles = /* @__PURE__ */ new Map();
+  const profileFor = (playerId) => {
+    let profile = profiles.get(playerId);
+    if (!profile) {
+      const setup = config.bots?.[playerId] ?? fallback;
+      profile = resolveProfile(setup.difficulty, setup.personality);
+      profiles.set(playerId, profile);
+    }
+    return profile;
+  };
+  return {
+    decide(state, playerId) {
+      const view = createPlayerView(state, playerId);
+      const rng = createRng(hash(`${config.seed}|${playerId}|${state.roundNumber}|${state.turnNumber}|${state.log.length}`));
+      const action = chooseAction(view, profileFor(playerId), rng);
+      if (action && validateAction(state, action).valid) return action;
+      const fallbackAction = placeholderBot.decide(view.state, playerId);
+      return fallbackAction && validateAction(state, fallbackAction).valid ? fallbackAction : null;
+    }
+  };
+}
+
+// src/games/online/server/carta.ts
+var CARTA_TIMING = {
+  /** Bots think this long; a little longer while someone can still be caught without UNO. */
+  think: 800,
+  penaltyWindow: 1700,
+  /** A human who doesn't act in this long has a sensible move played for them. */
+  turnLimit: 3e4,
+  /** The next round deals itself after this long. */
+  nextRound: 12e3
+};
+function createCarta(seats, seed) {
+  const s = createGame({
+    players: seats.map((p) => ({ id: p.id, name: p.name, type: p.kind === "bot" ? "BOT" : "REMOTE_HUMAN" })),
+    seed
+  });
+  return s;
+}
+function cartaView(state, seat) {
+  const v = createPlayerView(state, seat);
+  return { state: v.state, deckSize: v.deckSize };
+}
+var isColor = (x) => typeof x === "string" && COLORS.includes(x);
+var isId = (x) => typeof x === "string" && x.length > 0 && x.length <= 40 && /^[\w.-]+$/.test(x);
+function parseCartaAction(raw, seat) {
+  if (!raw || typeof raw !== "object") return null;
+  const a = raw;
+  switch (a.type) {
+    case "PLAY_CARD":
+      if (!isId(a.cardId) || a.chosenColor !== void 0 && !isColor(a.chosenColor)) return null;
+      return { type: "PLAY_CARD", playerId: seat, cardId: a.cardId, ...a.chosenColor ? { chosenColor: a.chosenColor } : {} };
+    case "DRAW_CARD":
+      return { type: "DRAW_CARD", playerId: seat };
+    case "CHOOSE_COLOR":
+      return isColor(a.color) ? { type: "CHOOSE_COLOR", playerId: seat, color: a.color } : null;
+    case "CALL_UNO":
+      return { type: "CALL_UNO", playerId: seat };
+    case "CHALLENGE_UNO":
+      return isId(a.targetId) ? { type: "CHALLENGE_UNO", playerId: seat, targetId: a.targetId } : null;
+    case "END_TURN":
+      return { type: "END_TURN", playerId: seat };
+    default:
+      return null;
+  }
+}
+function applyCarta(state, action, now) {
+  const res = applyAction(state, { ...action, timestamp: now });
+  return res.ok ? { ok: true, state: res.state } : { ok: false, error: res.error };
+}
+var DIFF = { easy: "easy", normal: "normal", hard: "hard" };
+function advanceCarta(state, lastAt, now, difficulty) {
+  let s = state;
+  let at = lastAt;
+  const bots = createBotController({ seed: state.seed, fallback: { difficulty: DIFF[difficulty] ?? "normal", personality: "balanced" } });
+  const helper = createBotController({ seed: state.seed ^ 1540483477, fallback: { difficulty: "easy", personality: "balanced" } });
+  for (let guard = 0; guard < 80; guard++) {
+    if (s.status === "ROUND_OVER") {
+      const due2 = at + CARTA_TIMING.nextRound;
+      if (now < due2) break;
+      const res2 = applyAction(s, { type: "START_GAME", timestamp: due2 });
+      if (!res2.ok) break;
+      s = res2.state;
+      at = due2;
+      continue;
+    }
+    if (s.status !== "PLAYING") break;
+    const actorId = getActingPlayerId(s);
+    const actor = s.players.find((p) => p.id === actorId);
+    if (!actor) break;
+    const bot = actor.type === "BOT";
+    const unoWindow = s.unoState.penaltyWindowPlayerId;
+    const delay = bot ? unoWindow && unoWindow !== actorId ? CARTA_TIMING.penaltyWindow : CARTA_TIMING.think : CARTA_TIMING.turnLimit;
+    const due = at + delay;
+    if (now < due) break;
+    const action = (bot ? bots : helper).decide(s, actor.id);
+    if (!action) break;
+    const res = applyAction(s, { ...action, timestamp: due });
+    if (!res.ok) break;
+    s = res.state;
+    at = due;
+  }
+  return { state: s, lastAt: at };
+}
+function cartaDeadline(state, lastAt) {
+  if (state.status !== "PLAYING") return state.status === "ROUND_OVER" ? lastAt + CARTA_TIMING.nextRound : null;
+  const actor = state.players.find((p) => p.id === getActingPlayerId(state));
+  return actor && actor.type !== "BOT" ? lastAt + CARTA_TIMING.turnLimit : null;
+}
+var botSeat = (state, seat) => ({ ...state, players: state.players.map((p) => p.id === seat ? { ...p, type: "BOT" } : p) });
+
+// src/games/online/protocol.ts
+var COIN_GAMES = ["blackjack", "roulette"];
+var QUICK_GAMES = ["carta", "blackjack", "roulette"];
+var SEAT_RANGE = {
+  domino: { min: 2, max: 4, quick: 4 },
+  bingo: { min: 1, max: 4, quick: 4 },
+  carta: { min: 2, max: 6, quick: 4 },
+  blackjack: { min: 1, max: 5, quick: 5 },
+  roulette: { min: 1, max: 6, quick: 6 }
+};
+
 // src/games/online/server/handler.ts
 var RoomStoreError = class extends Error {
   constructor(code) {
@@ -596,9 +2110,37 @@ var TIMING = {
   /** The next round starts by itself after this long (anyone may start it sooner). */
   nextRound: 12e3,
   /** First ball after the start. */
-  firstBall: 2500
+  firstBall: 2500,
+  /** Public Carta lobby: starts this long after the last player joined (2+ players)... */
+  publicStart: 2e4,
+  /** ...or this long after it opened, with bots, if nobody else came. */
+  publicSolo: 3e4,
+  /** A player's "still here" mark is refreshed at most this often... */
+  seenEvery: 2e4,
+  /** ...and players unseen this long leave coin tables and Carta rooms (a bot takes a Carta seat). */
+  idleDrop: 9e4
 };
-var fail = (code, detail) => ({ ok: false, code, detail });
+function maintain(room, userId, t) {
+  const prunes = isCoinGame(room.game) || room.game === "carta";
+  const me = room.members.find((m) => m.userId === userId);
+  const touch = !!me && t - (me.seenAt ?? 0) > TIMING.seenEvery;
+  const gone = prunes ? room.members.filter((m) => m.userId !== userId && m.seenAt !== void 0 && t - m.seenAt > TIMING.idleDrop) : [];
+  if (!touch && gone.length === 0) return room;
+  const members = room.members.filter((m) => !gone.includes(m)).map((m) => m.userId === userId ? { ...m, seenAt: t } : m);
+  let state = room.state;
+  if (room.game === "carta" && room.status === "playing" && state) for (const g of gone) state = botSeat(state, g.seat);
+  const host = members.some((m) => m.userId === room.host) ? room.host : members[0]?.userId ?? room.host;
+  return { ...room, members, state, host };
+}
+var CARTA_LOG = 40;
+var trimCarta = (s) => s.log.length > CARTA_LOG ? { ...s, log: s.log.slice(-CARTA_LOG) } : s;
+var isCoinGame = (g) => COIN_GAMES.includes(g);
+async function sha256Uuid(key) {
+  const d = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(key)));
+  const h = [...d.slice(0, 16)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20, 32)}`;
+}
+var fail2 = (code, detail) => ({ ok: false, code, detail });
 function cleanName(raw) {
   if (typeof raw !== "string") return null;
   const name = [...raw].filter((ch) => ch.charCodeAt(0) >= 32 && ch.charCodeAt(0) !== 127 && ch !== "<" && ch !== ">").join("").trim().slice(0, 16);
@@ -606,22 +2148,32 @@ function cleanName(raw) {
 }
 function cleanSettings(game, raw) {
   const r = raw && typeof raw === "object" ? raw : {};
+  if (isCoinGame(game)) return { difficulty: "normal", public: r.public === true };
   if (!DIFFICULTIES.includes(r.difficulty)) return null;
-  if (game === "domino") return r.target === 100 || r.target === 200 ? { difficulty: r.difficulty, target: r.target } : null;
-  return BINGO_SPEEDS.includes(r.speed) ? { difficulty: r.difficulty, speed: r.speed } : null;
+  const difficulty = r.difficulty;
+  if (game === "carta") return { difficulty, public: r.public === true };
+  if (game === "domino") return r.target === 100 || r.target === 200 ? { difficulty, target: r.target } : null;
+  return BINGO_SPEEDS.includes(r.speed) ? { difficulty, speed: r.speed } : null;
 }
+var GAMES = ["domino", "bingo", "carta", "blackjack", "roulette"];
 function parseRequest(raw) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
   const r = raw;
   const code = typeof r.code === "string" && ROOM_CODE_RE.test(r.code) ? r.code : null;
   switch (r.op) {
     case "create": {
-      if (r.game !== "domino" && r.game !== "bingo") return null;
+      if (!GAMES.includes(r.game)) return null;
+      const game = r.game;
       const seats = r.seats;
-      if (!Number.isInteger(seats) || seats < (r.game === "domino" ? 2 : 1) || seats > 4) return null;
+      if (!Number.isInteger(seats) || seats < SEAT_RANGE[game].min || seats > SEAT_RANGE[game].max) return null;
       const name = cleanName(r.name);
-      const settings = cleanSettings(r.game, r.settings);
-      return name && settings ? { op: "create", game: r.game, seats, name, settings } : null;
+      const settings = cleanSettings(game, r.settings);
+      return name && settings ? { op: "create", game, seats, name, settings } : null;
+    }
+    case "quick": {
+      if (!QUICK_GAMES.includes(r.game)) return null;
+      const name = cleanName(r.name);
+      return name ? { op: "quick", game: r.game, name } : null;
     }
     case "join": {
       const name = cleanName(r.name);
@@ -630,7 +2182,7 @@ function parseRequest(raw) {
     case "ready":
       return code && typeof r.ready === "boolean" ? { op: "ready", code, ready: r.ready } : null;
     case "act":
-      return code && r.action && typeof r.action === "object" ? { op: "act", code, action: r.action } : null;
+      return code && r.action && typeof r.action === "object" && !Array.isArray(r.action) ? { op: "act", code, action: r.action } : null;
     case "start":
     case "tick":
     case "sync":
@@ -641,19 +2193,28 @@ function parseRequest(raw) {
       return null;
   }
 }
-var SEATS = ["s0", "s1", "s2", "s3"];
+var SEATS = ["s0", "s1", "s2", "s3", "s4", "s5"];
 function sanitizeEvents(game, events, seat) {
   if (game === "domino") return events;
   return events.map((e) => e.type === "marked" && e.playerId !== seat ? { ...e, number: 0 } : e);
 }
-function viewFor(room, member, now, events = []) {
+function autoStartAt(room) {
+  if (room.game !== "carta" || room.status !== "lobby" || !room.settings.public) return null;
+  if (room.members.length >= room.seats) return room.clock.lastAt;
+  return room.clock.lastAt + (room.members.length >= 2 ? TIMING.publicStart : TIMING.publicSolo);
+}
+function viewFor(room, member, now, events = [], balance = null) {
   const domino = room.game === "domino" && room.state ? dominoView(room.state, member.seat) : null;
   const bingo = room.game === "bingo" && room.state ? bingoView(room.state, member.seat) : null;
+  const carta = room.game === "carta" && room.state ? cartaView(room.state, member.seat) : null;
+  const blackjack = room.game === "blackjack" && room.state ? bjTableView(room.state) : null;
+  const roulette = room.game === "roulette" && room.state ? rtTableView(room.state) : null;
   let turnDeadline = null;
   if (domino && domino.status === "playing") {
     const cur = room.state.players[room.state.current];
     if (cur.kind !== "bot") turnDeadline = room.clock.lastAt + TIMING.turnLimit;
   }
+  if (carta) turnDeadline = cartaDeadline(room.state, room.clock.lastAt);
   return {
     roomId: room.id,
     code: room.code,
@@ -666,17 +2227,35 @@ function viewFor(room, member, now, events = []) {
     version: room.version,
     serverNow: now,
     turnDeadline,
+    startsAt: autoStartAt(room),
     domino,
     bingo,
-    events: sanitizeEvents(room.game, events, member.seat)
+    carta,
+    blackjack,
+    roulette,
+    balance,
+    events: room.game === "domino" || room.game === "bingo" ? sanitizeEvents(room.game, events, member.seat) : []
   };
 }
-var viewsFor = (room, now, events) => room.members.map((m) => ({ userId: m.userId, view: viewFor(room, m, now, events) }));
+var viewsFor = (room, now, events, balances) => room.members.map((m) => ({ userId: m.userId, view: viewFor(room, m, now, events, balances?.get(m.userId) ?? null) }));
 function seedOf(room) {
   return room.state?.seed ?? 0;
 }
 function advance(room, now) {
   if (room.status !== "playing" || !room.state) return { room, events: [] };
+  if (room.game === "carta") {
+    const res = advanceCarta(room.state, room.clock.lastAt, now, room.settings.difficulty);
+    if (res.state === room.state) return { room, events: [] };
+    return { room: { ...room, state: trimCarta(res.state), clock: { ...room.clock, lastAt: res.lastAt } }, events: [] };
+  }
+  if (room.game === "blackjack") {
+    const t = advanceBj(room.state, now, room.members.map((m) => m.seat));
+    return { room: t === room.state ? room : { ...room, state: t }, events: [] };
+  }
+  if (room.game === "roulette") {
+    const t = advanceRt(room.state, now);
+    return { room: t === room.state ? room : { ...room, state: t }, events: [] };
+  }
   const events = [];
   let r = room;
   const set = (state, clock, ev) => {
@@ -772,84 +2351,240 @@ function cryptoInt(n) {
   while (buf[0] >= limit);
   return buf[0] % n;
 }
+function newSeed(randomInt) {
+  return randomInt(65536) * 65536 + randomInt(65536) >>> 0;
+}
 function newMatch(room, now, randomInt) {
-  const seed = randomInt(65536) * 65536 + randomInt(65536) >>> 0;
+  const seed = newSeed(randomInt);
   let bot = 0;
   const seats = SEATS.slice(0, room.seats).map((seat) => {
     const m = room.members.find((x) => x.seat === seat);
     return m ? { id: seat, name: m.name, kind: "human" } : { id: seat, name: `Bot ${++bot}`, kind: "bot" };
   });
+  if (room.game === "carta") return { ...room, status: "playing", state: createCarta(seats, seed), clock: { lastAt: now, lastCallAt: 0, closingAt: 0, roundOverAt: 0 } };
   const state = room.game === "domino" ? createDomino({ seats, seed, targetScore: room.settings.target ?? 100 }) : createBingo({ seats, seed });
   const clock = { lastAt: now, lastCallAt: now - (TIMING.pace[room.settings.speed ?? "normal"] ?? 3800) + TIMING.firstBall, closingAt: 0, roundOverAt: 0 };
   return { ...room, status: "playing", state, clock };
 }
+function newTable(room, now, randomInt) {
+  const seed = newSeed(randomInt);
+  const state = room.game === "blackjack" ? createBjTable(seed, now) : createRtTable(seed, now);
+  return { ...room, status: "playing", state, clock: { lastAt: now, lastCallAt: 0, closingAt: 0, roundOverAt: 0 } };
+}
+var idFor = (deps) => deps.requestId ?? sha256Uuid;
+async function payOut(room, deps, balances) {
+  if (!room.state || !isCoinGame(room.game) || !deps.wallet) return room;
+  let state = room.state;
+  const owed = state.kind === "blackjack" ? unpaid(state) : unpaid2(state);
+  for (const s of owed) {
+    const id = await idFor(deps)(`${room.id}|${state.round}|${s.seat}|payout`);
+    const res = await deps.wallet.pay(s.userId, id, room.game, s.payout, { room: room.code, round: state.round, seat: s.seat });
+    if (!res.ok) continue;
+    balances.set(s.userId, res.balance);
+    state = state.kind === "blackjack" ? markPaid(state, s.seat) : markPaid2(state, s.seat);
+  }
+  return state === room.state ? room : { ...room, state };
+}
+async function progress(room, now, deps, balances) {
+  let r = room;
+  const events = [];
+  for (let i = 0; i < 6; i++) {
+    const a = advance(r, now);
+    events.push(...a.events);
+    const paid = await payOut(a.room, deps, balances);
+    const moved = paid !== r;
+    r = paid;
+    if (!moved || paid === a.room) break;
+  }
+  return { room: r, events };
+}
+var walletError = (code) => code === "insufficient_funds" || code === "not_registered" || code === "banned" ? fail2(code) : code === "conflict" || code === "invalid" ? fail2("rule", code) : fail2("busy");
+async function mayPlayForCoins(userId, deps) {
+  if (!deps.wallet) return fail2("not_registered");
+  const p = await deps.wallet.player(userId);
+  if (!p.registered) return fail2("not_registered");
+  if (p.banned) return fail2("banned");
+  return null;
+}
+async function tableAction(room, me, raw, t, deps, balances, debited) {
+  const wallet2 = deps.wallet;
+  if (!wallet2) return { kind: "fail", res: fail2("not_registered") };
+  const game = room.game;
+  const state = room.state;
+  const take = async (key, amount, detail) => {
+    const id = await idFor(deps)(key);
+    const res = await wallet2.bet(me.userId, id, game, amount, { room: room.code, round: state.round, seat: me.seat, ...detail });
+    if (!res.ok) return walletError(res.code);
+    balances.set(me.userId, res.balance);
+    if (!debited.some((d) => d.id === id)) debited.push({ id, amount });
+    return null;
+  };
+  if (state.kind === "blackjack") {
+    const type = raw.type;
+    if (type === "BET") {
+      const amount = raw.amount;
+      const err2 = canBet(state, me.seat, amount);
+      if (err2 === "already_bet") return { kind: "same" };
+      if (err2) return { kind: "fail", res: fail2("rule", err2) };
+      const failed2 = await take(`${room.id}|${state.round}|${me.seat}|bet`, amount, { kind: "bet" });
+      if (failed2) return { kind: "fail", res: failed2 };
+      return { kind: "next", room: { ...room, state: placeBet(state, me.seat, me.userId, me.name, amount, t) } };
+    }
+    if (type === "HIT" || type === "STAND" || type === "DOUBLE") {
+      const action = type === "HIT" ? "hit" : type === "STAND" ? "stand" : "double";
+      const err2 = canAct(state, me.seat, action);
+      if (err2) return { kind: "fail", res: fail2("rule", err2) };
+      if (action === "double") {
+        const extra = state.seats[state.turn].bet;
+        const failed2 = await take(`${room.id}|${state.round}|${me.seat}|double`, extra, { kind: "double" });
+        if (failed2) return { kind: "fail", res: failed2 };
+      }
+      return { kind: "next", room: { ...room, state: act(state, me.seat, action, t) } };
+    }
+    return { kind: "fail", res: fail2("bad_request") };
+  }
+  if (raw.type !== "BET") return { kind: "fail", res: fail2("bad_request") };
+  const bets = parseSlip(raw.bets);
+  const slipId = typeof raw.slipId === "string" && /^[0-9a-f-]{8,40}$/i.test(raw.slipId) ? raw.slipId.toLowerCase() : null;
+  if (!bets || !slipId) return { kind: "fail", res: fail2("bad_request") };
+  if (hasSlip(state, me.seat, slipId)) return { kind: "same" };
+  const err = canAddBets(state, me.seat, bets);
+  if (err) return { kind: "fail", res: fail2("rule", err) };
+  const failed = await take(`${room.id}|${state.round}|${me.seat}|slip|${slipId}`, slipTotal(bets), { kind: "bet", bets });
+  if (failed) return { kind: "fail", res: failed };
+  return { kind: "next", room: { ...room, state: addBets(state, me.seat, me.userId, me.name, bets, t, slipId) } };
+}
 async function handleRoomRequest(userId, body, deps) {
-  if (!userId) return fail("unauthorized");
-  if (deps.allow && !deps.allow(userId)) return fail("rate_limited");
+  if (!userId) return fail2("unauthorized");
+  if (deps.allow && !deps.allow(userId)) return fail2("rate_limited");
   const req = parseRequest(body);
-  if (!req) return fail("bad_request");
+  if (!req) return fail2("bad_request");
   const now = deps.now ?? Date.now;
   const randomInt = deps.randomInt ?? cryptoInt;
+  if (req.op === "quick") {
+    if (isCoinGame(req.game)) {
+      const refused = await mayPlayForCoins(userId, deps);
+      if (refused) return refused;
+    }
+    for (let attempt = 0; attempt < 3 && deps.store.findOpen; attempt++) {
+      const code = await deps.store.findOpen(req.game, userId);
+      if (!code) break;
+      const res = await handleRoomRequest(userId, { op: "join", code, name: req.name }, { ...deps, allow: void 0 });
+      if (res.ok || !["full", "started", "not_found"].includes(res.code)) return res;
+    }
+    const settings = { difficulty: "normal", public: true };
+    return handleRoomRequest(userId, { op: "create", game: req.game, seats: SEAT_RANGE[req.game].quick, name: req.name, settings }, { ...deps, allow: void 0 });
+  }
   if (req.op === "create") {
+    if (isCoinGame(req.game)) {
+      const refused = await mayPlayForCoins(userId, deps);
+      if (refused) return refused;
+    }
     for (let attempt = 0; attempt < 5; attempt++) {
       const code = newRoomCode(randomInt);
-      const members = [{ userId, seat: "s0", name: req.name, ready: true }];
+      const members = [{ userId, seat: "s0", name: req.name, ready: true, seenAt: now() }];
       try {
         const t = now();
         const room = await deps.store.insert({ code, game: req.game, seats: req.seats, host: userId, members, settings: req.settings }, (roomId) => [
           { userId, view: viewFor({ id: roomId, code, game: req.game, seats: req.seats, host: userId, status: "lobby", members, settings: req.settings, state: null, clock: { lastAt: t, lastCallAt: t, closingAt: 0, roundOverAt: 0 }, version: 1 }, members[0], t) }
         ]);
-        return { ok: true, view: viewFor(room, members[0], t) };
+        const opened = { ...room, clock: { lastAt: t, lastCallAt: t, closingAt: 0, roundOverAt: 0 } };
+        if (isCoinGame(req.game) || req.game === "carta" && req.settings.public) {
+          const next = isCoinGame(req.game) ? newTable(opened, t, randomInt) : opened;
+          const version = await deps.store.commit(next, viewsFor({ ...next, version: next.version + 1 }, t, []));
+          return { ok: true, view: viewFor({ ...next, version }, members[0], t) };
+        }
+        return { ok: true, view: viewFor(opened, members[0], t) };
       } catch (e) {
         if (!(e instanceof RoomStoreError && e.code === "conflict")) throw e;
       }
     }
-    return fail("busy");
+    return fail2("busy");
   }
+  const balances = /* @__PURE__ */ new Map();
+  const debited = [];
+  const refund = async (room) => {
+    if (!deps.wallet || !debited.length) return;
+    for (const d of debited) {
+      const res = await deps.wallet.pay(userId, await idFor(deps)(`${d.id}|refund`), room.game, d.amount, { room: room.code, refund: true });
+      if (res.ok) balances.set(userId, res.balance);
+    }
+    debited.length = 0;
+  };
   for (let attempt = 0; attempt < 4; attempt++) {
-    const room = await deps.store.load(req.code);
-    if (!room || room.status === "closed") return fail("not_found");
+    const loaded = await deps.store.load(req.code);
+    if (!loaded || loaded.status === "closed") return fail2("not_found");
     const t = now();
+    const room = maintain(loaded, userId, t);
+    const dirty = room !== loaded;
     const me = room.members.find((m) => m.userId === userId);
     let next = room;
     let events = [];
     switch (req.op) {
       case "join": {
         if (me) return { ok: true, view: viewFor(room, me, t) };
-        if (room.status !== "lobby") return fail("started");
+        const coin = isCoinGame(room.game);
+        if (coin) {
+          const refused = await mayPlayForCoins(userId, deps);
+          if (refused) return refused;
+        } else if (room.status !== "lobby") return fail2("started");
         const seat = SEATS.slice(0, room.seats).find((s) => !room.members.some((m) => m.seat === s));
-        if (!seat) return fail("full");
-        next = { ...room, members: [...room.members, { userId, seat, name: req.name, ready: false }] };
+        if (!seat) return fail2("full");
+        const auto = coin || !!room.settings.public;
+        next = { ...room, members: [...room.members, { userId, seat, name: req.name, ready: auto, seenAt: t }], clock: room.game === "carta" && room.settings.public ? { ...room.clock, lastAt: t } : room.clock };
         break;
       }
       case "ready":
-        if (!me) return fail("not_member");
-        if (room.status !== "lobby") return fail("started");
+        if (!me) return fail2("not_member");
+        if (room.status !== "lobby") return fail2("started");
         next = { ...room, members: room.members.map((m) => m.userId === userId ? { ...m, ready: req.ready || m.userId === room.host } : m) };
         break;
       case "start":
-        if (!me) return fail("not_member");
-        if (room.host !== userId) return fail("not_host");
-        if (room.status !== "lobby") return fail("started");
-        if (!room.members.every((m) => m.ready)) return fail("not_ready");
+        if (!me) return fail2("not_member");
+        if (room.host !== userId) return fail2("not_host");
+        if (room.status !== "lobby") return fail2("started");
+        if (!room.members.every((m) => m.ready)) return fail2("not_ready");
         next = newMatch(room, t, randomInt);
         break;
       case "rematch": {
-        if (!me) return fail("not_member");
-        if (room.host !== userId) return fail("not_host");
+        if (!me) return fail2("not_member");
+        if (room.host !== userId) return fail2("not_host");
+        if (room.game === "carta") {
+          const s = room.state;
+          if (room.status !== "playing" || !s || s.status !== "GAME_OVER") return fail2("not_playing");
+          const res = applyAction(s, { type: "RESTART_GAME", timestamp: t });
+          if (!res.ok) return fail2("rule", res.error);
+          next = { ...room, state: trimCarta(res.state), clock: { ...room.clock, lastAt: t } };
+          break;
+        }
+        if (isCoinGame(room.game)) return fail2("not_playing");
         const over = room.state && (room.state.status === "game_over" || room.game === "bingo");
-        if (room.status !== "playing" || !over) return fail("not_playing");
+        if (room.status !== "playing" || !over) return fail2("not_playing");
         if (room.game === "domino") {
-          const seed = randomInt(65536) * 65536 + randomInt(65536) >>> 0;
-          next = { ...room, state: rematch(room.state, seed), clock: { ...room.clock, lastAt: t } };
+          next = { ...room, state: rematch(room.state, newSeed(randomInt)), clock: { ...room.clock, lastAt: t } };
         } else next = newMatch(room, t, randomInt);
         break;
       }
       case "leave": {
-        if (!me) return fail("not_member");
+        if (!me) return fail2("not_member");
         const members = room.members.filter((m) => m.userId !== userId);
-        if (room.status === "lobby") {
-          next = { ...room, members, status: room.host === userId || members.length === 0 ? "closed" : "lobby" };
+        if (isCoinGame(room.game)) {
+          let left = { ...room, members };
+          if (members.length === 0) {
+            for (let i = 0; i < 10; i++) {
+              const phase = left.state?.phase;
+              if (!phase || phase === "waiting") break;
+              left = (await progress(left, t + (i + 1) * 36e5, deps, balances)).room;
+            }
+            left = { ...left, status: "closed" };
+          }
+          next = left;
+        } else if (room.status === "lobby") {
+          const hostLeft = room.host === userId;
+          const host = hostLeft && room.settings.public && members.length ? members[0].userId : room.host;
+          next = { ...room, members, host, status: hostLeft && !room.settings.public || members.length === 0 ? "closed" : "lobby" };
+        } else if (room.game === "carta") {
+          next = { ...room, members, state: room.state ? botSeat(room.state, me.seat) : null, status: members.length === 0 ? "closed" : room.status };
         } else {
           const state = room.state ? { ...room.state, players: room.state.players.map((p) => p.id === me.seat ? { ...p, kind: "bot" } : p) } : null;
           next = { ...room, members, state, status: members.length === 0 ? "closed" : room.status };
@@ -857,12 +2592,45 @@ async function handleRoomRequest(userId, body, deps) {
         break;
       }
       case "act": {
-        if (!me) return fail("not_member");
-        if (room.status !== "playing" || !room.state) return fail("not_playing");
-        const caught = advance(room, t);
+        if (!me) return fail2("not_member");
+        if (room.status !== "playing" || !room.state) return fail2("not_playing");
+        const caught = await progress(room, t, deps, balances);
+        if (isCoinGame(room.game)) {
+          const d = await tableAction(caught.room, me, req.action, t, deps, balances, debited);
+          if (d.kind === "fail") {
+            await refund(room);
+            return d.res;
+          }
+          if (d.kind === "same") {
+            debited.length = 0;
+            next = caught.room;
+            if (next === room && !dirty) return { ok: true, view: viewFor(room, me, t, [], balances.get(userId) ?? null) };
+            break;
+          }
+          const after2 = await progress(d.room, t, deps, balances);
+          next = after2.room;
+          break;
+        }
+        if (room.game === "carta") {
+          const action2 = parseCartaAction(req.action, me.seat);
+          if (!action2) return fail2("forbidden");
+          const res2 = applyCarta(caught.room.state, action2, t);
+          if (!res2.ok) {
+            if (caught.room !== room) {
+              try {
+                await deps.store.commit(caught.room, viewsFor({ ...caught.room, version: caught.room.version + 1 }, t, []));
+              } catch {
+              }
+            }
+            return fail2("rule", res2.error);
+          }
+          const moved = { ...caught.room, state: trimCarta(res2.state), clock: { ...caught.room.clock, lastAt: t } };
+          next = advance(moved, t).room;
+          break;
+        }
         const action = room.game === "domino" ? parseDominoAction(req.action) : parseBingoAction(req.action);
-        if (!action || !("playerId" in action)) return fail("forbidden");
-        if (action.playerId !== me.seat) return fail("forbidden");
+        if (!action || !("playerId" in action)) return fail2("forbidden");
+        if (action.playerId !== me.seat) return fail2("forbidden");
         const res = room.game === "domino" ? applyDomino(caught.room.state, action) : applyBingo(caught.room.state, action);
         if (!res.ok) {
           if (caught.events.length) {
@@ -871,7 +2639,7 @@ async function handleRoomRequest(userId, body, deps) {
             } catch {
             }
           }
-          return fail("rule", res.error);
+          return fail2("rule", res.error);
         }
         const prev = caught.room.state;
         const clock = { lastAt: t };
@@ -888,31 +2656,40 @@ async function handleRoomRequest(userId, body, deps) {
       }
       case "tick":
       case "sync": {
-        if (!me) return fail("not_member");
-        const after = advance(room, t);
-        if (!after.events.length) return { ok: true, view: viewFor(room, me, t) };
+        if (!me) return fail2("not_member");
+        const startAt = autoStartAt(room);
+        if (startAt !== null && t >= startAt) {
+          next = newMatch({ ...room, members: room.members.map((m) => ({ ...m, ready: true })) }, t, randomInt);
+          break;
+        }
+        const after = await progress(room, t, deps, balances);
+        if (after.room === room && !dirty) return { ok: true, view: viewFor(room, me, t, [], balances.get(userId) ?? null) };
         next = after.room;
         events = after.events;
         break;
       }
     }
     try {
-      const version = await deps.store.commit(next, viewsFor({ ...next, version: next.version + 1 }, t, events));
+      const version = await deps.store.commit(next, viewsFor({ ...next, version: next.version + 1 }, t, events, balances));
       const committed = { ...next, version };
       const self = committed.members.find((m) => m.userId === userId);
       if (!self) return { ok: true, view: viewFor({ ...committed, status: "closed" }, me ?? { userId, seat: "s0", name: "", ready: false }, t) };
-      return { ok: true, view: viewFor(committed, self, t, events) };
+      return { ok: true, view: viewFor(committed, self, t, events, balances.get(userId) ?? null) };
     } catch (e) {
       if (e instanceof RoomStoreError && e.code === "conflict") continue;
       throw e;
     }
   }
-  return fail("busy");
+  if (debited.length) {
+    const room = await deps.store.load(req.code);
+    if (room) await refund(room);
+  }
+  return fail2("busy");
 }
 
 // supabase/functions/_shared/roomStore.ts
 function postgrestRoomStore(supabaseUrl, serviceKey, fetchImpl = fetch) {
-  async function rpc(fn, args) {
+  async function rpc2(fn, args) {
     const res = await fetchImpl(`${supabaseUrl}/rest/v1/rpc/${fn}`, {
       method: "POST",
       headers: { "content-type": "application/json", apikey: serviceKey, authorization: `Bearer ${serviceKey}` },
@@ -930,7 +2707,7 @@ function postgrestRoomStore(supabaseUrl, serviceKey, fetchImpl = fetch) {
   const views = (out) => out.map((v) => ({ userId: v.userId, view: v.view }));
   return {
     async insert(room, makeViews) {
-      const id = await rpc("room_insert", {
+      const id = await rpc2("room_insert", {
         p_code: room.code,
         p_game: room.game,
         p_seats: room.seats,
@@ -942,7 +2719,7 @@ function postgrestRoomStore(supabaseUrl, serviceKey, fetchImpl = fetch) {
       return { ...room, id, status: "lobby", state: null, clock: { lastAt: 0, lastCallAt: 0, closingAt: 0, roundOverAt: 0 }, version: 1 };
     },
     async load(code) {
-      const row = await rpc("room_load", { p_code: code });
+      const row = await rpc2("room_load", { p_code: code });
       if (!row) return null;
       return {
         id: row.id,
@@ -959,7 +2736,7 @@ function postgrestRoomStore(supabaseUrl, serviceKey, fetchImpl = fetch) {
       };
     },
     async commit(room, out) {
-      return rpc("room_commit", {
+      return rpc2("room_commit", {
         p_id: room.id,
         p_version: room.version,
         p_status: room.status,
@@ -978,6 +2755,38 @@ var ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
 var SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 var ALLOWED = /* @__PURE__ */ new Set(["https://siiknotic.github.io", "http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:4173"]);
 var store = postgrestRoomStore(SUPABASE_URL, SERVICE_KEY);
+async function rpc(fn, args) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+    method: "POST",
+    headers: { "content-type": "application/json", apikey: SERVICE_KEY, authorization: `Bearer ${SERVICE_KEY}` },
+    body: JSON.stringify(args)
+  });
+  const body = await res.json().catch(() => null);
+  if (!res.ok) return { ok: false, code: String(body?.code ?? res.status) };
+  return { ok: true, data: body };
+}
+var FAILURES = { P0402: "insufficient_funds", P0403: "not_registered", P0451: "banned", P0409: "conflict", P0400: "invalid" };
+var wallet = {
+  async player(userId) {
+    const res = await rpc("table_player", { p_user: userId });
+    const row = res.ok ? res.data[0] : null;
+    return row ? { registered: !!row.registered, banned: !!row.banned, balance: Number(row.balance) } : { registered: false, banned: false, balance: 0 };
+  },
+  async bet(userId, requestId, game, stake, detail) {
+    const res = await rpc("table_bet", { p_user: userId, p_request: requestId, p_game: game, p_stake: stake, p_detail: detail });
+    if (!res.ok) return { ok: false, code: FAILURES[res.code] ?? "server" };
+    return { ok: true, balance: Number(res.data[0].balance), replayed: !!res.data[0].replayed };
+  },
+  async pay(userId, requestId, game, payout, detail) {
+    const res = await rpc("table_pay", { p_user: userId, p_request: requestId, p_game: game, p_payout: payout, p_detail: detail });
+    if (!res.ok) return { ok: false, code: FAILURES[res.code] ?? "server" };
+    return { ok: true, balance: Number(res.data[0].balance) };
+  }
+};
+store.findOpen = async (game, userId) => {
+  const res = await rpc("room_find_open", { p_game: game, p_user: userId });
+  return res.ok && typeof res.data === "string" ? res.data : null;
+};
 var hits = /* @__PURE__ */ new Map();
 function allow(userId) {
   const now = Date.now();
@@ -1006,7 +2815,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
   if (req.method !== "POST") return Response.json({ ok: false, code: "bad_request" }, { status: 405, headers: cors });
   const text = await req.text();
-  if (text.length > 2048) return Response.json({ ok: false, code: "bad_request" }, { status: 413, headers: cors });
+  if (text.length > 8192) return Response.json({ ok: false, code: "bad_request" }, { status: 413, headers: cors });
   let body = null;
   try {
     body = JSON.parse(text);
@@ -1014,7 +2823,7 @@ Deno.serve(async (req) => {
     return Response.json({ ok: false, code: "bad_request" }, { status: 400, headers: cors });
   }
   try {
-    const out = await handleRoomRequest(await verifiedUser(req), body, { store, allow });
+    const out = await handleRoomRequest(await verifiedUser(req), body, { store, allow, wallet });
     const status = out.ok ? 200 : out.code === "unauthorized" ? 401 : out.code === "rate_limited" ? 429 : out.code === "not_found" ? 404 : 400;
     return Response.json(out, { status, headers: { ...cors, "cache-control": "no-store" } });
   } catch (e) {

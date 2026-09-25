@@ -48,7 +48,23 @@
     "players": "{min}–{max} players",
     "cartaTitle": "Carta",
     "cartaSubtitle": "The card game against bots",
-    "casinoSubtitle": "With shared virtual chips"
+    "casinoSubtitle": "With shared virtual chips",
+    "onlineTitle": "Online multiplayer",
+    "onlineSubtitle": "Play with other people in real time",
+    "online": {
+      "carta": {
+        "name": "Carta online",
+        "description": "Quick match or a room with a code. Bots fill the empty seats."
+      },
+      "blackjack": {
+        "name": "Blackjack table",
+        "description": "Up to 5 players against the house, with your account coins."
+      },
+      "roulette": {
+        "name": "Roulette table",
+        "description": "One wheel for everyone; each player bets their own coins."
+      }
+    }
   },
   "settings": {
     "title": "Settings",
@@ -253,7 +269,7 @@
     "drawnPlayable": "You can play the drawn card or pass",
     "mustAnswerStack": "Answer with another draw card or draw {count}",
     "pickCard": "Tap a card to play it",
-    "roundOver": "Round {round} over",
+    "roundOver": "Round over. The next one starts shortly.",
     "gameOver": "Game over!",
     "winsRound": "{name} wins the round",
     "teamWinsRound": "Team {team} wins the round ({name})",
@@ -261,7 +277,7 @@
     "points": "+{points} points",
     "cardsLeft": "Points in hand",
     "totalScore": "Total",
-    "nextRound": "Next round",
+    "nextRound": "You can bet in the next round.",
     "restart": "New game",
     "events": {
       "played": "{name} plays {card}",
@@ -293,7 +309,39 @@
     "roundShort": "Round {round}",
     "teamLabel": "Team {team}",
     "yourScoreLabel": "Your points",
-    "mustDraw": "No playable card: tap the deck to draw"
+    "mustDraw": "No playable card: tap the deck to draw",
+    "subtitle": "Multiplayer table · account coins",
+    "players": "Players",
+    "addChip": "Add a {amount} chip",
+    "betFor": "Bet {amount}",
+    "pickChips": "Pick chips (minimum {min})",
+    "waitYourTurn": "Wait for your turn…",
+    "watching": "At the table without a bet: {names}",
+    "errors": {
+      "rule": "That move isn't possible anymore."
+    },
+    "bj": {
+      "title": "Blackjack · Table",
+      "waiting": "Waiting for the first bet",
+      "betting": "Bets open · {s} s",
+      "yourTurn": "Your turn! · {s} s",
+      "turnOf": "{name}'s turn · {s} s",
+      "dealer": "The house plays…",
+      "results": "Results · new round in {s} s",
+      "dealerLabel": "House",
+      "noCards": "No cards",
+      "emptyRound": "Nobody has bet in this round yet."
+    },
+    "rt": {
+      "title": "Roulette · Table",
+      "waiting": "Waiting for the first bet",
+      "betting": "Bets open · {s} s",
+      "spinning": "No more bets… the wheel spins!",
+      "result": "{n} came up · new round in {s} s",
+      "addMore": "Add more bets",
+      "noMoreBets": "No more bets.",
+      "hint": "Tap the spots to build your bet and confirm it before betting closes."
+    }
   },
   "scenarios": {
     "random": "Random",
@@ -964,7 +1012,24 @@
     "notReadyAction": "Not ready yet",
     "hostStarts": "The host starts the match once everyone is ready.",
     "leave": "Leave room",
-    "accountName": "This is your username. You can change it in Your account."
+    "accountName": "This is your username. You can change it in Your account.",
+    "onlineTitle": "{game} online",
+    "playNow": "Play now",
+    "quickHint": "We seat you with other players. If nobody is around, the match starts with bots.",
+    "quickHintCoins": "We seat you at a table with other players. You bet your account coins.",
+    "createPrivate": "Create a private room",
+    "joinWithCode": "Join with a code",
+    "privateRoom": "Private room",
+    "coinTableNeedsAccount": "Coin tables are for players with an account. Create one or sign in to take a seat.",
+    "seatsNoteTable": "Players who fit at the table. People can join at any time.",
+    "noServer": "This build has no online server.",
+    "startsIn": "Starts in {s} s",
+    "publicHint": "Public room: the match starts by itself and bots play the empty seats.",
+    "games": {
+      "carta": "Carta",
+      "blackjack": "Blackjack",
+      "roulette": "Roulette"
+    }
   },
   "domino": {
     "roundOf": "Hand {n} · to {target}",
@@ -1097,7 +1162,10 @@
       "not_playing": "The match isn't being played.",
       "forbidden": "That action isn't allowed.",
       "busy": "The server isn't answering. Retrying…",
-      "rule": "Invalid move."
+      "rule": "Invalid move.",
+      "insufficient_funds": "You don't have enough coins for that bet.",
+      "not_registered": "You need an account to play at the coin tables.",
+      "banned": "Your account is suspended."
     },
     "polling": "syncing"
   },

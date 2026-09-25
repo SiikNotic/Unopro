@@ -1,18 +1,21 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Bot, Check, CloudOff, Copy, Crown, KeyRound, LogOut, Play, Users } from 'lucide-react';
+import { ArrowLeft, Bot, Check, CircleUserRound, CloudOff, Copy, Crown, KeyRound, LogOut, Play, Timer, Users, Zap } from 'lucide-react';
 import { useNavigation } from '@/components/Navigation';
 import { useI18n } from '@/i18n';
 import { useProfileName } from '@/settings/profile';
 import { useAccount } from '@/account/useAccount';
-import type { TableGame } from '@/types/navigation';
+import type { OnlineGame, Screen, TableGame } from '@/types/navigation';
+import { usePreferences } from '@/settings/usePreferences';
 import { newRoomCode, parseRoomCode } from '../multiplayer/roomCode';
 import { loadBingoSetup, loadDominoSetup, saveBingoSetup, saveDominoSetup } from '../setup';
 import { GameSceneBackground } from '../scenes/GameScenes';
 import { onlineConfig, roomCall } from '@/games/online/client';
 import type { OnlineConfig } from '@/games/online/client';
 import { useOnlineRoom } from '@/games/online/useOnlineRoom';
+import { matchScreen } from '@/games/online/screens';
 import { OnlineGate } from '@/games/online/OnlineGate';
-import type { RoomErrorCode } from '@/games/online/protocol';
+import { COIN_GAMES, QUICK_GAMES, SEAT_RANGE } from '@/games/online/protocol';
+import type { RoomErrorCode, RoomGame, RoomView } from '@/games/online/protocol';
 import './hub.css';
 
 /**
@@ -24,16 +27,22 @@ export function RoomScreen() {
   const { params } = useNavigation();
   const cfg = useMemo(() => onlineConfig(), []);
   const game = params.game ?? 'domino';
-  if (!cfg) return <OfflineRoom game={game} />;
+  if (!cfg) return game === 'domino' || game === 'bingo' ? <OfflineRoom game={game} /> : <NoServer game={game} />;
   if (params.room) return <Lobby code={params.room} />;
   return <RoomEntry game={game} cfg={cfg} joining={params.join === true} />;
 }
 
-function Shell({ game, title, onBack, children }: { game: TableGame; title: string; onBack: () => void; children: React.ReactNode }) {
+/** Where "back" goes from the room screen of this game. */
+const backScreen = (game: OnlineGame): Screen => (game === 'domino' ? 'dominoSetup' : game === 'bingo' ? 'bingoSetup' : 'gameModes');
+
+/** Name of the game in room titles. */
+const gameName = (game: OnlineGame, t: (k: string) => string) => (game === 'domino' || game === 'bingo' ? t(`hub.${game}.name`) : t(`room.games.${game}`));
+
+function Shell({ game, title, onBack, children }: { game: OnlineGame; title: string; onBack: () => void; children: React.ReactNode }) {
   const { t } = useI18n();
   return (
-    <div className={`ms ${game === 'domino' ? 'hub-domino' : 'hub-bingo'} screen-in`}>
-      <GameSceneBackground scene={game === 'domino' ? 'lounge' : 'hall'} />
+    <div className={`ms ${game === 'bingo' ? 'hub-bingo' : 'hub-domino'} screen-in`}>
+      <GameSceneBackground scene={game === 'bingo' ? 'hall' : 'lounge'} />
       <header className="ms-top">
         <button type="button" className="cz-btn cz-btn-secondary cz-icon-btn" onClick={onBack} aria-label={t('common.back')}>
           <ArrowLeft className="w-5 h-5" />
@@ -46,7 +55,7 @@ function Shell({ game, title, onBack, children }: { game: TableGame; title: stri
 }
 
 /** Create a room or join one with a code. */
-function RoomEntry({ game, cfg, joining }: { game: TableGame; cfg: OnlineConfig; joining: boolean }) {
+function RoomEntry({ game, cfg, joining }: { game: OnlineGame; cfg: OnlineConfig; joining: boolean }) {
   const { t } = useI18n();
   const { back, navigate } = useNavigation();
   const [profileName, saveName] = useProfileName();
@@ -59,39 +68,99 @@ function RoomEntry({ game, cfg, joining }: { game: TableGame; cfg: OnlineConfig;
   const name = accountName ?? typed;
   // If the account can't be read (network), fall back to typing a name rather than blocking rooms.
   const waitingForAccount = account.status === 'loading' || (account.status === 'user' && !account.profile && !account.coinsError);
-  const [seats, setSeats] = useState(4);
+  const { preferences } = usePreferences();
+  const range = SEAT_RANGE[game];
+  const [seats, setSeats] = useState(range.quick);
   const [code, setCode] = useState('');
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<null | 'quick' | 'form'>(null);
   const [error, setError] = useState<RoomErrorCode | 'bad_code' | 'no_name' | null>(null);
-  const min = game === 'domino' ? 2 : 1;
+  const [mode, setMode] = useState<'create' | 'join'>(joining ? 'join' : 'create');
+  const coins = (COIN_GAMES as readonly string[]).includes(game);
+  const quick = (QUICK_GAMES as readonly string[]).includes(game);
+  // Coin tables: only a registered account (the server checks it again).
+  const needAccount = coins && !(account.status === 'user' && account.coins?.registered);
+
+  const open = (v: RoomView) => {
+    if (v.status === 'lobby') navigate('room', { game: v.game, room: v.code }, { replace: true });
+    else navigate(matchScreen(v.game), { room: v.code }, { replace: true });
+  };
+
+  const cleanName = () => {
+    const clean = name.trim().slice(0, 16);
+    if (!clean) {
+      setError('no_name');
+      return null;
+    }
+    if (!signedIn) saveName(clean);
+    return clean;
+  };
+
+  const playNow = async () => {
+    const clean = cleanName();
+    if (!clean) return;
+    setBusy('quick');
+    setError(null);
+    const res = await roomCall(cfg, { op: 'quick', game: game as RoomGame, name: clean });
+    setBusy(null);
+    if (!res.ok) return setError(res.code);
+    open(res.view);
+  };
 
   const submit = async () => {
-    const clean = name.trim().slice(0, 16);
-    if (!clean) return setError('no_name');
-    const joinCode = joining ? parseRoomCode(code) : null;
-    if (joining && !joinCode) return setError('bad_code');
-    setBusy(true);
+    const clean = cleanName();
+    if (!clean) return;
+    const joinCode = mode === 'join' ? parseRoomCode(code) : null;
+    if (mode === 'join' && !joinCode) return setError('bad_code');
+    setBusy('form');
     setError(null);
-    if (!signedIn) saveName(clean);
     const d = loadDominoSetup();
     const b = loadBingoSetup();
-    const res = joining
-      ? await roomCall(cfg, { op: 'join', code: joinCode!, name: clean })
-      : await roomCall(cfg, { op: 'create', game, seats, name: clean, settings: game === 'domino' ? { difficulty: d.difficulty, target: d.target } : { difficulty: b.difficulty, speed: b.speed } });
-    setBusy(false);
+    const settings = game === 'domino' ? { difficulty: d.difficulty, target: d.target } : game === 'bingo' ? { difficulty: b.difficulty, speed: b.speed } : { difficulty: preferences.difficulty };
+    const res = mode === 'join' ? await roomCall(cfg, { op: 'join', code: joinCode!, name: clean }) : await roomCall(cfg, { op: 'create', game: game as RoomGame, seats, name: clean, settings });
+    setBusy(null);
     if (!res.ok) return setError(res.code);
-    navigate('room', { game: res.view.game, room: res.view.code }, { replace: true });
+    open(res.view);
   };
 
   return (
-    <Shell game={game} title={t(joining ? 'room.joinTitle' : 'room.createTitle', { game: t(`hub.${game}.name`) })} onBack={() => back(game === 'domino' ? 'dominoSetup' : 'bingoSetup')}>
+    <Shell game={game} title={t(mode === 'join' ? 'room.joinTitle' : quick ? 'room.onlineTitle' : 'room.createTitle', { game: gameName(game, t) })} onBack={() => back(backScreen(game))}>
+      {needAccount && (
+        <section className="ms-panel flex gap-3 items-start" role="note">
+          <CircleUserRound className="w-5 h-5 shrink-0 mt-0.5 text-[var(--cz-gold)]" aria-hidden />
+          <div className="min-w-0 flex-1">
+            <p className="ms-note !text-white/85">{t('room.coinTableNeedsAccount')}</p>
+            <button type="button" className="cz-btn cz-btn-primary cz-btn-sm mt-2" onClick={() => navigate('account')}>
+              {t('account.signUp')}
+            </button>
+          </div>
+        </section>
+      )}
+      {quick && !needAccount && (
+        <section className="ms-panel text-center">
+          <p className="ms-note mb-3">{t(coins ? 'room.quickHintCoins' : 'room.quickHint')}</p>
+          <button type="button" className="cz-btn cz-btn-primary cz-btn-game w-full" onClick={() => void playNow()} disabled={!!busy || waitingForAccount} aria-busy={busy === 'quick'}>
+            <Zap className="w-5 h-5" /> {busy === 'quick' ? t('online.connecting') : t('room.playNow')}
+          </button>
+        </section>
+      )}
+      {quick && !needAccount && (
+        <div className="ms-seg" role="tablist" aria-label={t('room.privateRoom')}>
+          <button type="button" role="tab" aria-selected={mode === 'create'} aria-pressed={mode === 'create'} onClick={() => setMode('create')}>
+            {t('room.createPrivate')}
+          </button>
+          <button type="button" role="tab" aria-selected={mode === 'join'} aria-pressed={mode === 'join'} onClick={() => setMode('join')}>
+            {t('room.joinWithCode')}
+          </button>
+        </div>
+      )}
+      {!needAccount && (
       <section className="ms-panel">
         <label className="ms-label" htmlFor="room-name">
           {t('room.yourName')}
         </label>
         <input id="room-name" className="rm-input !tracking-normal !normal-case" maxLength={16} autoComplete="nickname" value={name} onChange={(e) => setName(e.target.value)} placeholder={t('room.namePlaceholder')} readOnly={signedIn} aria-readonly={signedIn} />
         {signedIn && <p className="ms-note mt-1">{t('room.accountName')}</p>}
-        {joining ? (
+        {mode === 'join' ? (
           <>
             <label className="ms-label mt-4" htmlFor="room-code">
               {t('room.codeLabel')}
@@ -102,24 +171,39 @@ function RoomEntry({ game, cfg, joining }: { game: TableGame; cfg: OnlineConfig;
           <div className="mt-4">
             <span className="ms-label">{t('room.seatsLabel')}</span>
             <div className="ms-seg" role="group" aria-label={t('room.seatsLabel')}>
-              {Array.from({ length: 4 - min + 1 }, (_, i) => i + min).map((n) => (
+              {Array.from({ length: range.max - range.min + 1 }, (_, i) => i + range.min).map((n) => (
                 <button key={n} type="button" aria-pressed={seats === n} onClick={() => setSeats(n)}>
                   {n}
                 </button>
               ))}
             </div>
-            <p className="ms-note mt-2">{t('room.seatsNote')}</p>
+            <p className="ms-note mt-2">{t(coins ? 'room.seatsNoteTable' : 'room.seatsNote')}</p>
           </div>
         )}
-        <button type="button" className="cz-btn cz-btn-primary cz-btn-game w-full mt-5" onClick={submit} disabled={busy || waitingForAccount} aria-busy={busy || waitingForAccount}>
-          {joining ? <KeyRound className="w-5 h-5" /> : <Users className="w-5 h-5" />} {busy ? t('online.connecting') : t(joining ? 'room.join' : 'room.create')}
+        <button type="button" className={`cz-btn ${quick ? 'cz-btn-secondary' : 'cz-btn-primary'} cz-btn-game w-full mt-5`} onClick={submit} disabled={!!busy || waitingForAccount} aria-busy={busy === 'form' || waitingForAccount}>
+          {mode === 'join' ? <KeyRound className="w-5 h-5" /> : <Users className="w-5 h-5" />} {busy === 'form' ? t('online.connecting') : t(mode === 'join' ? 'room.join' : 'room.create')}
         </button>
-        {error && (
-          <p className="ms-note mt-3 !text-[#ffb3b3]" role="alert">
-            {error === 'bad_code' ? t('room.badCode') : error === 'no_name' ? t('room.needName') : t(`online.errors.${error}`)}
-          </p>
-        )}
       </section>
+      )}
+      {error && (
+        <p className="ms-note mt-1 !text-[#ffb3b3] text-center" role="alert">
+          {error === 'bad_code' ? t('room.badCode') : error === 'no_name' ? t('room.needName') : t(`online.errors.${error}`)}
+        </p>
+      )}
+    </Shell>
+  );
+}
+
+/** A room game other than Domino / Bingo in a build without the online server. */
+function NoServer({ game }: { game: OnlineGame }) {
+  const { t } = useI18n();
+  const { back } = useNavigation();
+  return (
+    <Shell game={game} title={t('room.onlineTitle', { game: gameName(game, t) })} onBack={() => back(backScreen(game))}>
+      <div className="ms-panel flex gap-3 items-start" role="note">
+        <CloudOff className="w-5 h-5 shrink-0 mt-0.5 text-[var(--cz-gold)]" aria-hidden />
+        <p className="ms-note !text-white/80">{t('room.noServer')}</p>
+      </div>
     </Shell>
   );
 }
@@ -132,8 +216,15 @@ function Lobby({ code }: { code: string }) {
   const [copied, setCopied] = useState(false);
   const v = room.view;
   useEffect(() => {
-    if (v?.status === 'playing') navigate(v.game, { room: code }, { replace: true });
+    if (v?.status === 'playing') navigate(matchScreen(v.game), { room: code }, { replace: true });
   }, [v?.status, v?.game, code, navigate]);
+  // Public rooms start by themselves: a countdown.
+  const [clock, setClock] = useState(() => Date.now());
+  useEffect(() => {
+    if (!v?.startsAt) return;
+    const id = window.setInterval(() => setClock(Date.now()), 500);
+    return () => window.clearInterval(id);
+  }, [v?.startsAt]);
   const home = () => navigate('home', {}, { replace: true });
   if (!v || v.status !== 'lobby') return <OnlineGate view={v} error={room.error} onExit={home} />;
 
@@ -154,7 +245,16 @@ function Lobby({ code }: { code: string }) {
   const seats = Array.from({ length: v.seats }, (_, i) => `s${i}`);
 
   return (
-    <Shell game={v.game} title={t('room.createTitle', { game: t(`hub.${v.game}.name`) })} onBack={leave}>
+    <Shell game={v.game} title={t('room.createTitle', { game: gameName(v.game, t) })} onBack={leave}>
+      {v.startsAt !== null && (
+        <section className="ms-panel text-center" role="status" aria-live="polite">
+          <p className="font-display font-bold text-lg inline-flex items-center gap-2">
+            <Timer className="w-5 h-5 text-[var(--cz-gold)]" aria-hidden />
+            {t('room.startsIn', { s: Math.max(0, Math.ceil((v.startsAt - (clock + (v.serverNow - Date.now()))) / 1000)) })}
+          </p>
+          <p className="ms-note mt-1">{t('room.publicHint')}</p>
+        </section>
+      )}
       <section className="ms-panel text-center">
         <span className="ms-label">{t('room.code')}</span>
         <div className="rm-code" aria-label={t('room.codeAria', { code: v.code.split('').join(' ') })}>
@@ -167,7 +267,7 @@ function Lobby({ code }: { code: string }) {
         <button type="button" className="cz-btn cz-btn-quiet cz-btn-sm mt-2" onClick={copy}>
           <Copy className="w-4 h-4" /> {copied ? t('room.copied') : t('room.copy')}
         </button>
-        <p className="ms-note mt-1">{t('room.shareHint', { game: t(`hub.${v.game}.name`) })}</p>
+        <p className="ms-note mt-1">{t('room.shareHint', { game: gameName(v.game, t) })}</p>
       </section>
       <section className="ms-panel">
         <span className="ms-label">{t('room.players', { n: v.members.length, total: v.seats })}</span>

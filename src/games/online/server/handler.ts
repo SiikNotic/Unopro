@@ -14,6 +14,14 @@ import { decideDomino } from '@/games/domino/bots/dominoBot';
 import { decideBingo } from '@/games/bingo/bots/bingoBot';
 import { newRoomCode, ROOM_CODE_RE } from '@/games/shared/multiplayer/roomCode';
 import { BINGO_SPEEDS, DIFFICULTIES } from '@/games/shared/setup';
+import type { GameState } from '@/game/engine';
+import { act as bjAct, advanceBj, bjTableView, canAct as bjCanAct, canBet as bjCanBet, createBjTable, markPaid as bjMarkPaid, placeBet, unpaid as bjUnpaid } from '@/casino/table/blackjackTable';
+import type { BjTable } from '@/casino/table/blackjackTable';
+import { addBets, advanceRt, canAddBets, createRtTable, hasSlip, markPaid as rtMarkPaid, parseSlip, rtTableView, slipTotal, unpaid as rtUnpaid } from '@/casino/table/rouletteTable';
+import type { RtTable } from '@/casino/table/rouletteTable';
+import { advanceCarta, applyCarta, botSeat, cartaDeadline, cartaView, createCarta, parseCartaAction } from './carta';
+import { applyAction as applyCartaAction } from '@/game/engine';
+import { COIN_GAMES, QUICK_GAMES, SEAT_RANGE } from '../protocol';
 import type { RoomErrorCode, RoomGame, RoomRequest, RoomResponse, RoomSettings, RoomStatus, RoomView } from '../protocol';
 
 export interface Member {
@@ -21,6 +29,8 @@ export interface Member {
   seat: string;
   name: string;
   ready: boolean;
+  /** Last request from this player (server clock); tables drop players who stopped coming. */
+  seenAt?: number;
 }
 
 export interface Clock {
@@ -43,10 +53,12 @@ export interface RoomRow {
   status: RoomStatus;
   members: Member[];
   settings: RoomSettings;
-  state: DominoState | BingoState | null;
+  state: RoomState | null;
   clock: Clock;
   version: number;
 }
+
+export type RoomState = DominoState | BingoState | GameState | BjTable | RtTable;
 
 export interface ViewOut {
   userId: string;
@@ -64,6 +76,17 @@ export interface RoomStore {
   insert(room: Omit<RoomRow, 'id' | 'version' | 'state' | 'clock' | 'status'>, views: (roomId: string) => ViewOut[]): Promise<RoomRow>;
   load(code: string): Promise<RoomRow | null>;
   commit(room: RoomRow, views: ViewOut[]): Promise<number>;
+  /** Quick match: an open public room of this game `userId` isn't in (room_find_open). */
+  findOpen?(game: RoomGame, userId: string): Promise<string | null>;
+}
+
+export type WalletFailure = 'insufficient_funds' | 'not_registered' | 'banned' | 'conflict' | 'invalid' | 'server';
+
+/** Account coins at the tables (table_player / table_bet / table_pay). Idempotent on the request id. */
+export interface TableWallet {
+  player(userId: string): Promise<{ registered: boolean; banned: boolean; balance: number }>;
+  bet(userId: string, requestId: string, game: 'blackjack' | 'roulette', stake: number, detail: Record<string, unknown>): Promise<{ ok: true; balance: number; replayed: boolean } | { ok: false; code: WalletFailure }>;
+  pay(userId: string, requestId: string, game: 'blackjack' | 'roulette', payout: number, detail: Record<string, unknown>): Promise<{ ok: true; balance: number } | { ok: false; code: WalletFailure }>;
 }
 
 export interface RoomDeps {
@@ -72,6 +95,10 @@ export interface RoomDeps {
   /** Uniform integer in [0, n) — crypto in production. */
   randomInt?: (n: number) => number;
   allow?: (userId: string) => boolean;
+  /** Required for the coin tables. */
+  wallet?: TableWallet;
+  /** Deterministic wallet request id for a key (SHA-256 → uuid in production). */
+  requestId?: (key: string) => Promise<string>;
 }
 
 /** Timings (ms). */
@@ -88,7 +115,45 @@ export const TIMING = {
   nextRound: 12000,
   /** First ball after the start. */
   firstBall: 2500,
+  /** Public Carta lobby: starts this long after the last player joined (2+ players)... */
+  publicStart: 20000,
+  /** ...or this long after it opened, with bots, if nobody else came. */
+  publicSolo: 30000,
+  /** A player's "still here" mark is refreshed at most this often... */
+  seenEvery: 20000,
+  /** ...and players unseen this long leave coin tables and Carta rooms (a bot takes a Carta seat). */
+  idleDrop: 90000,
 };
+
+/**
+ * Refreshes the caller's "still here" mark and drops players who closed the app without leaving (coin
+ * tables and Carta; Domino and Bingo keep their players). Returns the same room when nothing changes.
+ */
+function maintain(room: RoomRow, userId: string, t: number): RoomRow {
+  const prunes = isCoinGame(room.game) || room.game === 'carta';
+  const me = room.members.find((m) => m.userId === userId);
+  const touch = !!me && t - (me.seenAt ?? 0) > TIMING.seenEvery;
+  const gone = prunes ? room.members.filter((m) => m.userId !== userId && m.seenAt !== undefined && t - m.seenAt > TIMING.idleDrop) : [];
+  if (!touch && gone.length === 0) return room;
+  const members = room.members.filter((m) => !gone.includes(m)).map((m) => (m.userId === userId ? { ...m, seenAt: t } : m));
+  let state = room.state;
+  if (room.game === 'carta' && room.status === 'playing' && state) for (const g of gone) state = botSeat(state as GameState, g.seat);
+  const host = members.some((m) => m.userId === room.host) ? room.host : (members[0]?.userId ?? room.host);
+  return { ...room, members, state, host };
+}
+
+/** Carta keeps only its latest log entries in the room (the table shows recent events). */
+const CARTA_LOG = 40;
+const trimCarta = (s: GameState): GameState => (s.log.length > CARTA_LOG ? { ...s, log: s.log.slice(-CARTA_LOG) } : s);
+
+const isCoinGame = (g: RoomGame): g is 'blackjack' | 'roulette' => (COIN_GAMES as readonly string[]).includes(g);
+
+/** A uuid from SHA-256 of `key` (the same key always gives the same id). */
+export async function sha256Uuid(key: string): Promise<string> {
+  const d = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(key)));
+  const h = [...d.slice(0, 16)].map((b) => b.toString(16).padStart(2, '0')).join('');
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20, 32)}`;
+}
 
 const fail = (code: RoomErrorCode, detail?: string): RoomResponse => ({ ok: false, code, detail });
 
@@ -101,10 +166,15 @@ function cleanName(raw: unknown): string | null {
 
 function cleanSettings(game: RoomGame, raw: unknown): RoomSettings | null {
   const r = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+  if (isCoinGame(game)) return { difficulty: 'normal', public: r.public === true };
   if (!DIFFICULTIES.includes(r.difficulty as never)) return null;
-  if (game === 'domino') return r.target === 100 || r.target === 200 ? { difficulty: r.difficulty as RoomSettings['difficulty'], target: r.target } : null;
-  return BINGO_SPEEDS.includes(r.speed as never) ? { difficulty: r.difficulty as RoomSettings['difficulty'], speed: r.speed as RoomSettings['speed'] } : null;
+  const difficulty = r.difficulty as RoomSettings['difficulty'];
+  if (game === 'carta') return { difficulty, public: r.public === true };
+  if (game === 'domino') return r.target === 100 || r.target === 200 ? { difficulty, target: r.target } : null;
+  return BINGO_SPEEDS.includes(r.speed as never) ? { difficulty, speed: r.speed as RoomSettings['speed'] } : null;
 }
+
+const GAMES: RoomGame[] = ['domino', 'bingo', 'carta', 'blackjack', 'roulette'];
 
 /** Parses the body into a request, or null. Unknown fields are ignored; wrong types reject. */
 export function parseRequest(raw: unknown): RoomRequest | null {
@@ -113,12 +183,18 @@ export function parseRequest(raw: unknown): RoomRequest | null {
   const code = typeof r.code === 'string' && ROOM_CODE_RE.test(r.code) ? r.code : null;
   switch (r.op) {
     case 'create': {
-      if (r.game !== 'domino' && r.game !== 'bingo') return null;
+      if (!GAMES.includes(r.game as RoomGame)) return null;
+      const game = r.game as RoomGame;
       const seats = r.seats;
-      if (!Number.isInteger(seats) || (seats as number) < (r.game === 'domino' ? 2 : 1) || (seats as number) > 4) return null;
+      if (!Number.isInteger(seats) || (seats as number) < SEAT_RANGE[game].min || (seats as number) > SEAT_RANGE[game].max) return null;
       const name = cleanName(r.name);
-      const settings = cleanSettings(r.game, r.settings);
-      return name && settings ? { op: 'create', game: r.game, seats: seats as number, name, settings } : null;
+      const settings = cleanSettings(game, r.settings);
+      return name && settings ? { op: 'create', game, seats: seats as number, name, settings } : null;
+    }
+    case 'quick': {
+      if (!(QUICK_GAMES as readonly string[]).includes(r.game as string)) return null;
+      const name = cleanName(r.name);
+      return name ? { op: 'quick', game: r.game as RoomGame, name } : null;
     }
     case 'join': {
       const name = cleanName(r.name);
@@ -127,7 +203,7 @@ export function parseRequest(raw: unknown): RoomRequest | null {
     case 'ready':
       return code && typeof r.ready === 'boolean' ? { op: 'ready', code, ready: r.ready } : null;
     case 'act':
-      return code && r.action && typeof r.action === 'object' ? { op: 'act', code, action: r.action as DominoAction } : null;
+      return code && r.action && typeof r.action === 'object' && !Array.isArray(r.action) ? { op: 'act', code, action: r.action as DominoAction } : null;
     case 'start':
     case 'tick':
     case 'sync':
@@ -141,7 +217,7 @@ export function parseRequest(raw: unknown): RoomRequest | null {
 
 // ---------------------------------------------------------------- views
 
-const SEATS = ['s0', 's1', 's2', 's3'];
+const SEATS = ['s0', 's1', 's2', 's3', 's4', 's5'];
 
 function sanitizeEvents(game: RoomGame, events: (DominoEvent | BingoEvent)[], seat: string): (DominoEvent | BingoEvent)[] {
   if (game === 'domino') return events;
@@ -149,14 +225,25 @@ function sanitizeEvents(game: RoomGame, events: (DominoEvent | BingoEvent)[], se
   return events.map((e) => (e.type === 'marked' && e.playerId !== seat ? { ...e, number: 0 } : e));
 }
 
-export function viewFor(room: RoomRow, member: Member, now: number, events: (DominoEvent | BingoEvent)[] = []): RoomView {
+/** Public Carta lobby: when it starts by itself. */
+export function autoStartAt(room: RoomRow): number | null {
+  if (room.game !== 'carta' || room.status !== 'lobby' || !room.settings.public) return null;
+  if (room.members.length >= room.seats) return room.clock.lastAt;
+  return room.clock.lastAt + (room.members.length >= 2 ? TIMING.publicStart : TIMING.publicSolo);
+}
+
+export function viewFor(room: RoomRow, member: Member, now: number, events: (DominoEvent | BingoEvent)[] = [], balance: number | null = null): RoomView {
   const domino = room.game === 'domino' && room.state ? dominoView(room.state as DominoState, member.seat) : null;
   const bingo = room.game === 'bingo' && room.state ? bingoView(room.state as BingoState, member.seat) : null;
+  const carta = room.game === 'carta' && room.state ? cartaView(room.state as GameState, member.seat) : null;
+  const blackjack = room.game === 'blackjack' && room.state ? bjTableView(room.state as BjTable) : null;
+  const roulette = room.game === 'roulette' && room.state ? rtTableView(room.state as RtTable) : null;
   let turnDeadline: number | null = null;
   if (domino && domino.status === 'playing') {
     const cur = (room.state as DominoState).players[(room.state as DominoState).current];
     if (cur.kind !== 'bot') turnDeadline = room.clock.lastAt + TIMING.turnLimit;
   }
+  if (carta) turnDeadline = cartaDeadline(room.state as GameState, room.clock.lastAt);
   return {
     roomId: room.id,
     code: room.code,
@@ -169,13 +256,19 @@ export function viewFor(room: RoomRow, member: Member, now: number, events: (Dom
     version: room.version,
     serverNow: now,
     turnDeadline,
+    startsAt: autoStartAt(room),
     domino,
     bingo,
-    events: sanitizeEvents(room.game, events, member.seat),
+    carta,
+    blackjack,
+    roulette,
+    balance,
+    events: room.game === 'domino' || room.game === 'bingo' ? sanitizeEvents(room.game, events, member.seat) : [],
   };
 }
 
-const viewsFor = (room: RoomRow, now: number, events: (DominoEvent | BingoEvent)[]): ViewOut[] => room.members.map((m) => ({ userId: m.userId, view: viewFor(room, m, now, events) }));
+const viewsFor = (room: RoomRow, now: number, events: (DominoEvent | BingoEvent)[], balances?: Map<string, number>): ViewOut[] =>
+  room.members.map((m) => ({ userId: m.userId, view: viewFor(room, m, now, events, balances?.get(m.userId) ?? null) }));
 
 // ---------------------------------------------------------------- the server's own moves
 
@@ -190,6 +283,19 @@ function seedOf(room: RoomRow): number {
  */
 export function advance(room: RoomRow, now: number): { room: RoomRow; events: (DominoEvent | BingoEvent)[] } {
   if (room.status !== 'playing' || !room.state) return { room, events: [] };
+  if (room.game === 'carta') {
+    const res = advanceCarta(room.state as GameState, room.clock.lastAt, now, room.settings.difficulty);
+    if (res.state === room.state) return { room, events: [] };
+    return { room: { ...room, state: trimCarta(res.state), clock: { ...room.clock, lastAt: res.lastAt } }, events: [] };
+  }
+  if (room.game === 'blackjack') {
+    const t = advanceBj(room.state as BjTable, now, room.members.map((m) => m.seat));
+    return { room: t === room.state ? room : { ...room, state: t }, events: [] };
+  }
+  if (room.game === 'roulette') {
+    const t = advanceRt(room.state as RtTable, now);
+    return { room: t === room.state ? room : { ...room, state: t }, events: [] };
+  }
   const events: (DominoEvent | BingoEvent)[] = [];
   let r = room;
   const set = (state: RoomRow['state'], clock: Partial<Clock>, ev: (DominoEvent | BingoEvent)[]) => {
@@ -295,16 +401,133 @@ function cryptoInt(n: number): number {
   return buf[0] % n;
 }
 
+function newSeed(randomInt: (n: number) => number): number {
+  return (randomInt(0x10000) * 0x10000 + randomInt(0x10000)) >>> 0;
+}
+
 function newMatch(room: RoomRow, now: number, randomInt: (n: number) => number): RoomRow {
-  const seed = (randomInt(0x10000) * 0x10000 + randomInt(0x10000)) >>> 0;
+  const seed = newSeed(randomInt);
   let bot = 0;
   const seats = SEATS.slice(0, room.seats).map((seat) => {
     const m = room.members.find((x) => x.seat === seat);
     return m ? { id: seat, name: m.name, kind: 'human' as const } : { id: seat, name: `Bot ${++bot}`, kind: 'bot' as const };
   });
+  if (room.game === 'carta') return { ...room, status: 'playing', state: createCarta(seats, seed), clock: { lastAt: now, lastCallAt: 0, closingAt: 0, roundOverAt: 0 } };
   const state = room.game === 'domino' ? createDomino({ seats, seed, targetScore: room.settings.target ?? 100 }) : createBingo({ seats, seed });
   const clock: Clock = { lastAt: now, lastCallAt: now - (TIMING.pace[room.settings.speed ?? 'normal'] ?? 3800) + TIMING.firstBall, closingAt: 0, roundOverAt: 0 };
   return { ...room, status: 'playing', state, clock };
+}
+
+/** A coin table opens already running (players sit down and bet whenever a round is open). */
+function newTable(room: RoomRow, now: number, randomInt: (n: number) => number): RoomRow {
+  const seed = newSeed(randomInt);
+  const state = room.game === 'blackjack' ? createBjTable(seed, now) : createRtTable(seed, now);
+  return { ...room, status: 'playing', state, clock: { lastAt: now, lastCallAt: 0, closingAt: 0, roundOverAt: 0 } };
+}
+
+const idFor = (deps: RoomDeps) => deps.requestId ?? sha256Uuid;
+
+/** Credits every settled win of a coin table (idempotent ids), marking each seat paid. */
+async function payOut(room: RoomRow, deps: RoomDeps, balances: Map<string, number>): Promise<RoomRow> {
+  if (!room.state || !isCoinGame(room.game) || !deps.wallet) return room;
+  let state = room.state as BjTable | RtTable;
+  const owed = state.kind === 'blackjack' ? bjUnpaid(state) : rtUnpaid(state);
+  for (const s of owed) {
+    const id = await idFor(deps)(`${room.id}|${state.round}|${s.seat}|payout`);
+    const res = await deps.wallet.pay(s.userId, id, room.game, s.payout, { room: room.code, round: state.round, seat: s.seat });
+    if (!res.ok) continue; // tried again on the next request
+    balances.set(s.userId, res.balance);
+    state = state.kind === 'blackjack' ? bjMarkPaid(state, s.seat) : rtMarkPaid(state as RtTable, s.seat);
+  }
+  return state === room.state ? room : { ...room, state };
+}
+
+/** advance + payouts, until nothing more happens at `now`. */
+async function progress(room: RoomRow, now: number, deps: RoomDeps, balances: Map<string, number>): Promise<{ room: RoomRow; events: (DominoEvent | BingoEvent)[] }> {
+  let r = room;
+  const events: (DominoEvent | BingoEvent)[] = [];
+  for (let i = 0; i < 6; i++) {
+    const a = advance(r, now);
+    events.push(...a.events);
+    const paid = await payOut(a.room, deps, balances);
+    const moved = paid !== r;
+    r = paid;
+    if (!moved || paid === a.room) break;
+  }
+  return { room: r, events };
+}
+
+const walletError = (code: WalletFailure): RoomResponse =>
+  code === 'insufficient_funds' || code === 'not_registered' || code === 'banned' ? fail(code) : code === 'conflict' || code === 'invalid' ? fail('rule', code) : fail('busy');
+
+/** Registered, not banned: required to sit at a coin table. */
+async function mayPlayForCoins(userId: string, deps: RoomDeps): Promise<RoomResponse | null> {
+  if (!deps.wallet) return fail('not_registered');
+  const p = await deps.wallet.player(userId);
+  if (!p.registered) return fail('not_registered');
+  if (p.banned) return fail('banned');
+  return null;
+}
+
+type Decision =
+  | { kind: 'fail'; res: RoomResponse }
+  | { kind: 'same' }
+  | { kind: 'next'; room: RoomRow; events?: (DominoEvent | BingoEvent)[] };
+
+/**
+ * One action at a coin table. Bets and doubles take the coins first (idempotent request id derived from
+ * the room, round, seat and slip), then join the table state; `debited` records coins already taken by an
+ * earlier attempt of this same request so they can be refunded if the table moved on meanwhile.
+ */
+async function tableAction(room: RoomRow, me: Member, raw: Record<string, unknown>, t: number, deps: RoomDeps, balances: Map<string, number>, debited: { id: string; amount: number }[]): Promise<Decision> {
+  const wallet = deps.wallet;
+  if (!wallet) return { kind: 'fail', res: fail('not_registered') };
+  const game = room.game as 'blackjack' | 'roulette';
+  const state = room.state as BjTable | RtTable;
+  const take = async (key: string, amount: number, detail: Record<string, unknown>): Promise<RoomResponse | null> => {
+    const id = await idFor(deps)(key);
+    const res = await wallet.bet(me.userId, id, game, amount, { room: room.code, round: state.round, seat: me.seat, ...detail });
+    if (!res.ok) return walletError(res.code);
+    balances.set(me.userId, res.balance);
+    if (!debited.some((d) => d.id === id)) debited.push({ id, amount });
+    return null;
+  };
+
+  if (state.kind === 'blackjack') {
+    const type = raw.type;
+    if (type === 'BET') {
+      const amount = raw.amount as number;
+      const err = bjCanBet(state, me.seat, amount);
+      if (err === 'already_bet') return { kind: 'same' };
+      if (err) return { kind: 'fail', res: fail('rule', err) };
+      const failed = await take(`${room.id}|${state.round}|${me.seat}|bet`, amount, { kind: 'bet' });
+      if (failed) return { kind: 'fail', res: failed };
+      return { kind: 'next', room: { ...room, state: placeBet(state, me.seat, me.userId, me.name, amount, t) } };
+    }
+    if (type === 'HIT' || type === 'STAND' || type === 'DOUBLE') {
+      const action = type === 'HIT' ? 'hit' : type === 'STAND' ? 'stand' : 'double';
+      const err = bjCanAct(state, me.seat, action);
+      if (err) return { kind: 'fail', res: fail('rule', err) };
+      if (action === 'double') {
+        const extra = state.seats[state.turn].bet;
+        const failed = await take(`${room.id}|${state.round}|${me.seat}|double`, extra, { kind: 'double' });
+        if (failed) return { kind: 'fail', res: failed };
+      }
+      return { kind: 'next', room: { ...room, state: bjAct(state, me.seat, action, t) } };
+    }
+    return { kind: 'fail', res: fail('bad_request') };
+  }
+
+  if (raw.type !== 'BET') return { kind: 'fail', res: fail('bad_request') };
+  const bets = parseSlip(raw.bets);
+  const slipId = typeof raw.slipId === 'string' && /^[0-9a-f-]{8,40}$/i.test(raw.slipId) ? raw.slipId.toLowerCase() : null;
+  if (!bets || !slipId) return { kind: 'fail', res: fail('bad_request') };
+  if (hasSlip(state, me.seat, slipId)) return { kind: 'same' };
+  const err = canAddBets(state, me.seat, bets);
+  if (err) return { kind: 'fail', res: fail('rule', err) };
+  const failed = await take(`${room.id}|${state.round}|${me.seat}|slip|${slipId}`, slipTotal(bets), { kind: 'bet', bets });
+  if (failed) return { kind: 'fail', res: failed };
+  return { kind: 'next', room: { ...room, state: addBets(state, me.seat, me.userId, me.name, bets, t, slipId) } };
 }
 
 export async function handleRoomRequest(userId: string | null, body: unknown, deps: RoomDeps): Promise<RoomResponse> {
@@ -315,16 +538,42 @@ export async function handleRoomRequest(userId: string | null, body: unknown, de
   const now = deps.now ?? Date.now;
   const randomInt = deps.randomInt ?? cryptoInt;
 
+  if (req.op === 'quick') {
+    if (isCoinGame(req.game)) {
+      const refused = await mayPlayForCoins(userId, deps);
+      if (refused) return refused;
+    }
+    for (let attempt = 0; attempt < 3 && deps.store.findOpen; attempt++) {
+      const code = await deps.store.findOpen(req.game, userId);
+      if (!code) break;
+      const res = await handleRoomRequest(userId, { op: 'join', code, name: req.name }, { ...deps, allow: undefined });
+      if (res.ok || !['full', 'started', 'not_found'].includes(res.code)) return res;
+    }
+    const settings: RoomSettings = { difficulty: 'normal', public: true };
+    return handleRoomRequest(userId, { op: 'create', game: req.game, seats: SEAT_RANGE[req.game].quick, name: req.name, settings }, { ...deps, allow: undefined });
+  }
+
   if (req.op === 'create') {
+    if (isCoinGame(req.game)) {
+      const refused = await mayPlayForCoins(userId, deps);
+      if (refused) return refused;
+    }
     for (let attempt = 0; attempt < 5; attempt++) {
       const code = newRoomCode(randomInt);
-      const members: Member[] = [{ userId, seat: 's0', name: req.name, ready: true }];
+      const members: Member[] = [{ userId, seat: 's0', name: req.name, ready: true, seenAt: now() }];
       try {
         const t = now();
         const room = await deps.store.insert({ code, game: req.game, seats: req.seats, host: userId, members, settings: req.settings }, (roomId) => [
           { userId, view: viewFor({ id: roomId, code, game: req.game, seats: req.seats, host: userId, status: 'lobby', members, settings: req.settings, state: null, clock: { lastAt: t, lastCallAt: t, closingAt: 0, roundOverAt: 0 }, version: 1 }, members[0], t) },
         ]);
-        return { ok: true, view: viewFor(room, members[0], t) };
+        const opened: RoomRow = { ...room, clock: { lastAt: t, lastCallAt: t, closingAt: 0, roundOverAt: 0 } };
+        // Coin tables and public Carta rooms need their first state / timer stored right away.
+        if (isCoinGame(req.game) || (req.game === 'carta' && req.settings.public)) {
+          const next = isCoinGame(req.game) ? newTable(opened, t, randomInt) : opened;
+          const version = await deps.store.commit(next, viewsFor({ ...next, version: next.version + 1 }, t, []));
+          return { ok: true, view: viewFor({ ...next, version }, members[0], t) };
+        }
+        return { ok: true, view: viewFor(opened, members[0], t) };
       } catch (e) {
         if (!(e instanceof RoomStoreError && e.code === 'conflict')) throw e;
       }
@@ -333,10 +582,23 @@ export async function handleRoomRequest(userId: string | null, body: unknown, de
   }
 
   // Everything else changes an existing room: load, decide, commit with a version check; retry on a race.
+  const balances = new Map<string, number>();
+  const debited: { id: string; amount: number }[] = [];
+  const refund = async (room: RoomRow) => {
+    // Coins taken by an earlier attempt of this request that couldn't join the table: give them back.
+    if (!deps.wallet || !debited.length) return;
+    for (const d of debited) {
+      const res = await deps.wallet.pay(userId, await idFor(deps)(`${d.id}|refund`), room.game as 'blackjack' | 'roulette', d.amount, { room: room.code, refund: true });
+      if (res.ok) balances.set(userId, res.balance);
+    }
+    debited.length = 0;
+  };
   for (let attempt = 0; attempt < 4; attempt++) {
-    const room = await deps.store.load(req.code);
-    if (!room || room.status === 'closed') return fail('not_found');
+    const loaded = await deps.store.load(req.code);
+    if (!loaded || loaded.status === 'closed') return fail('not_found');
     const t = now();
+    const room = maintain(loaded, userId, t);
+    const dirty = room !== loaded;
     const me = room.members.find((m) => m.userId === userId);
     let next: RoomRow = room;
     let events: (DominoEvent | BingoEvent)[] = [];
@@ -344,10 +606,15 @@ export async function handleRoomRequest(userId: string | null, body: unknown, de
     switch (req.op) {
       case 'join': {
         if (me) return { ok: true, view: viewFor(room, me, t) };
-        if (room.status !== 'lobby') return fail('started');
+        const coin = isCoinGame(room.game);
+        if (coin) {
+          const refused = await mayPlayForCoins(userId, deps);
+          if (refused) return refused;
+        } else if (room.status !== 'lobby') return fail('started');
         const seat = SEATS.slice(0, room.seats).find((s) => !room.members.some((m) => m.seat === s));
         if (!seat) return fail('full');
-        next = { ...room, members: [...room.members, { userId, seat, name: req.name, ready: false }] };
+        const auto = coin || !!room.settings.public;
+        next = { ...room, members: [...room.members, { userId, seat, name: req.name, ready: auto, seenAt: t }], clock: room.game === 'carta' && room.settings.public ? { ...room.clock, lastAt: t } : room.clock };
         break;
       }
       case 'ready':
@@ -365,23 +632,48 @@ export async function handleRoomRequest(userId: string | null, body: unknown, de
       case 'rematch': {
         if (!me) return fail('not_member');
         if (room.host !== userId) return fail('not_host');
+        if (room.game === 'carta') {
+          const s = room.state as GameState | null;
+          if (room.status !== 'playing' || !s || s.status !== 'GAME_OVER') return fail('not_playing');
+          const res = applyCartaAction(s, { type: 'RESTART_GAME', timestamp: t });
+          if (!res.ok) return fail('rule', res.error);
+          next = { ...room, state: trimCarta(res.state), clock: { ...room.clock, lastAt: t } };
+          break;
+        }
+        if (isCoinGame(room.game)) return fail('not_playing');
         const over = room.state && ((room.state as DominoState).status === 'game_over' || room.game === 'bingo');
         if (room.status !== 'playing' || !over) return fail('not_playing');
         if (room.game === 'domino') {
-          const seed = (randomInt(0x10000) * 0x10000 + randomInt(0x10000)) >>> 0;
-          next = { ...room, state: dominoRematch(room.state as DominoState, seed), clock: { ...room.clock, lastAt: t } };
+          next = { ...room, state: dominoRematch(room.state as DominoState, newSeed(randomInt)), clock: { ...room.clock, lastAt: t } };
         } else next = newMatch(room, t, randomInt);
         break;
       }
       case 'leave': {
         if (!me) return fail('not_member');
         const members = room.members.filter((m) => m.userId !== userId);
-        if (room.status === 'lobby') {
-          // The host leaving a lobby closes the room for everyone.
-          next = { ...room, members, status: room.host === userId || members.length === 0 ? 'closed' : 'lobby' };
+        if (isCoinGame(room.game)) {
+          // Their bets stay on the table and are settled and paid to them. The last one out settles the
+          // round at once (nobody would be left to move the clock).
+          let left: RoomRow = { ...room, members };
+          if (members.length === 0) {
+            for (let i = 0; i < 10; i++) {
+              const phase = (left.state as BjTable | RtTable | null)?.phase;
+              if (!phase || phase === 'waiting') break;
+              left = (await progress(left, t + (i + 1) * 3600_000, deps, balances)).room;
+            }
+            left = { ...left, status: 'closed' };
+          }
+          next = left;
+        } else if (room.status === 'lobby') {
+          // The host leaving a private lobby closes the room for everyone; a public one keeps going.
+          const hostLeft = room.host === userId;
+          const host = hostLeft && room.settings.public && members.length ? members[0].userId : room.host;
+          next = { ...room, members, host, status: (hostLeft && !room.settings.public) || members.length === 0 ? 'closed' : 'lobby' };
+        } else if (room.game === 'carta') {
+          next = { ...room, members, state: room.state ? botSeat(room.state as GameState, me.seat) : null, status: members.length === 0 ? 'closed' : room.status };
         } else {
           // Mid-match, their seat is played by a bot from now on.
-          const state = room.state ? { ...room.state, players: (room.state.players as { id: string; kind: string }[]).map((p) => (p.id === me.seat ? { ...p, kind: 'bot' } : p)) } : null;
+          const state = room.state ? { ...room.state, players: ((room.state as DominoState).players as { id: string; kind: string }[]).map((p) => (p.id === me.seat ? { ...p, kind: 'bot' } : p)) } : null;
           next = { ...room, members, state: state as RoomRow['state'], status: members.length === 0 ? 'closed' : room.status };
         }
         break;
@@ -390,7 +682,42 @@ export async function handleRoomRequest(userId: string | null, body: unknown, de
         if (!me) return fail('not_member');
         if (room.status !== 'playing' || !room.state) return fail('not_playing');
         // Catch up the clock first, so the action applies to the state everyone should be seeing now.
-        const caught = advance(room, t);
+        const caught = await progress(room, t, deps, balances);
+        if (isCoinGame(room.game)) {
+          const d = await tableAction(caught.room, me, req.action as Record<string, unknown>, t, deps, balances, debited);
+          if (d.kind === 'fail') {
+            await refund(room);
+            return d.res;
+          }
+          if (d.kind === 'same') {
+            // Already on the table (a repeated request): nothing new to take or add.
+            debited.length = 0;
+            next = caught.room;
+            if (next === room && !dirty) return { ok: true, view: viewFor(room, me, t, [], balances.get(userId) ?? null) };
+            break;
+          }
+          const after = await progress(d.room, t, deps, balances);
+          next = after.room;
+          break;
+        }
+        if (room.game === 'carta') {
+          const action = parseCartaAction(req.action, me.seat);
+          if (!action) return fail('forbidden');
+          const res = applyCarta(caught.room.state as GameState, action, t);
+          if (!res.ok) {
+            if (caught.room !== room) {
+              try {
+                await deps.store.commit(caught.room, viewsFor({ ...caught.room, version: caught.room.version + 1 }, t, []));
+              } catch {
+                /* a newer version exists; nothing lost */
+              }
+            }
+            return fail('rule', res.error);
+          }
+          const moved = { ...caught.room, state: trimCarta(res.state), clock: { ...caught.room.clock, lastAt: t } };
+          next = advance(moved, t).room;
+          break;
+        }
         const action = room.game === 'domino' ? parseDominoAction(req.action) : parseBingoAction(req.action);
         if (!action || !('playerId' in action)) return fail('forbidden');
         if (action.playerId !== me.seat) return fail('forbidden');
@@ -413,7 +740,7 @@ export async function handleRoomRequest(userId: string | null, body: unknown, de
         if (status === 'round_over' || status === 'game_over') clock.roundOverAt = t;
         // A new Bingo round started by a player: first ball shortly, then the usual pace.
         if (room.game === 'bingo' && res.events.some((e) => e.type === 'dealt')) clock.lastCallAt = t - (TIMING.pace[room.settings.speed ?? 'normal'] ?? 3800) + TIMING.firstBall;
-        next = { ...caught.room, state: res.state, clock: { ...caught.room.clock, ...clock } };
+        next = { ...caught.room, state: res.state as RoomState, clock: { ...caught.room.clock, ...clock } };
         events = [...caught.events, ...res.events];
         const after = advance(next, t);
         next = after.room;
@@ -423,8 +750,14 @@ export async function handleRoomRequest(userId: string | null, body: unknown, de
       case 'tick':
       case 'sync': {
         if (!me) return fail('not_member');
-        const after = advance(room, t);
-        if (!after.events.length) return { ok: true, view: viewFor(room, me, t) };
+        // A public Carta lobby starts by itself.
+        const startAt = autoStartAt(room);
+        if (startAt !== null && t >= startAt) {
+          next = newMatch({ ...room, members: room.members.map((m) => ({ ...m, ready: true })) }, t, randomInt);
+          break;
+        }
+        const after = await progress(room, t, deps, balances);
+        if (after.room === room && !dirty) return { ok: true, view: viewFor(room, me, t, [], balances.get(userId) ?? null) };
         next = after.room;
         events = after.events;
         break;
@@ -432,15 +765,19 @@ export async function handleRoomRequest(userId: string | null, body: unknown, de
     }
 
     try {
-      const version = await deps.store.commit(next, viewsFor({ ...next, version: next.version + 1 }, t, events));
+      const version = await deps.store.commit(next, viewsFor({ ...next, version: next.version + 1 }, t, events, balances));
       const committed = { ...next, version };
       const self = committed.members.find((m) => m.userId === userId);
       if (!self) return { ok: true, view: viewFor({ ...committed, status: 'closed' }, me ?? { userId, seat: 's0', name: '', ready: false }, t) };
-      return { ok: true, view: viewFor(committed, self, t, events) };
+      return { ok: true, view: viewFor(committed, self, t, events, balances.get(userId) ?? null) };
     } catch (e) {
       if (e instanceof RoomStoreError && e.code === 'conflict') continue;
       throw e;
     }
+  }
+  if (debited.length) {
+    const room = await deps.store.load(req.code);
+    if (room) await refund(room);
   }
   return fail('busy');
 }

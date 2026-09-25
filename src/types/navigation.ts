@@ -1,11 +1,14 @@
 import type { GameModeId } from '@/game/rules/modes';
 
-export type Screen = 'home' | 'gameModes' | 'settings' | 'tutorial' | 'play' | 'blackjack' | 'roulette' | 'slots' | 'profile' | 'slotLobby' | 'slotMachine' | 'dominoSetup' | 'domino' | 'bingoSetup' | 'bingo' | 'room' | 'account' | 'staff' | 'bank';
+export type Screen = 'home' | 'gameModes' | 'settings' | 'tutorial' | 'play' | 'blackjack' | 'roulette' | 'slots' | 'profile' | 'slotLobby' | 'slotMachine' | 'dominoSetup' | 'domino' | 'bingoSetup' | 'bingo' | 'room' | 'account' | 'staff' | 'bank' | 'cartaOnline' | 'blackjackTable' | 'rouletteTable';
 
-export const SCREENS: Screen[] = ['home', 'gameModes', 'settings', 'tutorial', 'play', 'blackjack', 'roulette', 'slots', 'profile', 'slotLobby', 'slotMachine', 'dominoSetup', 'domino', 'bingoSetup', 'bingo', 'room', 'account', 'staff', 'bank'];
+export const SCREENS: Screen[] = ['home', 'gameModes', 'settings', 'tutorial', 'play', 'blackjack', 'roulette', 'slots', 'profile', 'slotLobby', 'slotMachine', 'dominoSetup', 'domino', 'bingoSetup', 'bingo', 'room', 'account', 'staff', 'bank', 'cartaOnline', 'blackjackTable', 'rouletteTable'];
 
 /** Table games with their own setup, room and match screens. */
 export type TableGame = 'domino' | 'bingo';
+
+/** Games with online rooms (the room screen's `game`). */
+export type OnlineGame = TableGame | 'carta' | 'blackjack' | 'roulette';
 
 export interface ScreenParams {
   mode?: GameModeId;
@@ -14,7 +17,7 @@ export interface ScreenParams {
   /** Open slot machine (MachineId). */
   machine?: string;
   /** Game of the room screen. */
-  game?: TableGame;
+  game?: OnlineGame;
   /** Room screen opened to join (with a code) rather than to create. */
   join?: boolean;
   /** Online room code (room lobby, or an online match). */

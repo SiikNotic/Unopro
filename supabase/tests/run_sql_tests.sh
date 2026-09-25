@@ -24,6 +24,9 @@ psql -q -v ON_ERROR_STOP=1 -d "$DB" -f profiles_staff_test.sql
 psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20260928000000_bank.sql
 psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20260928000000_bank.sql
 psql -q -v ON_ERROR_STOP=1 -d "$DB" -f bank_test.sql
+psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20260929000000_tables.sql
+psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20260929000000_tables.sql
+psql -q -v ON_ERROR_STOP=1 -d "$DB" -f tables_test.sql
 
 # Two players ask for the same username at the same instant: exactly one gets it.
 for u in 21 22 23 24 25 26; do
@@ -77,4 +80,17 @@ wait
 read -r LOANS ADS BBAL < <(psql -At -F ' ' -d "$DB" -c "select (select count(*) from public.bank_loans where user_id = '$BU'), (select count(*) from public.account_ledger where user_id = '$BU' and game = 'ad_reward'), (select balance from public.account_wallets where user_id = '$BU')")
 echo "bank concurrency: loans=$LOANS ad_payments=$ADS balance=$BBAL"
 [ "$LOANS" = 1 ] && [ "$ADS" = 1 ] && [ "$BBAL" = 600 ] || { echo "BANK CONCURRENCY TEST FAILED"; exit 1; }
+# Tables: 20 simultaneous bets of 100 against a balance of 500 (5 of them replaying one request id):
+# exactly 5 bets are taken, never a negative balance.
+TU=00000000-0000-0000-0004-0000000000ee
+psql -q -d "$DB" -c "insert into auth.users (id, email_confirmed_at) values ('$TU', now()); insert into public.account_wallets (user_id, balance) values ('$TU', 500)"
+TREPLAY=44444444-4444-4444-8444-444444444444
+for i in $(seq 1 20); do
+  if [ "$i" -le 5 ]; then RID=$TREPLAY; else RID=$(cat /proc/sys/kernel/random/uuid); fi
+  psql -q -d "$DB" -c "set role service_role; select * from public.table_bet('$TU', '$RID', 'roulette', 100, '{}')" >/dev/null 2>&1 &
+done
+wait
+read -r TBETS TBAL < <(psql -At -F ' ' -d "$DB" -c "select (select count(*) from public.account_ledger where user_id = '$TU'), (select balance from public.account_wallets where user_id = '$TU')")
+echo "table concurrency: bets=$TBETS balance=$TBAL"
+[ "$TBETS" = 5 ] && [ "$TBAL" = 0 ] || { echo "TABLE CONCURRENCY TEST FAILED"; exit 1; }
 echo "all SQL tests passed"

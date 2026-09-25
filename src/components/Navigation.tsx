@@ -51,7 +51,7 @@ function cleanParams(raw: unknown): ScreenParams {
   if (p.mode && GAME_MODES.some((m) => m.id === p.mode && m.enabled)) out.mode = p.mode;
   if (typeof p.topic === 'string' && /^[a-z]{2,16}$/.test(p.topic)) out.topic = p.topic;
   if (isMachineId(p.machine)) out.machine = p.machine;
-  if (p.game === 'domino' || p.game === 'bingo') out.game = p.game;
+  if (p.game === 'domino' || p.game === 'bingo' || p.game === 'carta' || p.game === 'blackjack' || p.game === 'roulette') out.game = p.game;
   if (p.join === true) out.join = true;
   if (typeof p.room === 'string' && ROOM_CODE_RE.test(p.room)) out.room = p.room;
   return out;

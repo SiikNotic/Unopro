@@ -27,6 +27,9 @@ const DominoScreen = lazy(() => import('@/games/domino/ui/DominoScreen').then((m
 const BingoScreen = lazy(() => import('@/games/bingo/ui/BingoScreen').then((m) => ({ default: m.BingoScreen })));
 const AccountScreen = lazy(() => import('@/account/AccountScreen').then((m) => ({ default: m.AccountScreen })));
 const StaffScreen = lazy(() => import('@/staff/StaffScreen').then((m) => ({ default: m.StaffScreen })));
+const CartaOnline = lazy(() => import('@/games/online/CartaOnline').then((m) => ({ default: m.CartaOnline })));
+const BlackjackTableScreen = lazy(() => import('@/casino/table/BlackjackTableScreen').then((m) => ({ default: m.BlackjackTableScreen })));
+const RouletteTableScreen = lazy(() => import('@/casino/table/RouletteTableScreen').then((m) => ({ default: m.RouletteTableScreen })));
 const BankScreen = lazy(() => import('@/bank/BankScreen').then((m) => ({ default: m.BankScreen })));
 const PremiumSlotScreen = lazy(() => import('@/screens/casino/PremiumSlotScreen').then((m) => ({ default: m.PremiumSlotScreen })));
 
@@ -53,6 +56,9 @@ function ScreenRouter() {
     account: <AccountScreen />,
     staff: <StaffScreen />,
     bank: <BankScreen />,
+    cartaOnline: <CartaOnline />,
+    blackjackTable: <BlackjackTableScreen />,
+    rouletteTable: <RouletteTableScreen />,
   };
 
   return (

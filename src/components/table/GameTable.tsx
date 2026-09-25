@@ -35,6 +35,8 @@ interface GameTableProps {
   onExit: () => void;
   engineError?: string | null;
   scenario: ScenarioId;
+  /** A thin line under the header (online matches: connection and turn timer). */
+  banner?: React.ReactNode;
 }
 
 interface Burst {
@@ -82,7 +84,7 @@ const NARROW_ORDER: SeatPosition[] = ['left', 'top-left', 'top', 'top-right', 'r
  * The visual table. Renders GameState and turns taps into GameActions — every rule
  * (legality, turns, effects, UNO, scoring) is answered by the engine.
  */
-export function GameTable({ state, localPlayerId, dispatch, onExit, engineError, scenario }: GameTableProps) {
+export function GameTable({ state, localPlayerId, dispatch, onExit, engineError, scenario, banner }: GameTableProps) {
   const { preferences } = usePreferences();
   const { t } = useI18n();
   const cardName = useCardName();
@@ -271,6 +273,7 @@ export function GameTable({ state, localPlayerId, dispatch, onExit, engineError,
           )}
         </div>
       </header>
+      {banner && <div className="relative z-10 flex justify-center px-2 pb-1 shrink-0">{banner}</div>}
 
       {/* Table */}
       <div className="relative z-[1] flex-1 min-h-0 w-full max-w-6xl mx-auto px-2 sm:px-4">
