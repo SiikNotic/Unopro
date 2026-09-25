@@ -5,7 +5,7 @@ import reactRefresh from 'eslint-plugin-react-refresh';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['dist', 'supabase/functions/game-room/index.ts', 'supabase/functions/casino/index.ts'] },
+  { ignores: ['dist', 'supabase/functions/game-room/index.ts', 'supabase/functions/casino/index.ts', 'supabase/functions/admob-ssv/index.ts', 'android'] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ['**/*.{ts,tsx}'],

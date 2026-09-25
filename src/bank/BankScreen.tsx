@@ -267,7 +267,7 @@ export function BankScreen() {
           </section>
 
           {/* Rewarded ad */}
-          <AdCard state={ad.state} amount={adAmount} capReached={capReached} locked={!registered || banned} today={status?.adToday ?? 0} cap={status?.adDailyCap ?? 20} onStart={ad.start} />
+          <AdCard state={ad.state} failure={ad.failure} amount={adAmount} capReached={capReached} locked={!registered || banned} today={status?.adToday ?? 0} cap={status?.adDailyCap ?? 20} onStart={ad.start} />
         </div>
 
         {/* History */}
@@ -304,7 +304,7 @@ export function BankScreen() {
   );
 }
 
-function AdCard({ state, amount, capReached, locked, today, cap, onStart }: { state: AdState; amount: number; capReached: boolean; locked: boolean; today: number; cap: number; onStart: () => void }) {
+function AdCard({ state, failure, amount, capReached, locked, today, cap, onStart }: { state: AdState; failure: 'load' | 'unconfirmed' | null; amount: number; capReached: boolean; locked: boolean; today: number; cap: number; onStart: () => void }) {
   const { t } = useI18n();
   const unavailable = state === 'UNAVAILABLE' || state === 'CHECKING';
   const off = unavailable || capReached;
@@ -318,7 +318,7 @@ function AdCard({ state, amount, capReached, locked, today, cap, onStart }: { st
           : state === 'REWARDED'
             ? t('bank.ad.done', { amount: formatChips(amount) })
             : state === 'ERROR'
-              ? t('bank.ad.error')
+              ? t(failure === 'load' ? 'bank.ad.loadError' : 'bank.ad.error')
               : capReached
                 ? t('bank.ad.cap')
                 : unavailable

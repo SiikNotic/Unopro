@@ -1423,7 +1423,8 @@
       "unavailable": "Publicidad no disponible",
       "unavailableHint": "Ahora mismo no hay anuncios disponibles.",
       "cap": "Límite diario alcanzado",
-      "rewarded": "¡Recibiste {amount} monedas por el anuncio!"
+      "rewarded": "¡Recibiste {amount} monedas por el anuncio!",
+      "loadError": "No se pudo mostrar el anuncio"
     },
     "errors": {
       "cooldown": "El préstamo todavía no está disponible.",

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useReducer, useRef } from 'react';
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { getRewardedAdsProvider } from './ads';
 import type { RewardedAdsProvider } from './ads';
 import { adReducer } from './bankLogic';
@@ -19,10 +19,11 @@ export function useRewardedAd(options: {
   checkServer: () => Promise<number | null>;
   onConfirmed: () => void;
   provider?: RewardedAdsProvider;
-}): { state: AdState; start: () => void } {
+}): { state: AdState; start: () => void; failure: 'load' | 'unconfirmed' | null } {
   const { enabled, userId, checkServer, onConfirmed } = options;
   const provider = options.provider ?? getRewardedAdsProvider();
   const [state, dispatch] = useReducer(adReducer, 'CHECKING');
+  const [failure, setFailure] = useState<'load' | 'unconfirmed' | null>(null);
   const alive = useRef(true);
   const busy = useRef(false);
   const latest = useRef({ checkServer, onConfirmed });
@@ -63,11 +64,14 @@ export function useRewardedAd(options: {
   const start = useCallback(() => {
     if (busy.current || !enabled || !userId) return;
     busy.current = true;
+    setFailure(null);
     void runAdFlow({ provider, userId, checkServer: () => latest.current.checkServer(), dispatch, isAlive: () => alive.current }).then((result) => {
       busy.current = false;
       if (result === 'rewarded') latest.current.onConfirmed();
+      else if (result === 'failed') setFailure('load');
+      else if (result === 'unconfirmed') setFailure('unconfirmed');
     });
   }, [enabled, userId, provider]);
 
-  return { state, start };
+  return { state, start, failure };
 }

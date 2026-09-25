@@ -1,0 +1,68 @@
+name: Android app (APK)
+
+# Builds the Android app (the same web build inside Capacitor, with AdMob rewarded ads) and publishes a
+# debug APK as a downloadable artifact of the run. Public values only, from repository Variables:
+#   VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY  (as for the web build)
+#   ADMOB_APP_ID           e.g. ca-app-pub-1234567890123456~1234567890   (unset: Google's test app)
+#   VITE_ADMOB_REWARDED_ID e.g. ca-app-pub-1234567890123456/1234567890   (unset: Google's test ad unit)
+on:
+  push:
+    branches: ['**']
+    paths: ['android/**', 'src/**', 'capacitor.config.ts', 'package.json', 'package-lock.json', '.github/workflows/android.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm ci
+      - run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+          VITE_ADMOB_REWARDED_ID: ${{ vars.VITE_ADMOB_REWARDED_ID }}
+      - run: npx cap sync android
+      - run: ./gradlew assembleDebug --no-daemon
+        working-directory: android
+        env:
+          ADMOB_APP_ID: ${{ vars.ADMOB_APP_ID }}
+      - uses: actions/upload-artifact@v5
+        with:
+          name: carta-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
+
+  ssv-smoke:
+    # The deployed AdMob verification endpoint must refuse anything not signed by Google. Also proves it can
+    # download and read Google's public keys (an unknown key id answers 403, not 500).
+    runs-on: ubuntu-latest
+    if: vars.VITE_SUPABASE_URL != ''
+    steps:
+      - name: Forged requests are refused
+        env:
+          BASE: ${{ vars.VITE_SUPABASE_URL }}/functions/v1/admob-ssv
+        run: |
+          set -u
+          code() { curl -s -o /dev/null -w '%{http_code}' "$@"; }
+          check() { echo "$1 -> $2 (expected $3)"; [ "$2" = "$3" ] || exit 1; }
+          check "no query" "$(code "$BASE")" 400
+          check "POST" "$(code -X POST "$BASE")" 405
+          check "unknown key" "$(code "$BASE?ad_unit=1&transaction_id=t&user_id=00000000-0000-4000-8000-000000000000&signature=MEUCIQ&key_id=1")" 403
+          KEY=$(curl -s https://www.gstatic.com/admob/reward/verifier-keys.json | python3 -c 'import json,sys; print(json.load(sys.stdin)["keys"][0]["keyId"])')
+          check "bad signature, real key $KEY" "$(code "$BASE?ad_unit=1&transaction_id=t&user_id=00000000-0000-4000-8000-000000000000&signature=MEUCIQDw&key_id=$KEY")" 400

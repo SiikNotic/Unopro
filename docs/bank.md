@@ -21,7 +21,7 @@ move to the account with the 1,000-coin welcome credit, as before).
 
 ## Rewarded ad: 100 coins per completed ad
 
-**No ad network is connected yet.** The client has an adapter (`src/bank/ads.ts`, interface
+**On the website no ad network is connected.** In the Android app, AdMob is connected (see `docs/admob.md`). The client has an adapter (`src/bank/ads.ts`, interface
 `RewardedAdsProvider`: `isAvailable`, `showRewardedAd`, `onReward`) whose default implementation is
 "no provider": always unavailable. The Bank then shows the ad card greyed out with
 "Publicidad no disponible". Nothing is faked (no timers pretending an ad played), and the app does not
