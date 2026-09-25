@@ -3,7 +3,7 @@
 // levels, chapters) and the settings (the app's sound, music and animation preferences).
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
-import { ArrowLeft, Lock, Map as MapIcon, Play, Settings2, X } from 'lucide-react';
+import { ArrowLeft, Lock, Map as MapIcon, Play, X } from 'lucide-react';
 import { useNavigation } from '@/components/Navigation';
 import { useI18n } from '@/i18n';
 import { usePreferences } from '@/settings/usePreferences';
@@ -16,6 +16,7 @@ import { JewelDefs } from './JewelDefs';
 import { OlympusScene } from './OlympusScene';
 import { BoosterIcon, Laurel, StarIcon } from './OlympusArt';
 import { playJewel } from './jewelAudio';
+import { ICONS } from './assets';
 import './jewels.css';
 
 const STEP = 104; // vertical distance between levels on the map (px)
@@ -111,7 +112,7 @@ export function JewelsHome() {
           </b>
         </p>
         <button type="button" className="ol-icon-btn" onClick={() => setSettings(true)} aria-label={t('jewels.settings')}>
-          <Settings2 className="w-5 h-5" />
+          <img src={ICONS.settings} alt="" />
         </button>
       </header>
 

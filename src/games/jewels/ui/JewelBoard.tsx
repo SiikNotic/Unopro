@@ -62,6 +62,12 @@ const Bolt = memo(function Bolt({ e, cell, rows, cols }: { e: Effect; cell: numb
   );
 });
 
+/** The frame's rim around a board `size` px wide (the frame art's rim is ~8.5% of its width per side). */
+function framePadding(size: number) {
+  const w = size / (1 - 0.168);
+  return `${w * 0.086}px ${w * 0.084}px ${w * 0.09}px`;
+}
+
 export function JewelBoard(props: BoardProps) {
   const { rows, cols, size, pieces, ice, effects, pops, combo, moveMs, selected, armed, busy, glints, celebrate, sparkCap, sparks, onTap, onSwipe } = props;
   const { t } = useI18n();
@@ -95,19 +101,7 @@ export function JewelBoard(props: BoardProps) {
   };
 
   return (
-    <div className={`ol-frame${celebrate ? ' is-celebrate' : ''}`} style={{ '--cell': `${cell}px` } as CSSProperties}>
-      <svg className="ol-crest" viewBox="0 0 120 40" aria-hidden>
-        <path d="M60 8 C44 4 26 8 6 20 C24 18 38 20 50 26 Z" fill="url(#jw-gold-line)" />
-        <path d="M60 8 C76 4 94 8 114 20 C96 18 82 20 70 26 Z" fill="url(#jw-gold-line)" />
-        <use href="#jw3" x="44" y="2" width="32" height="32" />
-      </svg>
-      {(['tl', 'tr', 'bl', 'br'] as const).map((k) => (
-        <svg key={k} className={`ol-corner is-${k}`} viewBox="0 0 40 40" aria-hidden>
-          <path d="M4 36 V12 C4 7 7 4 12 4 H36" fill="none" stroke="url(#jw-gold-line)" strokeWidth="4" />
-          <path d="M10 30 C10 20 14 14 24 10 M14 32 C16 26 20 22 28 20" fill="none" stroke="#e6c26c" strokeWidth="2" strokeLinecap="round" />
-          <circle cx="10" cy="10" r="3.4" fill="#fff3c8" />
-        </svg>
-      ))}
+    <div className={`ol-frame${celebrate ? ' is-celebrate' : ''}`} style={{ '--cell': `${cell}px`, padding: framePadding(size) } as CSSProperties}>
       <div
         className={`jw-board${busy ? ' is-busy' : ''}${armed ? ` is-armed is-${armed}` : ''}`}
         style={{ width: size, height, '--jw-cols': cols, '--jw-rows': rows, '--jw-move': `${moveMs}ms` } as CSSProperties}
@@ -141,7 +135,7 @@ export function JewelBoard(props: BoardProps) {
           <IceLayer ice={ice} />
         </div>
         {selected && <span className="jw-select" style={{ transform: `translate3d(${selected.c * 100}%, ${selected.r * 100}%, 0)` }} aria-hidden />}
-        {use3D && <Board3D rows={rows} cols={cols} width={size} height={height} pieces={pieces} selected={selected} moveMs={moveMs} idle={glints} onReady={setReady3D} />}
+        {use3D && <Board3D rows={rows} cols={cols} width={size} height={height} pieces={pieces} effects={effects} selected={selected} moveMs={moveMs} idle={glints} onReady={setReady3D} />}
         {ready3D && (
           // The 3D layer draws the hint itself; these invisible markers keep the hinted cells findable.
           <div className="jw-layer" aria-hidden>
@@ -158,19 +152,20 @@ export function JewelBoard(props: BoardProps) {
           ))}
         </div>
         <div className="jw-fx" aria-hidden>
-          {effects.map((f) =>
-            f.type === 'boltRow' || f.type === 'boltCol' ? (
-              <Bolt key={f.id} e={f} cell={cell} rows={rows} cols={cols} />
-            ) : f.type === 'hammer' ? (
-              <span key={f.id} className="jw-hammer" style={{ left: (f.c + 0.5) * cell, top: (f.r + 0.5) * cell, width: cell * 1.6, height: cell * 1.6 }} />
-            ) : (
-              <span
-                key={f.id}
-                className={`jw-wave ${f.type === 'divine' ? 'is-divine' : ''}`}
-                style={{ left: (f.c + 0.5) * cell, top: (f.r + 0.5) * cell, width: cell * (f.size ?? 1.5) * 2, height: cell * (f.size ?? 1.5) * 2 }}
-              />
-            )
-          )}
+          {!ready3D &&
+            effects.map((f) =>
+              f.type === 'boltRow' || f.type === 'boltCol' ? (
+                <Bolt key={f.id} e={f} cell={cell} rows={rows} cols={cols} />
+              ) : f.type === 'hammer' ? (
+                <span key={f.id} className="jw-hammer" style={{ left: (f.c + 0.5) * cell, top: (f.r + 0.5) * cell, width: cell * 1.6, height: cell * 1.6 }} />
+              ) : (
+                <span
+                  key={f.id}
+                  className={`jw-wave ${f.type === 'divine' ? 'is-divine' : ''}`}
+                  style={{ left: (f.c + 0.5) * cell, top: (f.r + 0.5) * cell, width: cell * (f.size ?? 1.5) * 2, height: cell * (f.size ?? 1.5) * 2 }}
+                />
+              )
+            )}
           {pops.map((p) => (
             <span key={p.id} className={`jw-pop${p.big ? ' is-big' : ''}`} style={{ left: (p.c + 0.5) * cell, top: (p.r + 0.5) * cell }}>
               +{p.points.toLocaleString()}

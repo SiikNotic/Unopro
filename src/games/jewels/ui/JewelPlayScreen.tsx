@@ -2,7 +2,7 @@
 // and the end of the level. The layout is real, not a scaled picture: the board takes the free space
 // (square cells), the HUD and power-ups stay compact on phones and breathe on wider screens.
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Music, Volume2, VolumeX } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useNavigation } from '@/components/Navigation';
 import { useI18n } from '@/i18n';
 import { usePreferences } from '@/settings/usePreferences';
@@ -21,6 +21,7 @@ import { OlympusHud } from './OlympusHud';
 import { PowerBar } from './PowerBar';
 import { LevelEnd } from './LevelEnd';
 import { useJewelGame } from './useJewelGame';
+import { ICONS } from './assets';
 import type { SparkLayer } from './particles';
 import { playJewel } from './jewelAudio';
 import './jewels.css';
@@ -28,8 +29,9 @@ import './jewels.css';
 // Development only: the dynamic import is dropped from production builds.
 const JewelDevTools = import.meta.env.DEV ? lazy(() => import('./JewelDevTools')) : null;
 
-/** Frame thickness around the board (matches .ol-frame padding in jewels.css). */
-const FRAME_PAD = 12;
+/** The frame's rim as a share of the frame's width (matches .ol-frame padding in jewels.css). */
+const RIM_X = 0.168;
+const RIM_Y = 0.176;
 
 export function JewelPlayScreen() {
   const { params } = useNavigation();
@@ -70,9 +72,10 @@ function Level({ level, onRetry }: { level: LevelDef; onRetry: () => void }) {
     const el = area.current;
     if (!el) return;
     const measure = () => {
-      const w = el.clientWidth - FRAME_PAD * 2;
-      const h = el.clientHeight - FRAME_PAD * 2 - 14; // room for the crest
-      setSize(Math.max(0, Math.floor(Math.min(w, (h * level.cols) / level.rows, 620))));
+      // frame width = size / (1 - RIM_X); frame height = board height + RIM_Y × frame width.
+      const byWidth = el.clientWidth * (1 - RIM_X);
+      const byHeight = el.clientHeight / (level.rows / level.cols + RIM_Y / (1 - RIM_X));
+      setSize(Math.max(0, Math.floor(Math.min(byWidth, byHeight, 620))));
     };
     measure();
     const ro = new ResizeObserver(measure);
@@ -113,11 +116,11 @@ function Level({ level, onRetry }: { level: LevelDef; onRetry: () => void }) {
           <span>{t(`jewels.chapter.${Math.min(3, Math.floor((level.id - 1) / 5))}`)}</span>
           <b>{t('jewels.levelN', { n: level.id })}</b>
         </p>
-        <button type="button" className="ol-icon-btn" onClick={() => setPreference('music', !preferences.music)} aria-label={t('jewels.music')} aria-pressed={preferences.music}>
-          <Music className={`w-5 h-5 ${preferences.music ? '' : 'opacity-40'}`} />
+        <button type="button" className={`ol-icon-btn${preferences.music ? '' : ' is-off'}`} onClick={() => setPreference('music', !preferences.music)} aria-label={t('jewels.music')} aria-pressed={preferences.music}>
+          <img src={ICONS.music} alt="" />
         </button>
-        <button type="button" className="ol-icon-btn" onClick={() => setPreference('sound', !preferences.sound)} aria-label={t('jewels.sound')} aria-pressed={preferences.sound}>
-          {preferences.sound ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
+        <button type="button" className={`ol-icon-btn${preferences.sound ? '' : ' is-off'}`} onClick={() => setPreference('sound', !preferences.sound)} aria-label={t('jewels.sound')} aria-pressed={preferences.sound}>
+          <img src={ICONS.sound} alt="" />
         </button>
       </header>
 

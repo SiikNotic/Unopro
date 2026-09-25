@@ -1,10 +1,10 @@
-// The WebGL layer of the board: the 3D pieces. three.js is loaded on demand (its own chunk), and until it is
+// The WebGL layer of the board: the painted pieces and the special effects. three.js is loaded on demand (its own chunk), and until it is
 // ready, or on a device without WebGL, the board keeps drawing the DOM jewels, so nothing waits on it.
 import { useEffect, useRef } from 'react';
 import type { Pos } from '../engine';
 import { isLiteDevice } from '@/components/scene/particles';
 import type { GemScene } from './three/GemScene';
-import type { VPiece } from './useJewelGame';
+import type { Effect, VPiece } from './useJewelGame';
 
 interface Board3DProps {
   rows: number;
@@ -12,6 +12,7 @@ interface Board3DProps {
   width: number;
   height: number;
   pieces: VPiece[];
+  effects: Effect[];
   selected: Pos | null;
   moveMs: number;
   /** Idle shimmer (off with reduced motion / animations off). */
@@ -19,16 +20,16 @@ interface Board3DProps {
   onReady: (ready: boolean) => void;
 }
 
-export function Board3D({ rows, cols, width, height, pieces, selected, moveMs, idle, onReady }: Board3DProps) {
+export function Board3D({ rows, cols, width, height, pieces, effects, selected, moveMs, idle, onReady }: Board3DProps) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const scene = useRef<GemScene | null>(null);
-  const latest = useRef({ pieces, selected, moveMs, idle, width, height });
-  latest.current = { pieces, selected, moveMs, idle, width, height };
+  const latest = useRef({ pieces, effects, selected, moveMs, idle, width, height });
+  latest.current = { pieces, effects, selected, moveMs, idle, width, height };
 
   useEffect(() => {
     let alive = true;
     import('./three/GemScene')
-      .then(({ GemScene }) => {
+      .then(async ({ GemScene }) => {
         if (!alive || !canvas.current) return;
         const s = new GemScene(canvas.current, rows, cols, { idle: latest.current.idle, lite: isLiteDevice() });
         scene.current = s;
@@ -39,7 +40,11 @@ export function Board3D({ rows, cols, width, height, pieces, selected, moveMs, i
           latest.current.selected,
           0
         );
-        onReady(true);
+        await s.ready();
+        if (alive) {
+          s.syncEffects(latest.current.effects);
+          onReady(true);
+        }
       })
       .catch(() => onReady(false));
     return () => {
@@ -54,6 +59,7 @@ export function Board3D({ rows, cols, width, height, pieces, selected, moveMs, i
   useEffect(() => scene.current?.resize(width, height), [width, height]);
   useEffect(() => scene.current?.setIdle(idle), [idle]);
   useEffect(() => scene.current?.sync(pieces, selected, moveMs), [pieces, selected, moveMs]);
+  useEffect(() => scene.current?.syncEffects(effects), [effects]);
 
   return <canvas ref={canvas} className="jw-3d" aria-hidden />;
 }
