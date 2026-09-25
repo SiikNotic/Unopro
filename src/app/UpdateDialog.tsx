@@ -3,6 +3,7 @@ import { Download, Loader2, Sparkles } from 'lucide-react';
 import { useI18n } from '@/i18n';
 import { storage } from '@/storage';
 import { isNativeApp } from '@/account/authApi';
+import { DISTRIBUTION } from './distribution';
 import release from '../../app-release.json';
 import { AppUpdater, isNewer, notesFor, parseManifest } from './updates';
 import type { UpdateManifest } from './updates';
@@ -25,7 +26,8 @@ export function UpdateDialog() {
   const dismissed = useRef<number>(0);
 
   useEffect(() => {
-    if (!isNativeApp()) return;
+    // Only the direct APK updates itself; the Google Play build is updated by Google Play.
+    if (!isNativeApp() || DISTRIBUTION === 'play') return;
     let cancelled = false;
     const check = async () => {
       try {

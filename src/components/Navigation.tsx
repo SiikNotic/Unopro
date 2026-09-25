@@ -34,7 +34,7 @@ const NavigationContext = createContext<NavigationContextValue | null>(null);
  * match. It lands on the game's setup instead. Online matches (with a room code) are re-entered: the
  * server kept the state.
  */
-const MATCH_FALLBACK: Partial<Record<Screen, Screen>> = { play: 'cartaSetup', domino: 'dominoSetup', bingo: 'bingoSetup', jewelsPlay: 'jewels' };
+const MATCH_FALLBACK: Partial<Record<Screen, Screen>> = { play: 'cartaSetup', domino: 'dominoSetup', bingo: 'bingoSetup', jewelsPlay: 'jewels', poker: 'pokerSetup' };
 
 /** Only well-formed screens and params are accepted from history (it survives reloads and can be edited). */
 function sanitize(raw: unknown): HistoryState | null {
@@ -56,12 +56,13 @@ function cleanParams(raw: unknown): ScreenParams {
   if (p.online === true) out.online = true;
   if (Number.isInteger(p.level) && (p.level as number) >= 1 && (p.level as number) <= 999) out.level = p.level;
   if (p.levels === true) out.levels = true;
+  if (typeof p.doc === 'string' && /^[a-z]{2,20}$/.test(p.doc)) out.doc = p.doc;
   if (typeof p.room === 'string' && ROOM_CODE_RE.test(p.room)) out.room = p.room;
   return out;
 }
 
 const sameEntry = (a: Entry | null, screen: Screen, params: ScreenParams) =>
-  !!a && a.screen === screen && (a.params.topic ?? '') === (params.topic ?? '') && (a.params.mode ?? '') === (params.mode ?? '') && (a.params.machine ?? '') === (params.machine ?? '') && (a.params.game ?? '') === (params.game ?? '') && !!a.params.join === !!params.join && !!a.params.online === !!params.online && (a.params.level ?? 0) === (params.level ?? 0) && !!a.params.levels === !!params.levels && (a.params.room ?? '') === (params.room ?? '');
+  !!a && a.screen === screen && (a.params.topic ?? '') === (params.topic ?? '') && (a.params.mode ?? '') === (params.mode ?? '') && (a.params.machine ?? '') === (params.machine ?? '') && (a.params.game ?? '') === (params.game ?? '') && !!a.params.join === !!params.join && !!a.params.online === !!params.online && (a.params.level ?? 0) === (params.level ?? 0) && !!a.params.levels === !!params.levels && (a.params.doc ?? '') === (params.doc ?? '') && (a.params.room ?? '') === (params.room ?? '');
 
 export function NavigationProvider({ children }: { children: ReactNode }) {
   const [entry, setEntry] = useState<Entry>(() => {

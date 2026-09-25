@@ -7,7 +7,7 @@ import { bell, noise, note, pluck, tone } from './voices';
 import type { Voice } from './voices';
 
 /** Slot machines plus the table games that bring their own music. */
-export type AmbientId = MachineId | 'domino' | 'bingo' | 'jewels';
+export type AmbientId = MachineId | 'domino' | 'bingo' | 'jewels' | 'poker';
 
 interface Pattern {
   /** Seconds per beat. */
@@ -101,6 +101,18 @@ export const AMBIENT: Record<AmbientId, Pattern> = {
       pluck(v, t, note(roots[bar] + walk - 12), 0.05, 0.6, 'sine');
       noise(v, t + (i % 2 ? 0.02 : 0), 0.22, { type: 'highpass', freq: 5200, gain: i % 2 ? 0.014 : 0.006, attack: 0.08 });
       if (r() < 0.22) pluck(v, t + 0.36, note(chords[bar][Math.floor(r() * 4)] + 12), 0.018, 0.7);
+    },
+  },
+  // Poker: a late-night lounge — soft seventh chords, a walking bass and brushed hats.
+  poker: {
+    beat: 0.5,
+    play: (v, t, i, r) => {
+      const bar = Math.floor(i / 8) % 4;
+      const roots = [-7, -2, -9, -4]; // D, G, C, F (ii–V–I–IV feel)
+      if (i % 8 === 0) chord(v, t, [0, 3, 7, 10].map((n) => roots[bar] + n), 3.6, 'sine', 0.01, 1800);
+      if (i % 2 === 0) tone(v, t, note(roots[bar] - 24 + [0, 7, 10, 7][(i / 2) % 4]), 0.4, { type: 'triangle', gain: 0.05, lowpass: 700 });
+      if (i % 2 === 1) noise(v, t, 0.05, { type: 'highpass', freq: 6000, gain: 0.012 });
+      if (i % 16 === 12 && r() < 0.5) bell(v, t, note(roots[bar] + 19), 0.006, 0.8);
     },
   },
   // Jewellery: slow, glassy pads with a crystal arpeggio drifting over them.

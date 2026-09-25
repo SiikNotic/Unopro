@@ -581,6 +581,10 @@
       "rate_limited": "Vas muy rápido. Espera un segundo.",
       "bad_request": "No se pudo hacer esa jugada.",
       "server": "No hay conexión con el servidor. Tus monedas están a salvo: inténtalo de nuevo."
+    },
+    "poker": {
+      "name": "Póker",
+      "description": "Texas Hold'em contra bots, de 2 a 6 en la mesa. Solo fichas de práctica."
     }
   },
   "profile": {
@@ -629,19 +633,22 @@
       "carta": "Carta",
       "blackjack": "Blackjack",
       "roulette": "Ruleta",
-      "slots": "Tragamonedas"
+      "slots": "Tragamonedas",
+      "poker": "Póker"
     },
     "tag": {
       "carta": "Contra bots · 2–10 jugadores",
       "blackjack": "Blackjack paga 3:2",
       "roulette": "Europea · un solo cero",
-      "slots": "Nuevo · 9 máquinas"
+      "slots": "Nuevo · 9 máquinas",
+      "poker": "Texas Hold'em"
     },
     "pitch": {
       "carta": "El juego de cartas original: combina colores, lanza comodines y canta UNO antes que nadie.",
       "blackjack": "Plántate a tiempo, dobla cuando toque y gánale al crupier sin pasarte de 21.",
       "roulette": "Elige tus números, mira girar la bola y cobra hasta 35 veces tu apuesta.",
-      "slots": "Nueve máquinas temáticas: Lucky 7s, Diamond Royale, Inferno, Pirate's Gold y más, con rodillos de verdad y jackpot."
+      "slots": "Nueve máquinas temáticas: Lucky 7s, Diamond Royale, Inferno, Pirate's Gold y más, con rodillos de verdad y jackpot.",
+      "poker": "De 2 a 6 en la mesa contra bots, con fichas de práctica."
     },
     "casino": "Casino",
     "casinoHint": "Blackjack, ruleta y tragaperras con fichas virtuales."
@@ -1298,7 +1305,8 @@
       "migratedCapped": "Pasamos {migrated} fichas de invitado (el máximo) a tu cuenta.",
       "coinsAdded": "El equipo añadió {amount} monedas a tu cuenta.",
       "coinsRemoved": "El equipo retiró {amount} monedas de tu cuenta.",
-      "usernameChanged": "Ahora te llamas {name}."
+      "usernameChanged": "Ahora te llamas {name}.",
+      "accountDeleted": "Tu cuenta se eliminó."
     },
     "errors": {
       "invalid_credentials": "Correo o contraseña incorrectos.",
@@ -1339,6 +1347,20 @@
       "staff": "Staff",
       "admin": "Admin",
       "owner": "Owner"
+    },
+    "delete": {
+      "title": "Eliminar cuenta",
+      "what": "Se borrarán de forma permanente tu cuenta, tu nombre de usuario, tus monedas, tu historial de partidas, préstamos y recompensas. No se puede deshacer.",
+      "kept": "Se conserva solo un registro interno de la eliminación (identificador y fecha) en el historial de acciones de moderación. Los datos de juego guardados en este dispositivo puedes borrarlos desde Ajustes.",
+      "type": "Escribe {word} para confirmar",
+      "word": "ELIMINAR",
+      "confirm": "Eliminar para siempre",
+      "errors": {
+        "owner_protected": "La cuenta propietaria no se puede eliminar desde aquí.",
+        "unauthorized": "Tu sesión caducó. Vuelve a iniciar sesión e inténtalo de nuevo.",
+        "network": "No hay conexión. Inténtalo de nuevo.",
+        "server": "No se pudo eliminar la cuenta. Inténtalo más tarde."
+      }
     }
   },
   "staff": {
@@ -1622,5 +1644,76 @@
     "entry": "Jewellery",
     "entryHint": "Puzzle de joyas para un jugador",
     "entryTag": "Un jugador · Puzzle"
+  },
+  "poker": {
+    "name": "Póker",
+    "description": "Texas Hold'em contra bots, de 2 a 6 en la mesa. Solo fichas de práctica.",
+    "practice": "Fichas de práctica",
+    "blinds": "Ciegas {b}",
+    "hand": "Mano {n}",
+    "pot": "Bote {n}",
+    "board": "Cartas comunitarias",
+    "dealer": "Repartidor",
+    "out": "Fuera",
+    "act": {
+      "fold": "No ir",
+      "check": "Pasar",
+      "call": "Igualar",
+      "bet": "Apostar",
+      "raise": "Subir",
+      "allIn": "Todo"
+    },
+    "callN": "Igualar {n}",
+    "betN": "Apostar {n}",
+    "raiseN": "Subir a {n}",
+    "amount": "Cantidad de fichas",
+    "less": "Menos",
+    "more": "Más",
+    "size": {
+      "half": "½ bote",
+      "pot": "Bote",
+      "max": "Todo"
+    },
+    "waiting": "Turno de {name}…",
+    "showdown": "Enseñan las cartas…",
+    "nextHand": "Siguiente mano",
+    "wins": "gana {n} fichas",
+    "splits": "reparten {n} fichas",
+    "wonTable": "¡Te quedaste con todas las fichas de la mesa!",
+    "lostTable": "Te quedaste sin fichas de práctica.",
+    "newTable": "Nueva mesa",
+    "leave": "Salir",
+    "hands": {
+      "highCard": "Carta alta",
+      "pair": "Pareja",
+      "twoPair": "Doble pareja",
+      "trips": "Trío",
+      "straight": "Escalera",
+      "flush": "Color",
+      "fullHouse": "Full",
+      "quads": "Póker",
+      "straightFlush": "Escalera de color",
+      "royalFlush": "Escalera real"
+    },
+    "setup": {
+      "stack": "Fichas iniciales",
+      "blinds": "Ciegas",
+      "rules": "Reglas",
+      "rulesItems": "Texas Hold'em sin límite|2 cartas privadas, flop, turn y river|Botes secundarios y empates repartidos|Los bots solo ven sus cartas y lo público",
+      "seatNote": "Tú y bots. Las mesas de póker en línea todavía no están disponibles.",
+      "sumStack": "{n} fichas",
+      "sumBlinds": "Ciegas {b}",
+      "practiceNote": "Mesa de práctica: las fichas son solo de esta mesa. No usan ni cambian las monedas de tu cuenta y no tienen valor real."
+    },
+    "entryTag": "Casino social · Cartas"
+  },
+  "legal": {
+    "title": "Legal y privacidad",
+    "subtitle": "Privacidad, términos y monedas virtuales",
+    "settingsHint": "Privacidad, términos, monedas virtuales, juego responsable y eliminar cuenta",
+    "updated": "Actualizado: {date}",
+    "goToAccount": "Ir a Cuenta para eliminarla",
+    "webCopy": "Copia pública:",
+    "understood": "Entendido"
   }
 }

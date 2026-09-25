@@ -581,6 +581,10 @@
       "rate_limited": "Too fast. Wait a second.",
       "bad_request": "That play couldn't be made.",
       "server": "Can't reach the server. Your coins are safe: try again."
+    },
+    "poker": {
+      "name": "Poker",
+      "description": "Texas Hold'em against bots, 2 to 6 at the table. Practice chips only."
     }
   },
   "profile": {
@@ -629,19 +633,22 @@
       "carta": "Carta",
       "blackjack": "Blackjack",
       "roulette": "Roulette",
-      "slots": "Slots"
+      "slots": "Slots",
+      "poker": "Poker"
     },
     "tag": {
       "carta": "Against bots · 2–10 players",
       "blackjack": "Blackjack pays 3:2",
       "roulette": "European · single zero",
-      "slots": "New · 9 machines"
+      "slots": "New · 9 machines",
+      "poker": "Texas Hold'em"
     },
     "pitch": {
       "carta": "The original card game: match colours, throw wilds and call UNO before anyone else.",
       "blackjack": "Stand at the right time, double when it counts and beat the dealer without going over 21.",
       "roulette": "Pick your numbers, watch the ball spin and collect up to 35 times your bet.",
-      "slots": "Nine themed machines: Lucky 7s, Diamond Royale, Inferno, Pirate's Gold and more, with real reels and a jackpot."
+      "slots": "Nine themed machines: Lucky 7s, Diamond Royale, Inferno, Pirate's Gold and more, with real reels and a jackpot.",
+      "poker": "2 to 6 at the table against bots, with practice chips."
     },
     "casino": "Casino",
     "casinoHint": "Blackjack, roulette and slots with virtual chips."
@@ -1298,7 +1305,8 @@
       "migratedCapped": "We moved {migrated} guest chips (the maximum) into your account.",
       "coinsAdded": "The team added {amount} coins to your account.",
       "coinsRemoved": "The team removed {amount} coins from your account.",
-      "usernameChanged": "You're now {name}."
+      "usernameChanged": "You're now {name}.",
+      "accountDeleted": "Your account was deleted."
     },
     "errors": {
       "invalid_credentials": "Wrong email or password.",
@@ -1339,6 +1347,20 @@
       "staff": "Staff",
       "admin": "Admin",
       "owner": "Owner"
+    },
+    "delete": {
+      "title": "Delete account",
+      "what": "Your account, username, coins, game history, loans and rewards will be permanently deleted. This can't be undone.",
+      "kept": "Only an internal record of the deletion (id and date) is kept in the moderation action log. Game data saved on this device can be cleared from Settings.",
+      "type": "Type {word} to confirm",
+      "word": "DELETE",
+      "confirm": "Delete forever",
+      "errors": {
+        "owner_protected": "The owner account can't be deleted from here.",
+        "unauthorized": "Your session expired. Sign in again and retry.",
+        "network": "No connection. Try again.",
+        "server": "The account couldn't be deleted. Try again later."
+      }
     }
   },
   "staff": {
@@ -1622,5 +1644,76 @@
     "entry": "Jewellery",
     "entryHint": "Single-player jewel puzzle",
     "entryTag": "Single player · Puzzle"
+  },
+  "poker": {
+    "name": "Poker",
+    "description": "Texas Hold'em against bots, 2 to 6 at the table. Practice chips only.",
+    "practice": "Practice chips",
+    "blinds": "Blinds {b}",
+    "hand": "Hand {n}",
+    "pot": "Pot {n}",
+    "board": "Community cards",
+    "dealer": "Dealer",
+    "out": "Out",
+    "act": {
+      "fold": "Fold",
+      "check": "Check",
+      "call": "Call",
+      "bet": "Bet",
+      "raise": "Raise",
+      "allIn": "All-in"
+    },
+    "callN": "Call {n}",
+    "betN": "Bet {n}",
+    "raiseN": "Raise to {n}",
+    "amount": "Chips",
+    "less": "Less",
+    "more": "More",
+    "size": {
+      "half": "½ pot",
+      "pot": "Pot",
+      "max": "All-in"
+    },
+    "waiting": "{name} to act…",
+    "showdown": "Showdown…",
+    "nextHand": "Next hand",
+    "wins": "wins {n} chips",
+    "splits": "split {n} chips",
+    "wonTable": "You won every chip at the table!",
+    "lostTable": "You are out of practice chips.",
+    "newTable": "New table",
+    "leave": "Leave",
+    "hands": {
+      "highCard": "High card",
+      "pair": "Pair",
+      "twoPair": "Two pair",
+      "trips": "Three of a kind",
+      "straight": "Straight",
+      "flush": "Flush",
+      "fullHouse": "Full house",
+      "quads": "Four of a kind",
+      "straightFlush": "Straight flush",
+      "royalFlush": "Royal flush"
+    },
+    "setup": {
+      "stack": "Starting chips",
+      "blinds": "Blinds",
+      "rules": "Rules",
+      "rulesItems": "No-limit Texas Hold'em|2 private cards, flop, turn and river|Side pots and split pots|Bots only see their own cards and public information",
+      "seatNote": "You and bots. Online poker tables are not available yet.",
+      "sumStack": "{n} chips",
+      "sumBlinds": "Blinds {b}",
+      "practiceNote": "Practice table: the chips belong to this table only. They don't use or change your account coins and have no real value."
+    },
+    "entryTag": "Social casino · Cards"
+  },
+  "legal": {
+    "title": "Legal & Privacy",
+    "subtitle": "Privacy, terms and virtual coins",
+    "settingsHint": "Privacy, terms, virtual coins, responsible play and account deletion",
+    "updated": "Updated: {date}",
+    "goToAccount": "Go to Account to delete it",
+    "webCopy": "Public copy:",
+    "understood": "Got it"
   }
 }

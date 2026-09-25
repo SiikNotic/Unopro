@@ -38,3 +38,9 @@ Only games listed here may skip `GameSetupScreen` (confirmed by the product owne
   (`SlotLobbyScreen`).
 - **Jewellery** (match-3): single-player, confirmed 2026-09-25. Its own front door (`JewelsHome`: Play /
   Levels / settings), no setup screen.
+
+## Poker
+
+**Póker (Texas Hold'em)** uses `GameSetupScreen` (`configs/poker.tsx`): players 2–6, starting stack, blinds,
+bot difficulty and scene. It is local only (you vs bots, practice chips, separate from account coins); it
+has no online mode until a server authority for poker exists.

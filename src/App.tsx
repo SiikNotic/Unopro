@@ -16,6 +16,7 @@ import { ProfileScreen } from '@/screens/ProfileScreen';
 import { WalletProvider } from '@/casino/WalletProvider';
 import { AccountProvider } from '@/account/AccountProvider';
 import { AccountOverlay } from '@/account/AccountOverlay';
+import { SocialCasinoNotice } from '@/legal/SocialCasinoNotice';
 import type { Screen } from '@/types/navigation';
 
 // The slot machines (engine, math, art, sounds) load only when a player opens them.
@@ -40,6 +41,10 @@ const BankScreen = lazy(() => import('@/bank/BankScreen').then((m) => ({ default
 // Jewellery (single-player match-3) loads only when opened.
 const JewelsHome = lazy(() => import('@/games/jewels/ui/JewelsHome').then((m) => ({ default: m.JewelsHome })));
 const JewelPlayScreen = lazy(() => import('@/games/jewels/ui/JewelPlayScreen').then((m) => ({ default: m.JewelPlayScreen })));
+// Poker and the legal pages load only when opened.
+const PokerSetupScreen = lazy(() => setup().then((m) => ({ default: m.PokerSetupScreen })));
+const PokerScreen = lazy(() => import('@/games/poker/ui/PokerScreen').then((m) => ({ default: m.PokerScreen })));
+const LegalScreen = lazy(() => import('@/legal/LegalScreen').then((m) => ({ default: m.LegalScreen })));
 const PremiumSlotScreen = lazy(() => import('@/screens/casino/PremiumSlotScreen').then((m) => ({ default: m.PremiumSlotScreen })));
 
 function ScreenRouter() {
@@ -73,6 +78,9 @@ function ScreenRouter() {
     rouletteSetup: <RouletteSetupScreen />,
     jewels: <JewelsHome />,
     jewelsPlay: <JewelPlayScreen />,
+    pokerSetup: <PokerSetupScreen />,
+    poker: <PokerScreen />,
+    legal: <LegalScreen />,
   };
 
   return (
@@ -80,6 +88,7 @@ function ScreenRouter() {
       <Background />
       <Suspense fallback={<div className="min-h-screen" aria-busy="true" />}>{screens[currentScreen]}</Suspense>
       <AccountOverlay />
+      <SocialCasinoNotice />
       <UpdateDialog />
     </main>
   );

@@ -140,3 +140,33 @@ export const loadCasinoSetup = (game: CasinoGame) => normalizeCasino(game, stora
 export const saveCasinoSetup = (game: CasinoGame, s: CasinoSetup) => storage.set(`games.${game}.setup`, s);
 /** The scene a casino screen opens with (a random choice avoids repeating the last one). */
 export const casinoScene = (game: CasinoGame): CasinoScene => pickScene(loadCasinoSetup(game).scene, CASINO_SCENES, `games.${game}.lastScene`);
+
+// ---------------------------------------------------------------- Poker (against bots, practice chips)
+
+/** Poker against bots: seats at the table, practice-chip stack, blinds, bots' difficulty, scene. */
+export interface PokerSetup {
+  players: 2 | 3 | 4 | 5 | 6;
+  stack: 1000 | 2500 | 5000;
+  blinds: '10/20' | '25/50' | '50/100';
+  difficulty: Difficulty;
+  scene: CasinoScene | 'random';
+}
+export const POKER_PLAYERS: PokerSetup['players'][] = [2, 3, 4, 5, 6];
+export const POKER_STACKS: PokerSetup['stack'][] = [1000, 2500, 5000];
+export const POKER_BLINDS: PokerSetup['blinds'][] = ['10/20', '25/50', '50/100'];
+export const DEFAULT_POKER: PokerSetup = { players: 6, stack: 1000, blinds: '10/20', difficulty: 'normal', scene: 'lounge' };
+
+export function normalizePoker(raw: unknown): PokerSetup {
+  const r = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+  return {
+    players: oneOf(POKER_PLAYERS, r.players, DEFAULT_POKER.players),
+    stack: oneOf(POKER_STACKS, r.stack, DEFAULT_POKER.stack),
+    blinds: oneOf(POKER_BLINDS, r.blinds, DEFAULT_POKER.blinds),
+    difficulty: oneOf(DIFFICULTIES, r.difficulty, DEFAULT_POKER.difficulty),
+    scene: oneOf([...CASINO_SCENES, 'random'] as const, r.scene, DEFAULT_POKER.scene),
+  };
+}
+const POKER_KEY = 'games.poker.setup';
+export const loadPokerSetup = () => normalizePoker(storage.get(POKER_KEY));
+export const savePokerSetup = (s: PokerSetup) => storage.set(POKER_KEY, s);
+export const blindsOf = (b: PokerSetup['blinds']) => b.split('/').map(Number) as [number, number];

@@ -48,7 +48,7 @@ describe('AdMob adapter', () => {
     const out = await p.showRewardedAd({ userId: 'u-1' });
     expect(out).toEqual({ status: 'completed', rewardId: null });
     expect(f.AdMob.prepareRewardVideoAd).toHaveBeenCalledWith({ adId: 'ca-app-pub-1/2', isTesting: false, ssv: { userId: 'u-1', customData: 'u-1' } });
-    expect(f.AdMob.initialize).toHaveBeenCalledWith({ initializeForTesting: false });
+    expect(f.AdMob.initialize).toHaveBeenCalledWith({ initializeForTesting: false, maxAdContentRating: 'Teen' });
     // listeners are cleaned up
     expect([...f.listeners.values()].every((s) => s.size === 0)).toBe(true);
   });
@@ -90,7 +90,7 @@ describe('AdMob adapter', () => {
   it("Google's test unit runs in test mode", async () => {
     const f = fakeAdMob();
     await createAdMobProvider({ adUnitId: ADMOB_TEST_REWARDED_ID, admob: f.module }).showRewardedAd({ userId: 'u' });
-    expect(f.AdMob.initialize).toHaveBeenCalledWith({ initializeForTesting: true });
+    expect(f.AdMob.initialize).toHaveBeenCalledWith({ initializeForTesting: true, maxAdContentRating: 'Teen' });
     expect(f.AdMob.prepareRewardVideoAd).toHaveBeenCalledWith(expect.objectContaining({ isTesting: true }));
   });
 });

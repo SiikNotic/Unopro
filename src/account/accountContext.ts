@@ -30,6 +30,7 @@ export type AccountNotice =
   | { kind: 'welcome'; name: string | null }
   | { kind: 'confirmed' }
   | { kind: 'signedOut' }
+  | { kind: 'accountDeleted' }
   | { kind: 'passwordChanged' }
   | { kind: 'error'; code: AuthErrorCode | 'link' };
 
@@ -54,6 +55,8 @@ export interface AccountContextValue {
   signUp: (email: string, password: string, name: string) => Promise<'signed_in' | 'check_email'>;
   signInWith: (provider: OAuthProvider) => Promise<void>;
   signOut: () => Promise<void>;
+  /** Deletes the signed-in account and its data on the server (the owner can't). */
+  deleteAccount: () => Promise<{ ok: boolean; code?: string }>;
   resendConfirmation: (email: string) => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
   updatePassword: (password: string) => Promise<void>;

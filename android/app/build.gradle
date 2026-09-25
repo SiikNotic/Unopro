@@ -33,6 +33,22 @@ android {
             }
         }
     }
+    buildFeatures {
+        buildConfig true
+    }
+    // Two distributions of the same app:
+    //   direct : the APK published on GitHub Releases, which can update itself (AppUpdaterPlugin).
+    //   play   : the bundle for Google Play — no self-update code path and no REQUEST_INSTALL_PACKAGES
+    //            (Google Play apps may only be updated through Google Play).
+    flavorDimensions = ["distribution"]
+    productFlavors {
+        direct {
+            dimension "distribution"
+        }
+        play {
+            dimension "distribution"
+        }
+    }
     buildTypes {
         release {
             if (System.getenv("ANDROID_KEYSTORE_FILE")) signingConfig signingConfigs.release

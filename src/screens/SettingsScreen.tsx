@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Volume2, Music, Smartphone, Sparkles, Info, Trash2, Check, Shuffle, Gauge, Mountain, Globe } from 'lucide-react';
+import { Volume2, Music, Smartphone, Sparkles, Info, Trash2, Check, Shuffle, Gauge, Mountain, Globe, ShieldCheck, ChevronRight } from 'lucide-react';
+import { useNavigation } from '@/components/Navigation';
 import type { LucideIcon } from 'lucide-react';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { Toggle } from '@/components/ui/Toggle';
@@ -51,6 +52,7 @@ function Pips({ level }: { level: number }) {
 }
 
 export function SettingsScreen() {
+  const { navigate } = useNavigation();
   const { t } = useI18n();
   const { preferences, setPreference } = usePreferences();
   const [confirmReset, setConfirmReset] = useState(false);
@@ -190,6 +192,21 @@ export function SettingsScreen() {
           <div className="menu-panel rounded-2xl p-4">
             <LanguageSelector />
           </div>
+        </section>
+
+        {/* Legal & Privacy */}
+        <section className="animate-slide-up" style={{ animationDelay: '0.14s' }}>
+          <SectionTitle icon={ShieldCheck}>{t('legal.title')}</SectionTitle>
+          <button type="button" className="cz-row w-full" onClick={() => navigate('legal')}>
+            <span className="cz-row-icon">
+              <ShieldCheck className="w-5 h-5" aria-hidden />
+            </span>
+            <span className="min-w-0 flex-1 text-left">
+              <span className="block font-display font-bold text-white text-[15px]">{t('legal.title')}</span>
+              <span className="block text-xs text-[var(--cz-muted)] mt-0.5 leading-snug">{t('legal.settingsHint')}</span>
+            </span>
+            <ChevronRight className="w-5 h-5 text-[var(--cz-muted)] shrink-0" aria-hidden />
+          </button>
         </section>
 
         {/* About + reset */}

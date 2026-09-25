@@ -31,7 +31,7 @@ const MiniWheel = () => (
   </svg>
 );
 
-const CASINO_GAMES: { screen: Screen; key: 'blackjack' | 'roulette' | 'slots'; art: React.ReactNode }[] = [
+const CASINO_GAMES: { screen: Screen; key: 'blackjack' | 'roulette' | 'slots' | 'poker'; art: React.ReactNode }[] = [
   {
     screen: 'blackjackSetup',
     key: 'blackjack',
@@ -43,6 +43,16 @@ const CASINO_GAMES: { screen: Screen; key: 'blackjack' | 'roulette' | 'slots'; a
     ),
   },
   { screen: 'rouletteSetup', key: 'roulette', art: <MiniWheel /> },
+  {
+    screen: 'pokerSetup',
+    key: 'poker',
+    art: (
+      <span className="relative w-10 h-10 flex items-center justify-center">
+        <PlayingCardView card={{ id: 'as', rank: 'A', suit: 'S' }} width={22} className="absolute -rotate-12 -translate-x-1.5" />
+        <PlayingCardView card={{ id: 'ah', rank: 'A', suit: 'H' }} width={22} className="absolute rotate-12 translate-x-1.5" />
+      </span>
+    ),
+  },
   { screen: 'slotLobby', key: 'slots', art: <SlotSymbolIcon symbol="seven" className="w-8 h-8" /> },
 ];
 

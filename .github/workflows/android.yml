@@ -81,7 +81,7 @@ jobs:
       - name: Build signed release APK
         if: steps.key.outputs.file != ''
         working-directory: android
-        run: ./gradlew assembleRelease --no-daemon
+        run: ./gradlew assembleDirectRelease --no-daemon
         env:
           ADMOB_APP_ID: ${{ vars.ADMOB_APP_ID }}
           APP_VERSION_NAME: ${{ steps.v.outputs.name }}
@@ -91,15 +91,15 @@ jobs:
       - name: Build debug APK
         if: steps.key.outputs.file == ''
         working-directory: android
-        run: ./gradlew assembleDebug --no-daemon
+        run: ./gradlew assembleDirectDebug --no-daemon
         env:
           ADMOB_APP_ID: ${{ vars.ADMOB_APP_ID }}
           APP_VERSION_NAME: ${{ steps.v.outputs.name }}
           APP_VERSION_CODE: ${{ steps.v.outputs.code }}
       - name: Collect APK
         run: |
-          if [ -f android/app/build/outputs/apk/release/app-release.apk ]; then cp android/app/build/outputs/apk/release/app-release.apk carta.apk
-          else cp android/app/build/outputs/apk/debug/app-debug.apk carta.apk; fi
+          if [ -f android/app/build/outputs/apk/direct/release/app-direct-release.apk ]; then cp android/app/build/outputs/apk/direct/release/app-direct-release.apk carta.apk
+          else cp android/app/build/outputs/apk/direct/debug/app-direct-debug.apk carta.apk; fi
           sha256sum carta.apk
       - uses: actions/upload-artifact@v5
         with:
@@ -129,6 +129,53 @@ jobs:
           ' "$SHA"
           cat update.json
           gh release create "$TAG" carta.apk update.json --repo "$REPO" --title "Carta $NAME" --notes-file notes.md --target "$GITHUB_SHA"
+
+  play-bundle:
+    # The Google Play bundle (.aab): same app, built with VITE_DISTRIBUTION=play and the "play" flavor (no
+    # self-update, no REQUEST_INSTALL_PACKAGES). Only kept as a run artifact — nothing is sent to Google.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm ci
+      - run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+          VITE_ADMOB_REWARDED_ID: ${{ vars.VITE_ADMOB_REWARDED_ID }}
+          VITE_DISTRIBUTION: play
+      - run: npx cap sync android
+      - name: Signing key (upload key)
+        id: key
+        env:
+          KS: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KS" ]; then echo "$KS" | base64 -d > "$RUNNER_TEMP/release.jks"; echo "file=$RUNNER_TEMP/release.jks" >> "$GITHUB_OUTPUT"; fi
+      - name: Build the Play bundle
+        working-directory: android
+        run: ./gradlew bundlePlayRelease --no-daemon
+        env:
+          ADMOB_APP_ID: ${{ vars.ADMOB_APP_ID }}
+          APP_VERSION_NAME: '1.0'
+          APP_VERSION_CODE: '1'
+          ANDROID_KEYSTORE_FILE: ${{ steps.key.outputs.file }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      - name: Check the bundle has no install-packages permission
+        run: |
+          AAB=android/app/build/outputs/bundle/playRelease/app-play-release.aab
+          unzip -p "$AAB" base/manifest/AndroidManifest.xml | strings | grep -q REQUEST_INSTALL_PACKAGES && { echo "REQUEST_INSTALL_PACKAGES found"; exit 1; } || echo "OK: no REQUEST_INSTALL_PACKAGES"
+      - uses: actions/upload-artifact@v5
+        with:
+          name: carta-play-aab
+          path: android/app/build/outputs/bundle/playRelease/app-play-release.aab
+          retention-days: 30
 
   ssv-smoke:
     # The deployed AdMob verification endpoint must refuse anything not signed by Google. Also proves it can

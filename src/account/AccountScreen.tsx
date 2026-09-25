@@ -4,6 +4,7 @@ import { Coins, Eye, EyeOff, Gift, LayoutDashboard, LogOut, Mail, ShieldCheck, U
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { useNavigation } from '@/components/Navigation';
 import { useI18n } from '@/i18n';
+import { DeleteAccount } from './DeleteAccount';
 import { formatChips } from '@/casino/chipValues';
 import { useAccount } from './useAccount';
 import { AuthError, PASSWORD_MIN } from './authApi';
@@ -293,6 +294,7 @@ function AccountPanel() {
         <LogOut className="w-4 h-4" /> {t('account.signOut')}
       </button>
       <p className="text-xs text-[var(--cz-muted)]">{t('account.signOutNote')}</p>
+      <DeleteAccount />
     </section>
   );
 }

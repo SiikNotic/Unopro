@@ -47,6 +47,21 @@ export const GameArt = memo(function GameArt({ game, size }: { game: LobbyGame; 
           <RouletteWheel rotorDeg={-28} ballDeg={0} durationMs={0} highlight={null} size={size * 2.6} label="" />
         </div>
       );
+    case 'poker':
+      return (
+        <div className="relative flex items-end" style={{ width: size * 3.2, height: size * 2.4 }} aria-hidden>
+          {(['S', 'H'] as const).map((suit, i) => (
+            <PlayingCardView key={suit} card={{ id: suit, rank: 'A', suit }} width={size * 1.3} className="absolute" style={{ left: size * (0.3 + i * 0.85), bottom: size * (0.12 + i * 0.1), transform: `rotate(${i ? 9 : -9}deg)` }} />
+          ))}
+          <div className="absolute flex" style={{ right: size * 0.05, bottom: size * 0.05 }}>
+            {[100, 500, 25].map((v, i) => (
+              <span key={i} style={{ marginLeft: i ? -size * 0.3 : 0 }}>
+                <Chip value={v} size={size * 0.6} label="" />
+              </span>
+            ))}
+          </div>
+        </div>
+      );
     case 'slots':
       return (
         <div className="flex gap-[6%] rounded-2xl p-[4%] bg-[#1d0e05]/80 border border-[rgba(216,178,106,0.5)]" style={{ width: size * 3 }} aria-hidden>

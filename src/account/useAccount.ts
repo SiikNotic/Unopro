@@ -17,6 +17,7 @@ const OFF: AccountContextValue = {
   signUp: async () => 'check_email',
   signInWith: async () => {},
   signOut: async () => {},
+  deleteAccount: async () => ({ ok: false, code: 'off' }),
   resendConfirmation: async () => {},
   sendPasswordReset: async () => {},
   updatePassword: async () => {},

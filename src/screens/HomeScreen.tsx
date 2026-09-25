@@ -26,6 +26,7 @@ interface GameEntry {
 const GAMES: GameEntry[] = [
   { id: 'blackjack', screen: 'blackjackSetup' },
   { id: 'roulette', screen: 'rouletteSetup' },
+  { id: 'poker', screen: 'pokerSetup' },
   { id: 'slots', screen: 'slotLobby' },
 ];
 
@@ -246,7 +247,7 @@ export function HomeScreen() {
             </div>
           </div>
           <Hero onPlay={play} />
-          <div className="grid grid-cols-3 gap-2.5 sm:gap-4 mt-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4 mt-3">
             {GAMES.map((g) => (
               <GameTile key={g.id} game={g} onPlay={() => play(g)} />
             ))}

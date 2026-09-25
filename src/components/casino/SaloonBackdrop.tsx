@@ -74,7 +74,7 @@ export const SaloonBackdrop = memo(function SaloonBackdrop() {
           <rect width="110" height="140" fill="#e8d7ae" stroke="#7a5a33" strokeWidth="3" />
           <text x="55" y="30" textAnchor="middle" fontSize="20" fontWeight="900" fill="#4a2a12" fontFamily="serif">WANTED</text>
           <circle cx="55" cy="75" r="26" fill="#b89a6a" />
-          <text x="55" y="126" textAnchor="middle" fontSize="16" fontWeight="900" fill="#4a2a12" fontFamily="serif">$500</text>
+          <text x="55" y="126" textAnchor="middle" fontSize="16" fontWeight="900" fill="#4a2a12" fontFamily="serif">★ ★ ★</text>
         </g>
         <g transform="translate(1030 380) rotate(3)">
           <rect width="150" height="56" rx="6" fill="#4a2412" stroke="#c9a24a" strokeWidth="3" />

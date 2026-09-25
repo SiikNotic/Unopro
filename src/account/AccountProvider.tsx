@@ -354,6 +354,27 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         setBan(null);
         setNotice({ kind: 'signedOut' });
       },
+      async deleteAccount() {
+        const token = cfg ? await tokenFor(cfg) : null;
+        if (!cfg || !token) return { ok: false, code: 'unauthorized' };
+        try {
+          const res = await fetch(`${cfg.base}/functions/v1/account`, {
+            method: 'POST',
+            headers: { apikey: cfg.apiKey, authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+            body: JSON.stringify({ op: 'delete', confirm: true }),
+          });
+          const body = (await res.json().catch(() => ({}))) as { ok?: boolean; code?: string };
+          if (!res.ok || !body.ok) return { ok: false, code: body.code ?? 'server' };
+        } catch {
+          return { ok: false, code: 'network' };
+        }
+        // The server removed the account: forget the session and this device's copy of its data.
+        saveSession(null);
+        setProfile(null);
+        setBan(null);
+        setNotice({ kind: 'accountDeleted' });
+        return { ok: true };
+      },
       resendConfirmation: (email) => need().resendConfirmation(email.trim()),
       sendPasswordReset: (email) => need().sendPasswordReset(email.trim()),
       async updatePassword(password) {

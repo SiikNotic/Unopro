@@ -43,7 +43,9 @@ export function createAdMobProvider({ adUnitId, admob, now = () => Date.now() }:
   const init = () =>
     (ready ??= (async () => {
       try {
-        await AdMob.initialize({ initializeForTesting: testing });
+        // Ads no stronger than "Teen" content (Google's rating): keeps mature ads out of a game with simulated
+        // gambling. Category blocking (gambling, dating, alcohol, politics…) is done in the AdMob console.
+        await AdMob.initialize({ initializeForTesting: testing, maxAdContentRating: 'Teen' as never });
       } catch (e) {
         setAdsIssue(`init: ${reason(e)}`);
         ready = null; // try again next time
