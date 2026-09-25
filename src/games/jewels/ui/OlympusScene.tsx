@@ -1,9 +1,12 @@
-// The world behind the board: sky and divine light (background), floating islands with temples and the
+// The world behind the board. With WebGL: the 3D-rendered Olympus (useBackdrop), with the light rays and
+// dust drifting over it. Without it (or until it is ready): sky and divine light (background), floating
+// islands with temples and the
 // great temple on its cloud stairs (midground), and clouds and columns (foreground, around the board).
 // SVG and CSS gradients over one small painted panorama: no blur filters, no frame loop — the only motion is a few
 // slow CSS transforms (the light turning, clouds drifting), removed with reduced motion.
 import { memo } from 'react';
 import { PANORAMA_IMAGE } from './assets';
+import { useBackdrop } from './useBackdrop';
 
 /** A small Greek temple: steps, columns, entablature and pediment. */
 function Temple({ x, y, w, cols = 6, tone = '#f4efe4', shade = '#c9bfae' }: { x: number; y: number; w: number; cols?: number; tone?: string; shade?: string }) {
@@ -54,6 +57,17 @@ function Island({ x, y, w, fall = true }: { x: number; y: number; w: number; fal
 }
 
 export const OlympusScene = memo(function OlympusScene() {
+  // The 3D-rendered Olympus when WebGL is there; the vector scene below until it is ready (and as fallback).
+  const backdrop = useBackdrop();
+  if (backdrop)
+    return (
+      <div className="ol-scene" aria-hidden>
+        <div className="ol-backdrop" style={{ backgroundImage: `url(${backdrop})` }} />
+        <div className="ol-rays" />
+        <div className="ol-glow" />
+        <Dust />
+      </div>
+    );
   return (
     <div className="ol-scene" aria-hidden>
       <div className="ol-sky" />
@@ -117,11 +131,17 @@ export const OlympusScene = memo(function OlympusScene() {
           <Cloud x={320} y={690} s={40} />
         </g>
       </svg>
-      <div className="ol-dust">
-        {Array.from({ length: 12 }, (_, i) => (
-          <i key={i} style={{ left: `${(i * 37) % 100}%`, animationDelay: `${(i * 1.7) % 9}s`, animationDuration: `${9 + (i % 5) * 2}s` }} />
-        ))}
-      </div>
+      <Dust />
     </div>
   );
 });
+
+function Dust() {
+  return (
+    <div className="ol-dust">
+      {Array.from({ length: 12 }, (_, i) => (
+        <i key={i} style={{ left: `${(i * 37) % 100}%`, animationDelay: `${(i * 1.7) % 9}s`, animationDuration: `${9 + (i % 5) * 2}s` }} />
+      ))}
+    </div>
+  );
+}

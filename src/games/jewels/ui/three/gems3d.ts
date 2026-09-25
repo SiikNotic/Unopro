@@ -2,8 +2,9 @@
 // studio environment, gold emblems for the specials, marble seals, and soft glow / sparkle sprites.
 // Everything is procedural (no model files) and created once per renderer, shared by every piece.
 import * as THREE from 'three';
-import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
+import { gemMaterial } from './gemShader';
+import type { GemLook } from './gemShader';
 
 type P2 = [number, number];
 
@@ -15,8 +16,8 @@ const ring = (n: number, r: number, rot = 0, sx = 1, sy = 1): P2[] => Array.from
 
 function heart(): P2[] {
   const pts: P2[] = [];
-  for (let i = 0; i < 28; i++) {
-    const t = (i / 28) * Math.PI * 2;
+  for (let i = 0; i < 14; i++) {
+    const t = (i / 14) * Math.PI * 2;
     const x = 16 * Math.sin(t) ** 3;
     const y = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
     pts.push([x / 17, (y + 2.5) / 17]);
@@ -25,8 +26,8 @@ function heart(): P2[] {
 }
 
 function pear(): P2[] {
-  return Array.from({ length: 24 }, (_, i) => {
-    const a = Math.PI / 2 + (i / 24) * Math.PI * 2;
+  return Array.from({ length: 12 }, (_, i) => {
+    const a = Math.PI / 2 + (i / 12) * Math.PI * 2;
     const s = Math.sin(a);
     const r = 0.78 * (1 + 0.55 * Math.max(0, s) ** 4);
     return [Math.cos(a) * r * 0.92, s * r - 0.12] as P2;
@@ -40,8 +41,8 @@ function trillion(): P2[] {
   for (let k = 0; k < 3; k++) {
     const a = corners[k];
     const b = corners[(k + 1) % 3];
-    for (let i = 0; i < 6; i++) {
-      const t = i / 6;
+    for (let i = 0; i < 3; i++) {
+      const t = i / 3;
       const mx = a[0] + (b[0] - a[0]) * t;
       const my = a[1] + (b[1] - a[1]) * t;
       const bulge = Math.sin(t * Math.PI) * 0.16;
@@ -53,7 +54,7 @@ function trillion(): P2[] {
 }
 
 const OUTLINES: P2[][] = [
-  ring(16, 0.96, Math.PI / 16), // round brilliant
+  ring(12, 0.96, Math.PI / 12), // round brilliant
   [
     [-0.46, 0.92],
     [0.46, 0.92],
@@ -79,13 +80,16 @@ interface Cut {
   brilliant: boolean;
 }
 
+// Few, large facets (clean, readable at any size): a twisted crown ring (kite facets) up to the table, a deep
+// pavilion.
+const BRILLIANT: Cut = { crown: [[0.58, 0.3]], pavilion: [[0.45, -0.34], [0, -0.62]], brilliant: true };
 const CUTS: Cut[] = [
-  { crown: [[0.8, 0.13], [0.56, 0.24]], pavilion: [[0.55, -0.34], [0, -0.62]], brilliant: true },
-  { crown: [[0.86, 0.09], [0.72, 0.17], [0.6, 0.22]], pavilion: [[0.7, -0.18], [0.42, -0.36], [0, -0.5]], brilliant: false },
-  { crown: [[0.78, 0.14], [0.55, 0.24]], pavilion: [[0.5, -0.34], [0, -0.58]], brilliant: true },
-  { crown: [[0.78, 0.14], [0.54, 0.24]], pavilion: [[0.5, -0.32], [0, -0.58]], brilliant: true },
-  { crown: [[0.76, 0.14], [0.5, 0.23]], pavilion: [[0.5, -0.3], [0, -0.52]], brilliant: true },
-  { crown: [[0.8, 0.12], [0.58, 0.22]], pavilion: [[0.52, -0.32], [0, -0.56]], brilliant: true },
+  BRILLIANT,
+  { crown: [[0.84, 0.12], [0.64, 0.24]], pavilion: [[0.7, -0.2], [0.36, -0.4], [0, -0.52]], brilliant: false },
+  BRILLIANT,
+  BRILLIANT,
+  { crown: [[0.56, 0.28]], pavilion: [[0.45, -0.32], [0, -0.58]], brilliant: true },
+  BRILLIANT,
 ];
 
 /** Build a faceted solid: girdle outline, crown rings up to the table, pavilion rings down to the culet. */
@@ -105,12 +109,25 @@ function cutGeometry(outline: P2[], cut: Cut): THREE.BufferGeometry {
     return new THREE.Vector3(cx + (x - cx) * k, cy + (y - cy) * k, z);
   };
   const pos: number[] = [];
-  const tri = (a: THREE.Vector3, b: THREE.Vector3, c: THREE.Vector3) => {
+  // Barycentric coordinates for the facet edges drawn by the shader; `hide` names vertices whose opposite
+  // edges are not real facet edges (a quad's diagonal, the spokes of the table) and so are not drawn.
+  const bary: number[] = [];
+  const tri = (a: THREE.Vector3, b: THREE.Vector3, c: THREE.Vector3, ...hide: (0 | 1 | 2)[]) => {
+    const bc: [number, number, number][] = [
+      [1, 0, 0],
+      [0, 1, 0],
+      [0, 0, 1],
+    ];
+    for (const h of hide) for (const v of bc) v[h] = 1;
     // Face outwards: away from the gem's centre.
     const nrm = new THREE.Vector3().subVectors(b, a).cross(new THREE.Vector3().subVectors(c, a));
     const mid = new THREE.Vector3().add(a).add(b).add(c).divideScalar(3).sub(new THREE.Vector3(cx, cy, 0));
-    if (nrm.dot(mid) < 0) pos.push(a.x, a.y, a.z, c.x, c.y, c.z, b.x, b.y, b.z);
-    else pos.push(a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z);
+    const order = nrm.dot(mid) < 0 ? [0, 2, 1] : [0, 1, 2];
+    const vs = [a, b, c];
+    for (const i of order) {
+      pos.push(vs[i].x, vs[i].y, vs[i].z);
+      bary.push(...bc[i]);
+    }
   };
   const band = (k0: number, z0: number, t0: boolean, k1: number, z1: number, t1: boolean) => {
     for (let i = 0; i < n; i++) {
@@ -119,8 +136,9 @@ function cutGeometry(outline: P2[], cut: Cut): THREE.BufferGeometry {
       const b0 = at(i, k1, z1, t1);
       const b1 = at(i + 1, k1, z1, t1);
       if (t0 === t1) {
-        tri(a0, a1, b1);
-        tri(a0, b1, b0);
+        // A quad facet split along a0–b1: hide that diagonal.
+        tri(a0, a1, b1, 1);
+        tri(a0, b1, b0, 2);
       } else if (t1) {
         // Inner ring sits between outer vertices i and i+1.
         tri(a0, a1, b0);
@@ -147,10 +165,11 @@ function cutGeometry(outline: P2[], cut: Cut): THREE.BufferGeometry {
   const top = levels(cut.crown);
   // Table: a flat fan at the top.
   const tableCentre = new THREE.Vector3(cx, cy, top[1]);
-  for (let i = 0; i < n; i++) tri(at(i, top[0], top[1], top[2]), at(i + 1, top[0], top[1], top[2]), tableCentre);
+  for (let i = 0; i < n; i++) tri(at(i, top[0], top[1], top[2]), at(i + 1, top[0], top[1], top[2]), tableCentre, 0, 1);
   levels(cut.pavilion);
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('bary', new THREE.Float32BufferAttribute(bary, 3));
   g.computeVertexNormals();
   g.scale(0.4, 0.4, 0.4);
   return g;
@@ -340,23 +359,79 @@ function sparkleTexture(): THREE.CanvasTexture {
 }
 
 // ---------------------------------------------------------------------------------------------------------
+// The reflections: a jeweller's light box. A dark room with small, very bright softboxes (white, warm gold,
+// a cool blue) all around, so each facet catches either a light or the dark: that contrast is what makes
+// cut stones sparkle. Rendered once into an environment map.
+
+function jewellerStudio() {
+  const scene = new THREE.Scene();
+  const room = new THREE.Mesh(new THREE.SphereGeometry(20, 32, 16), new THREE.MeshBasicMaterial({ color: '#232b3f', side: THREE.BackSide }));
+  scene.add(room);
+  const panel = new THREE.PlaneGeometry(1, 1);
+  const lights: [number, number, number, number, number, string, number][] = [
+    // x, y, z, width, height, colour, intensity
+    [0, 9, 4, 12, 3.5, '#ffffff', 7],
+    [-8, 3, 6, 3.5, 9, '#ffffff', 6],
+    [8, 2, 6, 3, 10, '#fff1d0', 5],
+    [-5, -6, 7, 5, 1.2, '#ffd27a', 5],
+    [6, -5, 5, 3, 1.4, '#9cc8ff', 5],
+    [0, 0, 12, 3, 3, '#ffffff', 4],
+    [-9, 8, -2, 3, 3, '#ffffff', 6],
+    [9, 8, -3, 2, 5, '#ffe7b0', 5],
+    [0, -9, 2, 8, 1.5, '#ffffff', 3],
+    [3, 5, 9, 1.2, 1.2, '#ffffff', 10],
+    [-3, 6, 9, 0.8, 2.4, '#ffffff', 10],
+  ];
+  const mats: THREE.Material[] = [];
+  for (const [x, y, z, w, h, color, k] of lights) {
+    const m = new THREE.MeshBasicMaterial({ color: new THREE.Color(color).multiplyScalar(k), side: THREE.DoubleSide });
+    mats.push(m);
+    const mesh = new THREE.Mesh(panel, m);
+    mesh.position.set(x, y, z);
+    mesh.scale.set(w, h, 1);
+    mesh.lookAt(0, 0, 0);
+    scene.add(mesh);
+  }
+  return {
+    scene,
+    dispose() {
+      room.geometry.dispose();
+      (room.material as THREE.Material).dispose();
+      panel.dispose();
+      mats.forEach((m) => m.dispose());
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------------------------------------
 // The kit.
 
 /** Body colour, then the glow colour, of each kind. */
 export const GEM_COLORS: [string, string][] = [
-  ['#eef7ff', '#bfe6ff'], // Celestial Diamond
-  ['#10a653', '#5dffa4'], // Divine Emerald
-  ['#d8102c', '#ff5d74'], // Ruby of Fire
-  ['#1a55e8', '#6aa0ff'], // Sapphire of Poseidon
-  ['#8f34ea', '#c98bff'], // Amethyst of Hades
-  ['#ffa914', '#ffd05a'], // Golden Topaz
+  ['#eaf4ff', '#bfe6ff'], // Celestial Diamond
+  ['#07a04a', '#5dffa4'], // Divine Emerald
+  ['#e0061f', '#ff5d74'], // Ruby of Fire
+  ['#1047e6', '#6aa0ff'], // Sapphire of Poseidon
+  ['#8a1ff0', '#c98bff'], // Amethyst of Hades
+  ['#ffa000', '#ffd05a'], // Golden Topaz
+];
+
+/** How each stone refracts: colour, inner glow, index of refraction and fire (dispersion). */
+const GEM_LOOKS: GemLook[] = [
+  { tint: '#e6f1ff', glow: '#7aa2d6', ior: 2.42, dispersion: 0.11, brightness: 1.1, fresnelBase: 0.14 }, // diamond: all fire
+  { tint: '#0fb557', glow: '#0a6b34', ior: 1.58, dispersion: 0.03, brightness: 1.5 },
+  { tint: '#ea0a2a', glow: '#7d0616', ior: 1.77, dispersion: 0.04, brightness: 1.6 },
+  { tint: '#1d56f5', glow: '#0a2786', ior: 1.77, dispersion: 0.04, brightness: 1.6 },
+  { tint: '#8f2cf5', glow: '#440b8a', ior: 1.55, dispersion: 0.04, brightness: 1.6 },
+  { tint: '#ffa40a', glow: '#8a4a00', ior: 1.63, dispersion: 0.05, brightness: 1.45 },
 ];
 
 export type EmblemName = keyof typeof EMBLEMS;
 
 export class GemKit {
   readonly gems: THREE.BufferGeometry[];
-  readonly gemMats: THREE.MeshPhysicalMaterial[];
+  readonly gemMats: THREE.ShaderMaterial[];
+  private cubeTarget: THREE.WebGLCubeRenderTarget;
   readonly emblems: Record<EmblemName, THREE.BufferGeometry>;
   readonly gold: THREE.MeshStandardMaterial;
   readonly orb: THREE.BufferGeometry;
@@ -372,37 +447,22 @@ export class GemKit {
 
   constructor(renderer: THREE.WebGLRenderer) {
     const pmrem = new THREE.PMREMGenerator(renderer);
-    const room = new RoomEnvironment();
-    this.env = pmrem.fromScene(room, 0.02).texture;
-    room.dispose();
+    const studio = jewellerStudio();
+    this.env = pmrem.fromScene(studio.scene, 0.01).texture;
+    // A sharp cube map of the same studio for the stones (refraction wants crisp lights, not blurred ones).
+    this.cubeTarget = new THREE.WebGLCubeRenderTarget(256, { generateMipmaps: false });
+    new THREE.CubeCamera(0.1, 50, this.cubeTarget).update(renderer, studio.scene);
+    studio.dispose();
     pmrem.dispose();
 
     this.gems = OUTLINES.map((o, k) => cutGeometry(o, CUTS[k]));
-    this.gemMats = GEM_COLORS.map(([body], k) => {
-      const diamond = k === 0;
-      return new THREE.MeshPhysicalMaterial({
-        color: body,
-        metalness: diamond ? 0.15 : 0.3,
-        roughness: 0.04,
-        flatShading: true,
-        clearcoat: 1,
-        clearcoatRoughness: 0.03,
-        iridescence: diamond ? 1 : 0.35,
-        iridescenceIOR: 1.9,
-        iridescenceThicknessRange: [200, 900],
-        emissive: new THREE.Color(body).multiplyScalar(diamond ? 0.06 : 0.22),
-        envMap: this.env,
-        envMapIntensity: diamond ? 3.2 : 2.3,
-        specularIntensity: 1,
-        specularColor: new THREE.Color('#ffffff'),
-      });
-    });
+    this.gemMats = GEM_LOOKS.map((look) => gemMaterial(this.cubeTarget.texture, look));
     this.emblems = { bolt: emblemGeometry(EMBLEMS.bolt), temple: emblemGeometry(EMBLEMS.temple), trident: emblemGeometry(EMBLEMS.trident) };
     this.gold = new THREE.MeshStandardMaterial({ color: '#f5c451', metalness: 1, roughness: 0.2, envMap: this.env, envMapIntensity: 1.8, emissive: new THREE.Color('#3a2400') });
     this.orb = new THREE.IcosahedronGeometry(0.3, 1);
     this.orbMat = new THREE.MeshPhysicalMaterial({
-      color: '#bfe3ff',
-      metalness: 0.2,
+      color: '#4f8dff',
+      metalness: 0.85,
       roughness: 0.03,
       flatShading: true,
       iridescence: 1,
@@ -410,7 +470,7 @@ export class GemKit {
       clearcoat: 1,
       envMap: this.env,
       envMapIntensity: 3,
-      emissive: new THREE.Color('#1a3b7a'),
+      emissive: new THREE.Color('#15306e'),
     });
     this.halo = new THREE.TorusGeometry(0.36, 0.035, 10, 48);
     this.stone = new RoundedBoxGeometry(0.84, 0.84, 0.3, 4, 0.08);
@@ -419,7 +479,7 @@ export class GemKit {
     this.glowTex = glowTexture();
     this.sparkleTex = sparkleTexture();
     this.arrow = new THREE.ConeGeometry(0.07, 0.14, 3);
-    this.disposables.push(...this.gems, ...this.gemMats, ...Object.values(this.emblems), this.gold, this.orb, this.orbMat, this.halo, this.stone, this.glowTex, this.sparkleTex, this.arrow, this.env);
+    this.disposables.push(this.cubeTarget, ...this.gems, ...this.gemMats, ...Object.values(this.emblems), this.gold, this.orb, this.orbMat, this.halo, this.stone, this.glowTex, this.sparkleTex, this.arrow, this.env);
     for (const m of this.stoneMats) this.disposables.push(m, m.map!);
   }
 
@@ -431,11 +491,15 @@ export class GemKit {
 
 /** Lights shared by the board and the icon renders: the studio environment does most of the work. */
 export function addLights(scene: THREE.Scene) {
-  scene.add(new THREE.AmbientLight('#ffffff', 0.35));
-  const key = new THREE.DirectionalLight('#fff4dc', 2.2);
-  key.position.set(-3, 4, 6);
+  // Flat-shaded facets each take a different share of these, so the cut reads even without reflections.
+  scene.add(new THREE.AmbientLight('#ffffff', 0.12));
+  const key = new THREE.DirectionalLight('#fff4dc', 3.2);
+  key.position.set(-3, 5, 5);
   scene.add(key);
-  const rim = new THREE.DirectionalLight('#9cc4ff', 1.2);
-  rim.position.set(4, -2, 3);
+  const fill = new THREE.DirectionalLight('#ffe2b0', 1.2);
+  fill.position.set(5, 2, 4);
+  scene.add(fill);
+  const rim = new THREE.DirectionalLight('#9cc4ff', 1.6);
+  rim.position.set(3, -5, 2);
   scene.add(rim);
 }

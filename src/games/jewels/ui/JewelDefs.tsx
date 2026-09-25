@@ -1,17 +1,18 @@
 // The jewel artwork, defined once as SVG symbols and drawn with <use> by every cell (no filters: cheap to
-// render 64 of them). The gems and special medallions are small painted WebP images from the Olympus asset
-// pack (see docs/jewellery.md); the seals, emblems' rims and gradients stay vector. Each kind keeps its own
-// silhouette (diamond, step-cut emerald, round ruby, pear sapphire, kite amethyst, hexagonal topaz), so the
-// pieces are recognisable without colour.
+// render 64 of them). The gems are still renders of the 3D stones (useGemIcons; the painted pack images
+// until those are ready, or without WebGL); the special medallions come from the asset pack; the seals and
+// gradients stay vector. Each kind has its own silhouette (round brilliant, emerald cut, heart, pear,
+// trillion, hexagon), so the pieces are recognisable without colour.
 import { memo } from 'react';
-import { GEM_IMAGES, SPECIAL_IMAGES } from './assets';
-
+import { SPECIAL_IMAGES } from './assets';
+import { useGemIcons } from './useGemIcons';
 
 /** A small four-point sparkle. */
 const sparkle = (x: number, y: number, r: number) => `M${x} ${y - r} L${x + r * 0.28} ${y - r * 0.28} L${x + r} ${y} L${x + r * 0.28} ${y + r * 0.28} L${x} ${y + r} L${x - r * 0.28} ${y + r * 0.28} L${x - r} ${y} L${x - r * 0.28} ${y - r * 0.28} Z`;
 
 /** Hidden SVG with every jewel symbol; render once per game screen. */
 export const JewelDefs = memo(function JewelDefs() {
+  const gems = useGemIcons();
   return (
     <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden focusable="false">
       <defs>
@@ -37,7 +38,7 @@ export const JewelDefs = memo(function JewelDefs() {
           <stop offset="1" stopColor="#ffe7a3" stopOpacity="0" />
         </radialGradient>
 
-        {GEM_IMAGES.map((src, k) => (
+        {gems.map((src, k) => (
           <symbol key={k} id={`jw${k}`} viewBox="0 0 100 100">
             <ellipse cx="50" cy="94" rx="26" ry="4" fill="#000" opacity="0.4" />
             <image href={src} x="4" y="3" width="92" height="92" />

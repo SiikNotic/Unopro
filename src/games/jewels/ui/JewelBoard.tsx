@@ -1,11 +1,13 @@
 // The board: marble-and-gold frame, crystal, jewels, lightning / waves / divine light, score pops, the spark
 // canvas, and touch input (tap → tap, or swipe). One set of pointer handlers for the whole board (no
 // listener per jewel).
-import { memo, useEffect, useMemo, useRef } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { useI18n } from '@/i18n';
 import type { Booster, Pos } from '../engine';
 import { JewelView } from './Jewel';
+import { Board3D } from './Board3D';
+import { canUse3D } from './three/support';
 import { SparkLayer } from './particles';
 import type { Effect, ScorePop, VPiece } from './useJewelGame';
 
@@ -67,6 +69,9 @@ export function JewelBoard(props: BoardProps) {
   const cell = size / cols;
   const height = cell * rows;
   const gesture = useRef<{ id: number; x: number; y: number; cell: Pos; done: boolean } | null>(null);
+  // 3D pieces when WebGL is there; the DOM jewels until it is ready (and as the fallback).
+  const [use3D] = useState(canUse3D);
+  const [ready3D, setReady3D] = useState(false);
 
   // The spark layer lives as long as the board; disposed (frame cancelled) on unmount.
   useEffect(() => {
@@ -136,8 +141,19 @@ export function JewelBoard(props: BoardProps) {
           <IceLayer ice={ice} />
         </div>
         {selected && <span className="jw-select" style={{ transform: `translate3d(${selected.c * 100}%, ${selected.r * 100}%, 0)` }} aria-hidden />}
-        <div className="jw-layer">
-          {pieces.map((p) => (
+        {use3D && <Board3D rows={rows} cols={cols} width={size} height={height} pieces={pieces} selected={selected} moveMs={moveMs} idle={glints} onReady={setReady3D} />}
+        {ready3D && (
+          // The 3D layer draws the hint itself; these invisible markers keep the hinted cells findable.
+          <div className="jw-layer" aria-hidden>
+            {pieces
+              .filter((p) => p.phase === 'hint')
+              .map((p) => (
+                <span key={p.id} className="jw-hint-at" style={{ transform: `translate3d(${p.c * 100}%, ${p.r * 100}%, 0)` }} />
+              ))}
+          </div>
+        )}
+        <div className="jw-layer" hidden={ready3D}>
+          {!ready3D && pieces.map((p) => (
             <JewelView key={p.id} kind={p.kind} special={p.special} hp={p.hp} r={p.r} c={p.c} phase={p.phase} selected={!!selected && selected.r === p.r && selected.c === p.c} glint={glints && p.id % 7 === 0} dropFrom={p.dropFrom} dropMs={moveMs} />
           ))}
         </div>

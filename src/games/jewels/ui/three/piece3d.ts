@@ -54,8 +54,8 @@ export function buildPiece(kit: GemKit, kind: number, special: Special | null, h
     trident.position.z = 0.34;
     body.add(trident);
   } else {
-    const gem = new THREE.Mesh(kit.gems[kind] ?? kit.gems[0], kit.gemMats[kind] ?? kit.gemMats[0]);
-    body.add(gem);
+    const k = kit.gems[kind] ? kind : 0;
+    body.add(new THREE.Mesh(kit.gems[k], kit.gemMats[k]));
     if (special === 'lineH' || special === 'lineV') {
       const bolt = new THREE.Mesh(kit.emblems.bolt, kit.gold);
       bolt.scale.setScalar(0.5);
