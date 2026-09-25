@@ -57,3 +57,7 @@ Because the fingerprint is fixed before the bets, the server cannot pick an outc
 - Migration `20260929000000_tables.sql` (rooms for the new games, quick match, table wallet).
 - The `game-room` function is deployed by the workflow **Deploy Supabase functions** when
   `supabase/functions/**` changes, using the repository secret `SUPABASE_ACCESS_TOKEN`.
+- Without the token, the function can be deployed with a one-line entrypoint that imports
+  `https://raw.githubusercontent.com/SiikNotic/Unopro/<commit>/supabase/functions/game-room/index.ts`
+  pinned to a commit id (content-addressed, so it can only load that exact bundle). The workflow
+  **Online smoke test** then checks the live function from outside.
