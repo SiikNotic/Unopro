@@ -26,13 +26,6 @@ export function makeParticles(count: number, seed: number, opts: { minSize?: num
   }));
 }
 
-/** A box-shadow star field string (one element renders many stars). */
-export function starField(count: number, seed: number, color = '#fff'): string {
-  return makeParticles(count, seed)
-    .map((p) => `${(p.left * 20).toFixed(0)}px ${(p.top * 12).toFixed(0)}px 0 ${p.size > 4 ? 1 : 0}px ${color}`)
-    .join(',');
-}
-
 /** Weak devices get fewer particles and no blur-heavy layers. */
 export function isLiteDevice(): boolean {
   if (typeof navigator === 'undefined') return false;
