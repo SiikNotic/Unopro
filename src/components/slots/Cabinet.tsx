@@ -149,9 +149,10 @@ export function Cabinet({ id, className = '', spinning = false, lite = false, co
 }
 
 /** The machine's name as its cast 3D logo (the image's alt text is the name), or as styled text if the art is missing. */
-export function MachineLogo({ id, name, as: Tag = 'span' }: { id: MachineId; name: string; as?: 'span' | 'h2' }) {
-  const src = art3d(id, 'logo');
-  return <Tag className={`mc-logo block ${src ? 'has-3d' : ''}`}>{src ? <img src={src} alt={name} draggable={false} decoding="async" /> : name}</Tag>;
+export function MachineLogo({ id, name, as: Tag = 'span', hero = false }: { id: MachineId; name: string; as?: 'span' | 'h2'; hero?: boolean }) {
+  // On the machine screen a machine may show its marquee art (hero.webp) instead of the compact logo.
+  const src = (hero && art3d(id, 'hero')) || art3d(id, 'logo');
+  return <Tag className={`mc-logo block ${src ? 'has-3d' : ''} ${hero && art3d(id, 'hero') ? 'is-hero' : ''}`}>{src ? <img src={src} alt={name} draggable={false} decoding="async" /> : name}</Tag>;
 }
 
 /** Full-screen scenery behind a machine (Vegas lights, a jeweller's vault, a temple, a volcano…), pure CSS. */

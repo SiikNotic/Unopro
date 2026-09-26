@@ -512,3 +512,255 @@
 [data-motion='off'] .mb *, .is-lite .mb * { animation: none !important; }
 @media (prefers-reduced-motion: reduce) { .mb * { animation: none !important; } }
 .mc-goldenFortune .mc-spin.has-3d { color: #3a2502; text-shadow: 0 1px 0 rgba(255, 240, 180, 0.9); }
+
+/* ================================================================ Lucky 7s — luxury Vegas cabinet
+   Red lacquer and polished gold, cream reels, a glowing payline, marquee art on top, a lit control deck.
+   Machine screen only (lobby tiles keep their compact look). Motion: transform/opacity. */
+.mc-lucky7s:not(.sl-tile) .mc-shell {
+  padding: 5px;
+  border-radius: 34px;
+  background: linear-gradient(180deg, #fff1b8 0%, #e3b04b 18%, #8a5a12 50%, #e3b04b 82%, #fff1b8 100%);
+  box-shadow: 0 0 0 2px #3a0a10, 0 0 40px -6px rgba(255, 150, 60, 0.45), 0 34px 60px -24px #000;
+}
+.mc-lucky7s:not(.sl-tile) .mc-cab {
+  border-radius: 29px;
+  padding-top: 18px;
+  background: radial-gradient(120% 50% at 50% 0%, #b3101f 0%, #6a0710 45%, #2a0307 100%);
+  box-shadow: inset 0 0 0 2px rgba(255, 215, 106, 0.35), inset 0 18px 30px -18px rgba(255, 220, 160, 0.5), inset 0 -30px 40px -20px rgba(0, 0, 0, 0.7);
+}
+/* Marquee: the cast logo art over the red lacquer, then the subtitle on a gold-trimmed ribbon. */
+.mc-lucky7s:not(.sl-tile) .mc-top {
+  margin: -6px -6px 8px;
+  padding: 0 0 6px;
+  background: none;
+  box-shadow: none;
+}
+.mc-lucky7s .mc-logo.is-hero img {
+  height: auto;
+  width: min(100%, 460px);
+  margin: -4px auto -6px;
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.5));
+}
+.mc-lucky7s:not(.sl-tile) .mc-sub {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+  padding: 5px 16px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #ffe7a3;
+  background: linear-gradient(180deg, #8a0a18, #4a040b);
+  box-shadow: 0 0 0 1.5px #e3b04b, 0 0 0 3px #4a040b, 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+.mc-lucky7s:not(.sl-tile) .mc-sub::before,
+.mc-lucky7s:not(.sl-tile) .mc-sub::after {
+  content: '★';
+  color: #ffd76a;
+  font-size: 10px;
+}
+/* Marquee bulbs: warm gold, a slow idle shimmer (off with reduced motion). */
+.mc-lucky7s:not(.sl-tile) .lk-bulbs i {
+  width: 8px;
+  height: 8px;
+  background: radial-gradient(circle at 35% 30%, #fff8dc, #ffc247 60%, #b8700c);
+  box-shadow: 0 0 10px #ffb547;
+  opacity: 0.55;
+}
+.mc-lucky7s.is-idle:not(.sl-tile) .lk-bulbs i {
+  animation: lk-idle 2.4s ease-in-out infinite;
+  animation-delay: calc(var(--i) * -0.13s);
+}
+@keyframes lk-idle {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.95; }
+}
+/* Reel window: gold bezel, cream reels with engraved gold dividers, a glowing payline with side markers. */
+.mc-lucky7s:not(.sl-tile) .mc-window {
+  border-radius: 16px;
+  padding: 7px;
+  background: linear-gradient(180deg, #fff1b8, #d9a441 30%, #8a5a12 55%, #e3b04b 80%, #fff1b8);
+  box-shadow: 0 0 0 2px #3a0a10, 0 8px 18px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+}
+.mc-lucky7s:not(.sl-tile) .ps-reel {
+  border-radius: 8px;
+  background: linear-gradient(90deg, #c9b386 0%, #f6ecd6 16%, #fffaf0 50%, #f6ecd6 84%, #c9b386 100%);
+  box-shadow: inset 0 0 0 1px rgba(122, 84, 16, 0.45);
+}
+.mc-lucky7s:not(.sl-tile) .ps-reel::after {
+  background: linear-gradient(180deg, rgba(60, 20, 0, 0.5), transparent 22%, transparent 78%, rgba(60, 20, 0, 0.5));
+}
+.mc-lucky7s:not(.sl-tile) .mc-payline {
+  height: 3px;
+  background: linear-gradient(90deg, transparent, #ffd76a 8%, #fff6d6 50%, #ffd76a 92%, transparent);
+  box-shadow: 0 0 10px 2px rgba(255, 190, 70, 0.8);
+  opacity: 0.9;
+}
+.mc-lucky7s:not(.sl-tile) .mc-payline::before,
+.mc-lucky7s:not(.sl-tile) .mc-payline::after {
+  /* Gold markers on the bezel at both ends of the centre line. */
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 22px;
+  margin-top: -11px;
+  border-radius: 4px;
+  background: linear-gradient(180deg, #fff1b8, #d9a441 50%, #8a5a12);
+  box-shadow: 0 0 0 1.5px #3a0a10, 0 0 10px rgba(255, 190, 70, 0.8);
+}
+.mc-lucky7s:not(.sl-tile) .mc-payline::before { left: -13px; }
+.mc-lucky7s:not(.sl-tile) .mc-payline::after { right: -13px; }
+/* Meter: a dark lacquered display, WIN in gold. */
+.mc-lucky7s:not(.sl-tile) .mc-meter {
+  margin-top: 12px;
+  padding: 8px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #1a0205, #0c0103);
+  box-shadow: inset 0 0 0 1.5px rgba(227, 176, 75, 0.55), inset 0 6px 14px rgba(0, 0, 0, 0.7);
+}
+.mc-lucky7s:not(.sl-tile) .mc-win {
+  min-width: 118px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #0a0002, #1a0205);
+  border: 1.5px solid #8a5a12;
+}
+.mc-lucky7s:not(.sl-tile) .mc-win label {
+  color: #ffd76a;
+  letter-spacing: 0.16em;
+}
+.mc-lucky7s:not(.sl-tile) .mc-win strong {
+  color: #ffd76a;
+  font-size: 26px;
+  text-shadow: 0 0 10px rgba(255, 190, 70, 0.8);
+}
+.mc-lucky7s:not(.sl-tile) .mc-status {
+  padding: 8px 12px;
+  border-radius: 10px;
+  color: #fff4dc;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(227, 176, 75, 0.25);
+}
+.mc-lucky7s:not(.sl-tile) .mc-status.is-error {
+  color: #ffd0c8;
+  border-color: rgba(255, 90, 80, 0.55);
+}
+.mc-lucky7s:not(.sl-tile) .mc-status.is-error::before {
+  content: '!';
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  margin-right: 8px;
+  border-radius: 50%;
+  border: 1.5px solid #ffd76a;
+  color: #ffd76a;
+  font-size: 12px;
+  font-weight: 900;
+  vertical-align: -4px;
+}
+.mc-lucky7s:not(.sl-tile) .mc-status.is-win {
+  color: #ffe7a3;
+  border-color: rgba(255, 215, 106, 0.6);
+}
+
+/* Control deck (the dock under the machine). */
+.mc-lucky7s .mc-dock {
+  padding: 10px 12px;
+  border-radius: 22px;
+  background: linear-gradient(180deg, #2a0307, #140103);
+  box-shadow: inset 0 0 0 1.5px rgba(227, 176, 75, 0.5), inset 0 1px 0 rgba(255, 220, 160, 0.25), 0 10px 24px rgba(0, 0, 0, 0.5);
+}
+.mc-lucky7s .mc-key {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  color: #ffe7a3;
+  background: linear-gradient(180deg, #3a0a10, #1a0205);
+  border: 1.5px solid #c8912d;
+  box-shadow: inset 0 1px 0 rgba(255, 220, 160, 0.3), 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+.mc-lucky7s .mc-key.is-on {
+  background: linear-gradient(180deg, #ffe7a0, #d9a441);
+  color: #2b1804;
+}
+.mc-lucky7s .mc-key:disabled {
+  opacity: 0.45;
+}
+.mc-lucky7s .mc-bet-value label {
+  color: #ffd76a;
+}
+.mc-lucky7s .mc-bet-value strong {
+  font-size: 20px;
+  color: #fff4dc;
+}
+.mc-lucky7s .mc-spin {
+  --spin-ring: #e3b04b;
+  box-shadow: 0 0 0 4px #3a0a10, 0 0 0 7px #e3b04b, 0 0 0 9px #7a4a0e, 0 0 26px 6px rgba(255, 60, 60, 0.45), 0 10px 20px rgba(0, 0, 0, 0.6);
+}
+.mc-lucky7s .mc-spin.is-ready:not(:disabled) {
+  animation: lk-breathe 2.2s ease-in-out infinite;
+}
+@keyframes lk-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.04); }
+}
+.mc-lucky7s .mc-chip {
+  height: 42px;
+  padding: 0 18px;
+  color: #ffe7a3;
+  background: linear-gradient(180deg, #5a0710, #2a0307);
+  border: 1.5px solid #c8912d;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45);
+}
+.mc-lucky7s .mc-key:focus-visible,
+.mc-lucky7s .mc-chip:focus-visible,
+.mc-lucky7s .mc-spin:focus-visible {
+  outline: 3px solid #ffd76a;
+  outline-offset: 3px;
+}
+@media (hover: hover) {
+  .mc-lucky7s .mc-key:not(:disabled):hover,
+  .mc-lucky7s .mc-chip:hover {
+    border-color: #ffd76a;
+    box-shadow: 0 0 14px rgba(255, 190, 70, 0.45), 0 4px 10px rgba(0, 0, 0, 0.5);
+  }
+}
+
+/* Backdrop: a Vegas casino floor — warm chandelier glow above, neon red and violet on the sides. */
+.mb-lucky7s {
+  background: radial-gradient(70% 45% at 50% 0%, rgba(255, 170, 70, 0.35), transparent 70%), radial-gradient(40% 60% at 0% 60%, rgba(200, 16, 46, 0.45), transparent 70%), radial-gradient(40% 60% at 100% 55%, rgba(140, 40, 200, 0.35), transparent 70%), linear-gradient(180deg, #2a0508, #0e0104);
+}
+
+@media (min-width: 900px) {
+  .mc-lucky7s:not(.sl-tile) .mc-cab {
+    padding: 20px 26px 22px;
+  }
+  .mc-lucky7s .mc-dock {
+    padding: 14px 22px;
+  }
+  .mc-lucky7s .mc-spin {
+    width: 104px;
+    height: 104px;
+    font-size: 22px;
+  }
+}
+@media (max-width: 370px) {
+  .mc-lucky7s .mc-key {
+    width: 40px;
+    height: 40px;
+  }
+  .mc-lucky7s .mc-dock {
+    padding: 8px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mc-lucky7s .lk-bulbs i,
+  .mc-lucky7s .mc-spin {
+    animation: none !important;
+  }
+}
