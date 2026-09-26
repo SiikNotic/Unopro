@@ -4,7 +4,7 @@
 // Every card opens an existing screen; nothing here pretends to be a feature the app does not have.
 import { useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
-import { ChevronRight, CircleDot, Cherry, Club, Crown, Gem, Globe, GraduationCap, House, Rocket, Landmark, LayoutGrid, Menu, Play, Plus, Settings, ShieldCheck, Spade, UserRound } from 'lucide-react';
+import { ChevronRight, CircleDot, Cherry, Crown, Gem, Globe, GraduationCap, History, House, Rocket, LayoutGrid, Play, Plus, Settings, ShieldCheck, Spade, UserRound } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useNavigation } from '@/components/Navigation';
 import { useI18n } from '@/i18n';
@@ -113,29 +113,29 @@ function CoinsBanner({ onOpen }: { onOpen: () => void }) {
   );
 }
 
-function BottomNav({ onPlay }: { onPlay: () => void }) {
+/** The bottom tab bar: where to play. The account side (profile, coins and the Bank, settings) lives in the top bar,
+ * so nothing here repeats it. */
+function BottomNav({ online }: { online: boolean }) {
   const { t } = useI18n();
   const { navigate } = useNavigation();
-  const item = (Icon: LucideIcon, label: string, onClick: () => void, active = false) => (
-    <button type="button" className={`hm-nav-item ${active ? 'is-active' : ''}`} onClick={onClick} aria-current={active ? 'page' : undefined}>
-      <Icon className="w-[22px] h-[22px]" aria-hidden />
-      <span>{label}</span>
-    </button>
-  );
+  const tabs: { key: string; icon: LucideIcon; label: string; onClick: () => void; active?: boolean }[] = [
+    { key: 'home', icon: House, label: t('home2.nav.home'), onClick: () => window.scrollTo({ top: 0, behavior: 'smooth' }), active: true },
+    { key: 'games', icon: LayoutGrid, label: t('home2.nav.games'), onClick: () => navigate('gameModes') },
+    ...(online ? [{ key: 'online', icon: Globe, label: t('home2.nav.online'), onClick: () => navigate('cartaSetup', { online: true }) }] : []),
+    { key: 'history', icon: History, label: t('home2.nav.history'), onClick: () => navigate('profile') },
+    { key: 'learn', icon: GraduationCap, label: t('home2.nav.learn'), onClick: () => navigate('tutorial') },
+  ];
   return (
     <nav className="hm-nav" aria-label={t('home2.nav.aria')}>
-      <div className="hm-nav-inner">
-        {item(House, t('home2.nav.home'), () => window.scrollTo({ top: 0, behavior: 'smooth' }), true)}
-        {item(LayoutGrid, t('home2.nav.games'), () => navigate('gameModes'))}
-        <button type="button" className="hm-orb" onClick={onPlay} aria-label={t('home2.playNow')}>
-          <span className="hm-orb-ball">
-            <Club className="w-7 h-7" fill="currentColor" aria-hidden />
-          </span>
-          <span className="hm-orb-label">{t('home2.nav.play')}</span>
-        </button>
-        {item(Landmark, t('home2.nav.bank'), () => navigate('bank'))}
-        {item(UserRound, t('home2.nav.profile'), () => navigate('profile'))}
-        {item(Menu, t('home2.nav.more'), () => navigate('settings'))}
+      <div className="hm-nav-inner" style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}>
+        {tabs.map(({ key, icon: Icon, label, onClick, active }) => (
+          <button key={key} type="button" className={`hm-nav-item ${active ? 'is-active' : ''}`} onClick={onClick} aria-current={active ? 'page' : undefined}>
+            <span className="hm-nav-icon">
+              <Icon className="w-[22px] h-[22px]" strokeWidth={active ? 2.3 : 1.9} aria-hidden />
+            </span>
+            <span className="hm-nav-label">{label}</span>
+          </button>
+        ))}
       </div>
     </nav>
   );
@@ -260,7 +260,7 @@ export function HomeScreen() {
         </footer>
       </main>
 
-      <BottomNav onPlay={playNow} />
+      <BottomNav online={online} />
     </div>
   );
 }

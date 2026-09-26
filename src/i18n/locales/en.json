@@ -1954,10 +1954,9 @@
       "aria": "Main navigation",
       "home": "Home",
       "games": "Games",
-      "play": "Play",
-      "bank": "Bank",
-      "profile": "Profile",
-      "more": "More"
+      "online": "Online",
+      "history": "History",
+      "learn": "Learn"
     }
   },
   "availability": {

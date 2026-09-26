@@ -1954,10 +1954,9 @@
       "aria": "Navegación principal",
       "home": "Inicio",
       "games": "Juegos",
-      "play": "Jugar",
-      "bank": "Banco",
-      "profile": "Perfil",
-      "more": "Más"
+      "online": "Online",
+      "history": "Historial",
+      "learn": "Aprender"
     }
   },
   "availability": {
