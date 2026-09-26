@@ -172,12 +172,12 @@ def background(hd2):
 
 
 def backgrounds_v2(src):
-    """The owner's second backgrounds (ChatGPT, cleaned: the sheet's grey edges cropped, downscaled 3x, then
-    upscaled 4x with Real-ESRGAN into <src>: bg_mobile.png, bg_desktop.png)."""
-    m = Image.open(os.path.join(src, 'bg_mobile.png')).convert('RGB')
-    save(m, 'bg-portrait', q=82)
-    d = Image.open(os.path.join(src, 'bg_desktop.png')).convert('RGB')
-    save(d.resize((2560, int(d.height * 2560 / d.width)), Image.LANCZOS), 'bg-landscape', q=82)
+    """The owner's backgrounds (<src>: bg_mobile.png, bg_desktop.png), kept exactly as delivered: native size,
+    no crop, no upscale, lossless WebP."""
+    for f, name in [('bg_mobile.png', 'bg-portrait'), ('bg_desktop.png', 'bg-landscape')]:
+        im = Image.open(os.path.join(src, f)).convert('RGB')
+        im.save(OUT + name + '.webp', 'WEBP', lossless=True, quality=100, method=6)
+        print(name, im.size, os.path.getsize(OUT + name + '.webp') // 1024, 'KB')
 
 
 def plain_button(im):

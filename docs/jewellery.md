@@ -63,7 +63,8 @@ The look follows the owner's concept sheet and uses only the owner's asset pack 
   - the marble seals (drawn: the pack has no seal);
   - Zeus's portrait, the power-ups and the effect sprites;
   - the UI pieces: board frame, HUD plaques, panel, icons, stars;
-  - the portrait and landscape backgrounds.
+  - the portrait and landscape backgrounds, which are the owner's images exactly as delivered (native size,
+    lossless WebP: no crop, upscale or compression).
 - **Board engine** (`ui/three/`): `GemScene` draws the pieces and the special effects with WebGL (three.js,
   a lazy chunk).
   - Each gem is a quad with a shader that adds a band of light sweeping across it, masked by the gem's
