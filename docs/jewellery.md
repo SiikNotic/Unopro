@@ -80,7 +80,8 @@ The look follows the owner's concept sheet and uses only the owner's asset pack 
     is hidden and on leave.
   - Without WebGL, the DOM jewels and CSS effects stand in.
 - **Screen**:
-  - The board sits in the pack's gold frame with laurels.
+  - The board sits in the owner's gold, marble and ruby frame (native size, lossless; `scripts/olympus-assets.py frame`
+    cleans it). Its rim sizes live in `ui/frame.ts`.
   - The HUD uses the pack's gold-rimmed plaques (moves) and the winged header panel (score), with Zeus's
     portrait.
   - The round buttons, stars and level-end / settings panels are from the pack.

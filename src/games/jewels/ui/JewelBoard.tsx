@@ -10,6 +10,7 @@ import { Board3D } from './Board3D';
 import { canUse3D } from './three/support';
 import { SparkLayer } from './particles';
 import type { Effect, ScorePop, VPiece } from './useJewelGame';
+import { framePadding } from './frame';
 
 interface BoardProps {
   rows: number;
@@ -61,12 +62,6 @@ const Bolt = memo(function Bolt({ e, cell, rows, cols }: { e: Effect; cell: numb
     </svg>
   );
 });
-
-/** The frame's rim around a board `size` px wide (the frame art's rim is ~8.5% of its width per side). */
-function framePadding(size: number) {
-  const w = size / (1 - 0.168);
-  return `${w * 0.086}px ${w * 0.084}px ${w * 0.09}px`;
-}
 
 export function JewelBoard(props: BoardProps) {
   const { rows, cols, size, pieces, ice, effects, pops, combo, moveMs, selected, armed, busy, glints, celebrate, sparkCap, sparks, onTap, onSwipe } = props;

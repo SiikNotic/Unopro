@@ -16,6 +16,7 @@ import { localProgress, recordResult, spendBooster } from '../progress';
 import type { JewelProgress } from '../progress';
 import { JewelDefs } from './JewelDefs';
 import { JewelBoard } from './JewelBoard';
+import { FRAME_RIM_X as RIM_X, FRAME_RIM_Y as RIM_Y } from './frame';
 import { OlympusScene } from './OlympusScene';
 import { OlympusHud } from './OlympusHud';
 import { PowerBar } from './PowerBar';
@@ -29,9 +30,6 @@ import './jewels.css';
 // Development only: the dynamic import is dropped from production builds.
 const JewelDevTools = import.meta.env.DEV ? lazy(() => import('./JewelDevTools')) : null;
 
-/** The frame's rim as a share of the frame's width (matches .ol-frame padding in jewels.css). */
-const RIM_X = 0.168;
-const RIM_Y = 0.176;
 
 export function JewelPlayScreen() {
   const { params } = useNavigation();

@@ -180,6 +180,29 @@ def backgrounds_v2(src):
         print(name, im.size, os.path.getsize(OUT + name + '.webp') // 1024, 'KB')
 
 
+def board_frame(png):
+    """The owner's square board frame (gold, marble, rubies). The PNG already has transparency; a few faint
+    blotches were left in the opening, so only the frame (the opaque ring and its soft edge) is kept, cropped
+    to its bounds and saved at native size as lossless WebP. Its rim sizes are FRAME in ui/JewelBoard.tsx."""
+    import numpy as np
+    from PIL import ImageDraw, ImageFilter
+    im = Image.open(png).convert('RGBA')
+    a = np.array(im.getchannel('A'))
+    solid = Image.fromarray(np.where(a >= 96, 255, 0).astype('uint8')).copy()
+    seed = next((x, a.shape[0] // 2) for x in range(a.shape[1]) if a[a.shape[0] // 2, x] >= 96)
+    ImageDraw.floodfill(solid, seed, 128)
+    ring = Image.fromarray(((np.array(solid) == 128) * 255).astype('uint8')).filter(ImageFilter.MaxFilter(5))
+    alpha = np.where(np.array(ring) > 0, a, 0)
+    alpha[alpha < 8] = 0
+    px = np.array(im)
+    px[..., 3] = alpha
+    px[alpha == 0, :3] = 0
+    out = Image.fromarray(px)
+    out = out.crop(out.getchannel('A').getbbox())
+    out.save(OUT + 'ui-board-frame.webp', 'WEBP', lossless=True, quality=100, method=6)
+    print('ui-board-frame', out.size, os.path.getsize(OUT + 'ui-board-frame.webp') // 1024, 'KB')
+
+
 def plain_button(im):
     """A pill button whose middle can stretch: the centre ornaments are covered by a plain slice of the pill
     (feathered into the ends), so CSS border-image can widen it without distorting anything."""
@@ -238,7 +261,7 @@ def build(hd, hd2, bg2=None, ui2=None):
     # UI: the board frame and the plaques, kept at their shape (used as CSS border-images / backgrounds).
     # Sub-boxes (fractions of the HD image) where a pack image holds more than one element.
     boxes = {'frame_small_bar_2': (0, 0.2, 1, 1), 'panel_header': (0.07, 0, 1, 0.86), 'panel_stars': (0, 0, 1, 1), 'panel_pause': (0, 0, 1, 1), 'bar_score_gold': (0, 0, 1, 1), 'frame_vertical_panel': (0, 0, 1, 1)}
-    for n, name, width in [('frame_vertical_panel', 'ui-board-frame', 560), ('panel_header', 'ui-panel-header', 640), ('frame_small_bar_2', 'ui-bar', 640), ('bar_score_gold', 'ui-score-bar', 640), ('panel_stars', 'ui-panel-stars', 560), ('panel_pause', 'ui-panel', 720)]:
+    for n, name, width in [('panel_header', 'ui-panel-header', 640), ('frame_small_bar_2', 'ui-bar', 640), ('bar_score_gold', 'ui-score-bar', 640), ('panel_stars', 'ui-panel-stars', 560), ('panel_pause', 'ui-panel', 720)]:
         im = Image.open(os.path.join(hd, n + '.png')).convert('RGBA')
         bx = boxes[n]
         im = im.crop((int(im.width * bx[0]), int(im.height * bx[1]), int(im.width * bx[2]), int(im.height * bx[3])))
@@ -257,6 +280,8 @@ def build(hd, hd2, bg2=None, ui2=None):
 if __name__ == '__main__':
     if sys.argv[1] == 'upscale':
         upscale(sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5:])
+    elif sys.argv[1] == 'frame':
+        board_frame(sys.argv[2])
     else:
         os.makedirs(OUT, exist_ok=True)
         build(sys.argv[2], sys.argv[3], *(sys.argv[4:6]))

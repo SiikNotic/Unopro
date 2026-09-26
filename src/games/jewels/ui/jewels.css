@@ -365,7 +365,7 @@
 }
 .ol-frame {
   position: relative;
-  /* The asset pack's gold frame with laurels (padding set from the board size in JewelBoard). */
+  /* The owner's gold, marble and ruby frame (padding set from the board size in JewelBoard). */
   background: url('../assets/ui-board-frame.webp') center / 100% 100% no-repeat;
   filter: drop-shadow(0 18px 28px rgba(3, 8, 26, 0.55));
 }
