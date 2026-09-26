@@ -1911,5 +1911,12 @@
       "roulette": "Roulette",
       "poker": "Poker"
     }
+  },
+  "apk": {
+    "aria": "Download the Android app",
+    "title": "Get the Android app",
+    "sub": "Always the latest version · updates itself inside the app",
+    "cta": "Download APK",
+    "close": "Close"
   }
 }

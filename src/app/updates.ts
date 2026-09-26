@@ -22,6 +22,11 @@ interface AppUpdaterPlugin {
 export const AppUpdater = registerPlugin<AppUpdaterPlugin>('AppUpdater');
 
 const RELEASES = 'https://github.com/SiikNotic/Unopro/releases/download/';
+/**
+ * Always the newest APK: every push that changes the app publishes a GitHub Release with carta.apk, and
+ * GitHub's "latest" link follows the newest one (no code change needed when a version ships).
+ */
+export const LATEST_APK_URL = 'https://github.com/SiikNotic/Unopro/releases/latest/download/carta.apk';
 
 /** "1.2.3" → 10203 (the Android versionCode the release workflow uses). */
 export function versionCodeOf(version: string): number | null {

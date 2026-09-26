@@ -1911,5 +1911,12 @@
       "roulette": "Ruleta",
       "poker": "Póker"
     }
+  },
+  "apk": {
+    "aria": "Descargar la app para Android",
+    "title": "Descarga la app para Android",
+    "sub": "Siempre la última versión · se actualiza sola dentro de la app",
+    "cta": "Descargar APK",
+    "close": "Cerrar"
   }
 }

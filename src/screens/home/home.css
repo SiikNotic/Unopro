@@ -975,3 +975,75 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
+
+/* "Get the Android app" banner (website only; always links to the newest APK). */
+.hm-apk {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 40px 12px 12px;
+  border-radius: 16px;
+  background: linear-gradient(90deg, rgba(20, 60, 36, 0.92), rgba(10, 24, 18, 0.92));
+  border: 1px solid rgba(90, 220, 140, 0.45);
+  box-shadow: 0 0 22px -8px rgba(90, 220, 140, 0.55);
+}
+.hm-apk-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  color: #0c2415;
+  background: radial-gradient(circle at 35% 30%, #c9ffd9, #3ddc84 60%, #1a8a4a);
+}
+.hm-apk-copy {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+.hm-apk-copy b {
+  color: #fff;
+  font-size: 15px;
+  font-weight: 800;
+}
+.hm-apk-copy small {
+  color: rgba(220, 255, 232, 0.75);
+  font-size: 12px;
+  margin-top: 2px;
+}
+.hm-apk-cta {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.hm-apk-close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(0, 0, 0, 0.25);
+}
+.hm-apk-close:hover {
+  color: #fff;
+}
+@media (max-width: 380px) {
+  .hm-apk {
+    flex-wrap: wrap;
+  }
+  .hm-apk-cta {
+    width: 100%;
+    justify-content: center;
+  }
+}

@@ -17,6 +17,7 @@ import { useGameAvailability } from '@/games/availability';
 import type { ControlledGame } from '@/games/availability';
 import { CASINO, CATEGORIES, EXTRA_IMAGES, HERO_ART, HOME_GAMES, POPULAR, PROMO_IMAGE, RECOMMENDED } from './home/homeGames';
 import type { HomeCategory, HomeGame, HomeGameId } from './home/homeGames';
+import { ApkBanner } from '@/app/ApkBanner';
 import './home/home.css';
 
 const CATEGORY_ICON: Record<HomeCategory, LucideIcon> = { all: LayoutGrid, cards: Spade, table: CircleDot, slots: Cherry, puzzle: Gem };
@@ -180,6 +181,7 @@ export function HomeScreen() {
       </header>
 
       <main className="hm-wrap hm-main cz-safe-x">
+        <ApkBanner />
         <Hero onPlay={playNow} />
 
         <div className="hm-cats" role="tablist" aria-label={t('home2.categories')}>
