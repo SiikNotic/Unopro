@@ -1766,5 +1766,86 @@
     "termsText": "To keep playing, please confirm your age and accept the current terms.",
     "acceptAndPlay": "Accept and play",
     "acceptFailed": "We couldn't save your acceptance. Check your connection and try again."
+  },
+  "home2": {
+    "welcome": "WELCOME TO",
+    "tagline": "PLAY · WIN · HAVE FUN",
+    "playNow": "Play now",
+    "playAria": "Play {name}",
+    "coinsAria": "Coins: {amount}. Open the Bank",
+    "categories": "Categories",
+    "cat": {
+      "all": "All",
+      "cards": "Cards",
+      "table": "Table",
+      "slots": "Slots",
+      "puzzle": "Puzzle"
+    },
+    "popular": "Popular games",
+    "casino": "Casino games",
+    "extras": "Extras",
+    "recommended": "Recommended for you",
+    "promo": {
+      "chip": "NEW",
+      "sub": "20 jewel levels on Olympus",
+      "aria": "Play Jewellery: Olympus"
+    },
+    "event": {
+      "online": {
+        "title": "Online rooms",
+        "sub": "Play with friends using a code"
+      },
+      "daily": {
+        "title": "Daily coins",
+        "sub": "The Bank's daily loan and rewards"
+      },
+      "learn": {
+        "title": "Learn to play",
+        "sub": "Step-by-step rules"
+      }
+    },
+    "game": {
+      "carta": {
+        "name": "Carta",
+        "desc": "Card strategy in the lounge."
+      },
+      "domino": {
+        "name": "Domino",
+        "desc": "Count, block and dominate."
+      },
+      "bingo": {
+        "name": "Bingo",
+        "desc": "Balls, cards and BINGO!"
+      },
+      "poker": {
+        "name": "Poker",
+        "desc": "Texas Hold'em vs bots."
+      },
+      "roulette": {
+        "name": "Roulette",
+        "desc": "Single zero. Up to 35x."
+      },
+      "blackjack": {
+        "name": "Blackjack",
+        "desc": "Blackjack pays 3:2."
+      },
+      "slots": {
+        "name": "Slots",
+        "desc": "9 themed machines."
+      },
+      "jewels": {
+        "name": "Jewellery",
+        "desc": "Jewels of Olympus: 20 levels."
+      }
+    },
+    "nav": {
+      "aria": "Main navigation",
+      "home": "Home",
+      "games": "Games",
+      "play": "Play",
+      "bank": "Bank",
+      "profile": "Profile",
+      "more": "More"
+    }
   }
 }

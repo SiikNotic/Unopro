@@ -1766,5 +1766,86 @@
     "termsText": "Para seguir jugando necesitamos que confirmes tu edad y aceptes las condiciones actuales.",
     "acceptAndPlay": "Aceptar y jugar",
     "acceptFailed": "No pudimos guardar tu aceptación. Revisa tu conexión e inténtalo de nuevo."
+  },
+  "home2": {
+    "welcome": "BIENVENIDO A",
+    "tagline": "JUEGA · GANA · DIVIÉRTETE",
+    "playNow": "Jugar ahora",
+    "playAria": "Jugar a {name}",
+    "coinsAria": "Monedas: {amount}. Abrir el Banco",
+    "categories": "Categorías",
+    "cat": {
+      "all": "Todos",
+      "cards": "Cartas",
+      "table": "Mesa",
+      "slots": "Slots",
+      "puzzle": "Puzzle"
+    },
+    "popular": "Juegos populares",
+    "casino": "Juegos de casino",
+    "extras": "Extras",
+    "recommended": "Recomendado para ti",
+    "promo": {
+      "chip": "NUEVO",
+      "sub": "20 niveles de joyas en el Olimpo",
+      "aria": "Jugar a Jewellery: Olympus"
+    },
+    "event": {
+      "online": {
+        "title": "Salas en línea",
+        "sub": "Juega con amigos con un código"
+      },
+      "daily": {
+        "title": "Monedas diarias",
+        "sub": "Préstamo diario y recompensas del Banco"
+      },
+      "learn": {
+        "title": "Aprende a jugar",
+        "sub": "Reglas paso a paso"
+      }
+    },
+    "game": {
+      "carta": {
+        "name": "Carta",
+        "desc": "Estrategia de cartas en el lounge."
+      },
+      "domino": {
+        "name": "Dominó",
+        "desc": "Cuenta, bloquea y domina."
+      },
+      "bingo": {
+        "name": "Bingo",
+        "desc": "Bolas, cartones y ¡BINGO!"
+      },
+      "poker": {
+        "name": "Póker",
+        "desc": "Texas Hold'em contra bots."
+      },
+      "roulette": {
+        "name": "Ruleta",
+        "desc": "Un solo cero. Hasta 35x."
+      },
+      "blackjack": {
+        "name": "Blackjack",
+        "desc": "El blackjack paga 3:2."
+      },
+      "slots": {
+        "name": "Tragamonedas",
+        "desc": "9 máquinas temáticas."
+      },
+      "jewels": {
+        "name": "Jewellery",
+        "desc": "Joyas del Olimpo: 20 niveles."
+      }
+    },
+    "nav": {
+      "aria": "Navegación principal",
+      "home": "Inicio",
+      "games": "Juegos",
+      "play": "Jugar",
+      "bank": "Banco",
+      "profile": "Perfil",
+      "more": "Más"
+    }
   }
 }
