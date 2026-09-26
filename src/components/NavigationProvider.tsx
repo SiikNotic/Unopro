@@ -1,20 +1,11 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { Screen, ScreenParams } from '@/types/navigation';
 import { SCREENS } from '@/types/navigation';
 import { GAME_MODES } from '@/game/rules/modes';
 import { isMachineId } from '@/casino/premium/engine';
 import { ROOM_CODE_RE } from '@/games/shared/multiplayer/roomCode';
-
-interface NavigationContextValue {
-  currentScreen: Screen;
-  params: ScreenParams;
-  /** Goes to a screen (a new browser history entry, unless `replace`). */
-  navigate: (screen: Screen, params?: ScreenParams, options?: { replace?: boolean }) => void;
-  /** "Back" to a screen: reuses the browser's history when that screen is the one we came from. */
-  back: (screen: Screen, params?: ScreenParams) => void;
-  goHome: () => void;
-}
+import { NavigationContext } from './navigationContext';
 
 interface Entry {
   screen: Screen;
@@ -27,7 +18,6 @@ interface HistoryState extends Entry {
   prev: Entry | null;
 }
 
-const NavigationContext = createContext<NavigationContextValue | null>(null);
 
 /**
  * A local match screen is never re-entered from history or a reload: that would silently start a new
@@ -129,10 +119,4 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
 
   const value = { currentScreen: entry.screen, params: entry.params, navigate, back, goHome };
   return <NavigationContext.Provider value={value}>{children}</NavigationContext.Provider>;
-}
-
-export function useNavigation(): NavigationContextValue {
-  const ctx = useContext(NavigationContext);
-  if (!ctx) throw new Error('useNavigation must be used within a NavigationProvider');
-  return ctx;
 }

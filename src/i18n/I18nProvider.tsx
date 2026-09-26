@@ -1,7 +1,8 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { DEFAULT_LANGUAGE, type LanguageCode } from './config';
 import { storage } from '@/storage';
+import { I18nContext } from './context';
 import en from './locales/en.json';
 import es from './locales/es.json';
 
@@ -34,14 +35,6 @@ function interpolate(template: string, vars?: Record<string, string | number>): 
   );
 }
 
-interface I18nContextValue {
-  language: LanguageCode;
-  setLanguage: (lang: LanguageCode) => void;
-  t: (key: string, vars?: Record<string, string | number>) => string;
-}
-
-const I18nContext = createContext<I18nContextValue | null>(null);
-
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState<LanguageCode>(() => {
     const stored = storage.get<LanguageCode>(STORAGE_KEY);
@@ -69,10 +62,4 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   const value = useMemo(() => ({ language, setLanguage, t }), [language, setLanguage, t]);
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
-}
-
-export function useI18n(): I18nContextValue {
-  const ctx = useContext(I18nContext);
-  if (!ctx) throw new Error('useI18n must be used within an I18nProvider');
-  return ctx;
 }
