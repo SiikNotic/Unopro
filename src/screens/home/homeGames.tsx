@@ -20,6 +20,8 @@ import cardBlackjack from './art/card-blackjack.webp';
 import cardSlots from './art/card-slots.webp';
 import cardJewels from './art/card-jewels.webp';
 import cardCrash from './art/card-crash.webp';
+// The Horse Racing card art is picked up when the file exists (until then the card draws its emoji art).
+const cardHorse = (import.meta.glob('./art/card-horse-racing.webp', { eager: true, import: 'default' }) as Record<string, string>)['./art/card-horse-racing.webp'];
 import heroPortrait from './art/hero-portrait.webp';
 import heroLandscape from './art/hero-landscape.webp';
 import promoCoins from './art/promo-coins.webp';
@@ -27,7 +29,7 @@ import extraOnline from './art/extra-online.webp';
 import extraDaily from './art/extra-daily.webp';
 import extraLearn from './art/extra-learn.webp';
 
-export type HomeGameId = 'carta' | 'domino' | 'bingo' | 'poker' | 'roulette' | 'blackjack' | 'slots' | 'jewels' | 'crash';
+export type HomeGameId = 'carta' | 'domino' | 'bingo' | 'poker' | 'roulette' | 'blackjack' | 'slots' | 'jewels' | 'crash' | 'horse';
 export type HomeCategory = 'all' | 'cards' | 'table' | 'slots' | 'puzzle' | 'instant';
 
 export interface HomeGame {
@@ -104,6 +106,15 @@ export const HOME_GAMES: Record<HomeGameId, HomeGame> = {
     accent: '#ff6b5a',
     art: (s) => <span style={{ fontSize: s * 0.7 }} aria-hidden>🚀</span>,
   },
+  horse: {
+    id: 'horse',
+    image: cardHorse,
+    screen: 'horse',
+    category: 'instant',
+    bg: 'radial-gradient(120% 90% at 50% 10%, #1f6a3c 0%, #0e3a20 55%, #04140a 100%)',
+    accent: '#e8c46a',
+    art: (s) => <span style={{ fontSize: s * 0.7 }} aria-hidden>🏇</span>,
+  },
   jewels: {
     id: 'jewels',
     image: cardJewels,
@@ -122,9 +133,9 @@ export const HOME_GAMES: Record<HomeGameId, HomeGame> = {
 };
 
 export const POPULAR: HomeGameId[] = ['carta', 'domino', 'bingo', 'poker'];
-export const CASINO: HomeGameId[] = ['crash', 'roulette', 'blackjack', 'slots', 'jewels'];
+export const CASINO: HomeGameId[] = ['crash', 'horse', 'roulette', 'blackjack', 'slots', 'jewels'];
 /** "Recommended for you": a static, configurable pick (there is no play history to learn from yet). */
-export const RECOMMENDED: HomeGameId[] = ['crash', 'jewels', 'slots', 'poker', 'roulette', 'bingo'];
+export const RECOMMENDED: HomeGameId[] = ['horse', 'crash', 'jewels', 'slots', 'poker', 'roulette', 'bingo'];
 export const CATEGORIES: HomeCategory[] = ['all', 'cards', 'table', 'slots', 'instant', 'puzzle'];
 export const HERO_ART = { crown, coin, portrait: heroPortrait, landscape: heroLandscape };
 export const PROMO_IMAGE = promoCoins;

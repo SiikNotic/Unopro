@@ -31,8 +31,9 @@ const MiniWheel = () => (
   </svg>
 );
 
-const CASINO_GAMES: { screen: Screen; key: 'blackjack' | 'roulette' | 'slots' | 'poker' | 'crash'; art: React.ReactNode }[] = [
+const CASINO_GAMES: { screen: Screen; key: 'blackjack' | 'roulette' | 'slots' | 'poker' | 'crash' | 'horse'; art: React.ReactNode }[] = [
   { screen: 'crash', key: 'crash', art: <Rocket className="w-5 h-5 text-[var(--cz-gold)]" aria-hidden /> },
+  { screen: 'horse', key: 'horse', art: <span className="text-lg" aria-hidden>🏇</span> },
   {
     screen: 'blackjackSetup',
     key: 'blackjack',

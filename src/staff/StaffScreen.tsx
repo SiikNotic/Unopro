@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Ban, Coins, Gamepad2, LayoutDashboard, Power, ScrollText, Search, ShieldX, Users } from 'lucide-react';
+import { ArrowLeft, Ban, Coins, Flag, Gamepad2, LayoutDashboard, Power, ScrollText, Search, ShieldX, Users } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useNavigation } from '@/components/Navigation';
 import { useI18n } from '@/i18n';
@@ -16,14 +16,16 @@ import { RoleBadge, UserDetailPanel } from './UserDetail';
 import { auditLine } from './auditText';
 import { CONTROLLED_GAMES, setAvailability } from '@/games/availability';
 import type { ControlledGame } from '@/games/availability';
+import { HorseAdmin } from './HorseAdmin';
 import './staff.css';
 
-type Tab = 'overview' | 'users' | 'economy' | 'games' | 'bans' | 'audit';
+type Tab = 'overview' | 'users' | 'economy' | 'games' | 'horse' | 'bans' | 'audit';
 const TABS: { id: Tab; icon: LucideIcon }[] = [
   { id: 'overview', icon: LayoutDashboard },
   { id: 'users', icon: Users },
   { id: 'economy', icon: Coins },
   { id: 'games', icon: Gamepad2 },
+  { id: 'horse', icon: Flag },
   { id: 'bans', icon: Ban },
   { id: 'audit', icon: ScrollText },
 ];
@@ -123,6 +125,7 @@ export function StaffScreen() {
           {tab === 'users' && <UsersTab version={version} onOpen={setSelected} selected={selected} />}
           {tab === 'economy' && <EconomyTab overview={overview} version={version} onOpen={setSelected} />}
           {tab === 'games' && <GamesTab version={version} isOwner={myRole === 'owner'} onChanged={() => setVersion((v) => v + 1)} />}
+          {tab === 'horse' && <HorseAdmin version={version} role={myRole} onChanged={() => setVersion((v) => v + 1)} />}
           {tab === 'bans' && <BansTab version={version} onOpen={setSelected} />}
           {tab === 'audit' && <AuditTab version={version} onOpen={setSelected} />}
         </main>
@@ -510,7 +513,7 @@ function AuditTab({ version, onOpen }: { version: number; onOpen: (id: string) =
       <h2 className="sd-h">{t('staff.tabs.audit')}</h2>
       <p className="text-xs text-[var(--cz-muted)]">{t('staff.auditNote')}</p>
       <div className="sd-seg" role="group" aria-label={t('staff.filter')}>
-        {['all', 'ADD_COINS', 'REMOVE_COINS', 'BAN', 'UNBAN', 'USERNAME_CHANGE', 'ROLE_CHANGE', 'GAME_AVAILABILITY'].map((f) => (
+        {['all', 'ADD_COINS', 'REMOVE_COINS', 'BAN', 'UNBAN', 'USERNAME_CHANGE', 'ROLE_CHANGE', 'GAME_AVAILABILITY', 'HORSE_CONFIG'].map((f) => (
           <button key={f} type="button" aria-pressed={filter === f} onClick={() => setFilter(f)}>
             {f === 'all' ? t('staff.all') : f}
           </button>

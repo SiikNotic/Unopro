@@ -7,7 +7,7 @@ import { bell, noise, note, pluck, tone } from './voices';
 import type { Voice } from './voices';
 
 /** Slot machines plus the table games that bring their own music. */
-export type AmbientId = MachineId | 'domino' | 'bingo' | 'jewels' | 'poker' | 'crash';
+export type AmbientId = MachineId | 'domino' | 'bingo' | 'jewels' | 'poker' | 'crash' | 'horse';
 
 interface Pattern {
   /** Seconds per beat. */
@@ -114,6 +114,18 @@ export const AMBIENT: Record<AmbientId, Pattern> = {
       if (i % 2 === 0) tone(v, t, note(roots[bar] - 24), 0.3, { type: 'triangle', gain: 0.06, lowpass: 420 });
       if (i % 4 === 3) noise(v, t, 0.06, { type: 'highpass', freq: 7000, gain: 0.01 });
       if (i % 16 === 8 && r() < 0.6) bell(v, t, note(roots[bar] + 24), 0.005, 1.2);
+    },
+  },
+  // Horse racing: a bright, brassy lilt over a trotting bass, a far-off bell.
+  horse: {
+    beat: 0.42,
+    play: (v, t, i, r) => {
+      const bar = Math.floor(i / 8) % 4;
+      const roots = [0, 5, 7, 0]; // C F G C
+      if (i % 8 === 0) chord(v, t, [0, 4, 7, 12].map((n) => roots[bar] + n - 12), 3.2, 'triangle', 0.009, 2200);
+      if (i % 2 === 0) tone(v, t, note(roots[bar] - 24 + (i % 4 === 0 ? 0 : 7)), 0.22, { type: 'triangle', gain: 0.05, lowpass: 600 });
+      if (i % 4 === 1 || i % 4 === 3) noise(v, t, 0.03, { type: 'bandpass', freq: 900, gain: 0.012 });
+      if (i % 16 === 14 && r() < 0.5) bell(v, t, note(roots[bar] + 19), 0.005, 0.9);
     },
   },
   poker: {

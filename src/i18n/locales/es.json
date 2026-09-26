@@ -589,6 +589,10 @@
     "crash": {
       "name": "Crash",
       "description": "Cohete multiplicador: retira antes de que explote."
+    },
+    "horse": {
+      "name": "Carta Horse Racing",
+      "description": "Apuesta al ganador y vive la carrera."
     }
   },
   "profile": {
@@ -1400,7 +1404,8 @@
       "economy": "Economía",
       "bans": "Baneos",
       "audit": "Registro",
-      "games": "Juegos"
+      "games": "Juegos",
+      "horse": "Hípica"
     },
     "errors": {
       "forbidden": "No tienes permiso para esta acción (o el usuario está protegido).",
@@ -1501,7 +1506,8 @@
       "username": "nombre {from} → {to}",
       "role": "rol {from} → {to}",
       "gameOn": "{game} en servicio",
-      "gameOff": "{game} fuera de servicio"
+      "gameOff": "{game} fuera de servicio",
+      "horseConfig": "Horse Racing: RTP {rtp} %, apuestas {min}–{max}"
     },
     "kpi": {
       "registered": "Usuarios registrados",
@@ -1585,8 +1591,50 @@
         "domino": "Dominó",
         "bingo": "Bingo",
         "carta": "Carta",
-        "crash": "Crash"
+        "crash": "Crash",
+        "horse": "Horse Racing"
       }
+    },
+    "horse": {
+      "title": "Horse Racing",
+      "config": "Configuración",
+      "minBet": "Apuesta mínima",
+      "maxBet": "Apuesta máxima",
+      "save": "Guardar",
+      "saved": "Guardado. Se aplica a las carreras que se creen desde ahora.",
+      "invalid": "RTP entre 80 y 99 %, mínima ≥ 1, máxima ≤ 1.000.000 y mínima ≤ máxima.",
+      "configNote": "Los cambios se aplican a las carreras nuevas (una carrera abierta mantiene sus cuotas y límites) y quedan en el registro.",
+      "configReadOnly": "Solo un admin o el owner pueden cambiar la configuración.",
+      "lastChange": "Último cambio: {who}, {when}.",
+      "stats": "Estadísticas",
+      "period": "Periodo",
+      "days": "{n} d",
+      "races": "Carreras",
+      "bets": "Apuestas",
+      "players": "Jugadores",
+      "staked": "Apostado",
+      "paid": "Pagado",
+      "net": "Casa",
+      "rtpRealized": "RTP real",
+      "rtpTarget": "Objetivo {rtp}",
+      "horse": "Caballo",
+      "wins": "Victorias",
+      "runs": "Carreras",
+      "raceList": "Carreras recientes",
+      "race": "Carrera",
+      "when": "Hora",
+      "winner": "Ganador",
+      "pending": "En curso",
+      "latestBets": "Últimas apuestas",
+      "player": "Jugador",
+      "amount": "Apuesta",
+      "odds": "Cuota",
+      "result": "Resultado",
+      "back": "Volver",
+      "raceN": "Carrera #{n}",
+      "limits": "límites {min}–{max}",
+      "seed": "Semilla",
+      "place": "Puesto"
     }
   },
   "bank": {
@@ -1896,6 +1944,10 @@
       "crash": {
         "name": "Crash",
         "desc": "Retira antes de que explote."
+      },
+      "horse": {
+        "name": "Horse Racing",
+        "desc": "Hipódromo de lujo: apuesta al ganador."
       }
     },
     "nav": {
@@ -1920,7 +1972,8 @@
       "blackjack": "Blackjack",
       "roulette": "Ruleta",
       "poker": "Póker",
-      "crash": "Crash"
+      "crash": "Crash",
+      "horse": "Horse Racing"
     }
   },
   "apk": {
@@ -1999,6 +2052,93 @@
       "crash": "En cualquier momento el cohete explota. Si no retiraste antes, pierdes la apuesta de esa ronda.",
       "fair": "El punto de crash se fija antes de la ronda y se publica su huella SHA-256; al terminar se revela la semilla para que puedas verificarlo. De media se devuelve el 97 % de lo apostado.",
       "coins": "Crash usa solo monedas virtuales de tu cuenta, sin valor real: no hay dinero, ni compras, ni retiros."
+    }
+  },
+  "horse": {
+    "title": "Carta Horse Racing",
+    "subtitle": "Elige tu caballo, apuesta y vive la carrera",
+    "race": "Carrera #{n}",
+    "loading": "Conectando…",
+    "players": "{n} jugadores",
+    "history": "Últimos ganadores",
+    "phase": {
+      "betting": "Próxima carrera",
+      "countdown": "Salida",
+      "racing": "En carrera",
+      "result": "Resultado"
+    },
+    "nextRaceTitle": "Próxima carrera · elige tu caballo",
+    "start": "SALIDA",
+    "finish": "META",
+    "go": "¡YA!",
+    "horses": "Caballos",
+    "place": "{n}.º",
+    "odds": "Cuota",
+    "pays": "Paga",
+    "amount": "Monto de apuesta",
+    "less": "Menos",
+    "more": "Más",
+    "pickHint": "Elige un caballo de la lista",
+    "pickLater": "Podrás apostar en la próxima carrera",
+    "pickFirst": "Elige un caballo",
+    "confirm": "Confirmar apuesta · #{n} · 🪙 {coins}",
+    "placing": "Confirmando…",
+    "betPlaced": "Apuesta: #{n} · 🪙 {coins} · paga 🪙 {pays}",
+    "racingYours": "En carrera · tu caballo es el #{n}",
+    "youWon": "¡Ganaste! +🪙 {coins}",
+    "youLost": "Ganó el #{n} · suerte en la próxima",
+    "waitNext": "Carrera en curso · apuesta en la siguiente",
+    "nextRace": "La próxima carrera abre en segundos",
+    "winner": "GANADOR",
+    "horseN": "Caballo #{n}",
+    "resultWon": "Apostaste 🪙 {coins} a {odds}: ganaste 🪙 {win}",
+    "resultLost": "Apostaste 🪙 {coins} al #{n}: esta vez no",
+    "positions": "Posiciones",
+    "signIn": "Crea una cuenta o entra para apostar",
+    "guest": "Estás viendo la carrera en directo. Para apostar necesitas una cuenta: Horse Racing juega con tus monedas de la cuenta.",
+    "bets": "Apuestas",
+    "myBets": "Mis apuestas",
+    "noBets": "Nadie ha apostado todavía en esta carrera.",
+    "noMyBets": "Aún no has apostado en Horse Racing.",
+    "col": {
+      "player": "Jugador",
+      "race": "Carrera",
+      "horse": "Caballo",
+      "bet": "Apuesta",
+      "result": "Resultado"
+    },
+    "fairDetail": "Esta semilla da este podio: {order}",
+    "offline": "No se puede conectar con el servidor. Reintentando…",
+    "disabled": "Horse Racing está fuera de servicio temporalmente. Tus monedas están a salvo.",
+    "errors": {
+      "race_closed": "Las apuestas de esta carrera ya se cerraron. Apuesta en la siguiente.",
+      "disabled": "Horse Racing está fuera de servicio temporalmente.",
+      "insufficient_funds": "No tienes monedas suficientes para esa apuesta.",
+      "conflict": "Ya tienes una apuesta en esta carrera.",
+      "not_registered": "Necesitas una cuenta confirmada y aceptar los términos para apostar.",
+      "banned": "Tu cuenta está suspendida.",
+      "invalid": "Apuesta no válida (revisa el caballo y los límites).",
+      "network": "Sin conexión. Vuelve a intentarlo.",
+      "server": "El servidor no respondió. Vuelve a intentarlo."
+    },
+    "helpTitle": "Cómo se juega a Horse Racing",
+    "help": {
+      "how": "En cada carrera corren de 6 a 8 caballos. Mientras la carrera está abierta, elige un caballo, el monto y confirma tu apuesta.",
+      "odds": "Cada caballo tiene una cuota fija que se muestra antes de apostar: los favoritos pagan menos y los outsiders pagan más.",
+      "race": "Al terminar la cuenta atrás se abren los cajones y la carrera dura entre 32 y 40 segundos. Todos los jugadores ven la misma carrera.",
+      "pay": "Si tu caballo gana, cobras apuesta × cuota automáticamente al terminar la carrera. Solo cuenta el ganador.",
+      "fair": "El servidor decide la carrera antes de las apuestas y publica su huella SHA-256; al terminar revela la semilla para que puedas verificar cuotas, ganador y podio.",
+      "coins": "Horse Racing usa solo monedas virtuales de tu cuenta, sin valor real: no hay dinero, ni compras, ni retiros."
+    },
+    "names": {
+      "1": "Trueno Negro",
+      "2": "Esmeralda Real",
+      "3": "Zafiro",
+      "4": "Fortuna Dorada",
+      "5": "Marfil",
+      "6": "Rey de Oros",
+      "7": "Brasa",
+      "8": "Reina de Corazones"
     }
   }
 }

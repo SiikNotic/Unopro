@@ -89,7 +89,7 @@ export interface AuditRow {
   actor_username?: string | null;
   target_id: string | null;
   target_username?: string | null;
-  action: 'ADD_COINS' | 'REMOVE_COINS' | 'BAN' | 'UNBAN' | 'USERNAME_CHANGE' | 'ROLE_CHANGE' | 'GUEST_MIGRATION' | 'GAME_AVAILABILITY';
+  action: 'ADD_COINS' | 'REMOVE_COINS' | 'BAN' | 'UNBAN' | 'USERNAME_CHANGE' | 'ROLE_CHANGE' | 'GUEST_MIGRATION' | 'GAME_AVAILABILITY' | 'HORSE_CONFIG';
   reason: string | null;
   metadata: Record<string, unknown>;
 }
@@ -112,6 +112,69 @@ export interface UserDetail {
   ledger: LedgerRow[];
   bans: BanRow[];
   audit: AuditRow[];
+}
+
+/** Horse Racing: configuration (RTP in basis points, bet limits) and reports. */
+export interface HorseConfig {
+  rtp: number;
+  minBet: number;
+  maxBet: number;
+  updatedAt: string;
+  updatedBy: string | null;
+  enabled: boolean;
+}
+export interface HorseStats {
+  days: number;
+  races: number;
+  bets: number;
+  players: number;
+  staked: number;
+  paid: number;
+  net: number;
+  rtpRealized: number | null;
+  byHorse: { horse: number; wins: number; runs: number; bets: number; staked: number; paid: number }[];
+  config: HorseConfig;
+}
+export interface HorseRaceRow {
+  id: number;
+  createdAt: string;
+  startsAt: string;
+  finishAt: string;
+  finished: boolean;
+  settled: boolean;
+  rtp: number;
+  runners: number;
+  winner: number | null;
+  bets: number;
+  staked: number;
+  paid: number;
+}
+export interface HorseStaffBet {
+  id: string;
+  race: number;
+  userId: string;
+  username: string | null;
+  horse: number;
+  amount: number;
+  odds: number;
+  status: 'placed' | 'won' | 'lost';
+  payout: number | null;
+  at: string;
+}
+export interface HorseRaceDetail {
+  id: number;
+  hash: string;
+  rtp: number;
+  minBet: number;
+  maxBet: number;
+  runners: { horse: number; odds: number }[];
+  createdAt: string;
+  startsAt: string;
+  finishAt: string;
+  settledAt: string | null;
+  order: number[] | null;
+  seed: string | null;
+  bets: Omit<HorseStaffBet, 'race'>[];
 }
 
 const num = (x: unknown) => Number(x ?? 0);
@@ -140,6 +203,13 @@ export const staffApi = {
   },
   /** Owner only: the database checks the caller's role and records the change in the audit log. */
   setGame: (game: ControlledGame, enabled: boolean, reason: string) => rpc<null>('owner_set_game_enabled', { p_game: game, p_enabled: enabled, p_reason: reason }),
+  horseStats: (days: number) => rpc<HorseStats>('staff_horse_stats', { p_days: days }),
+  horseRaces: (limit = 50, before: number | null = null) => rpc<HorseRaceRow[]>('staff_horse_races', { p_limit: limit, p_before: before }),
+  horseRace: (id: number) => rpc<HorseRaceDetail>('staff_horse_race', { p_id: id }),
+  horseBets: (limit = 100) => rpc<HorseStaffBet[]>('staff_horse_bets', { p_limit: limit }),
+  /** Admin or owner: the database checks the role and records the change in the audit log. */
+  setHorseConfig: (rtpBp: number, minBet: number, maxBet: number, reason: string) =>
+    rpc<HorseConfig>('admin_set_horse_config', { p_rtp_bp: rtpBp, p_min_bet: minBet, p_max_bet: maxBet, p_reason: reason }),
 };
 
 export type { RpcResult };

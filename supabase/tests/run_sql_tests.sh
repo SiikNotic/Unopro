@@ -43,6 +43,9 @@ psql -q -v ON_ERROR_STOP=1 -d "$DB" -f game_control_tables_test.sql
 psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20261007000000_crash.sql
 psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20261007000000_crash.sql
 psql -q -v ON_ERROR_STOP=1 -d "$DB" -f crash_test.sql
+psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20261008000000_horse_racing.sql
+psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20261008000000_horse_racing.sql
+psql -q -v ON_ERROR_STOP=1 -d "$DB" -f horse_racing_test.sql
 
 # Two players ask for the same username at the same instant: exactly one gets it.
 for u in 21 22 23 24 25 26; do
@@ -150,4 +153,22 @@ wait
 read -r CBETS CPAYS CBAL < <(psql -At -F ' ' -d "$DB" -c "select (select count(*) from public.crash_bets where user_id = '$CU'), (select count(*) from public.account_ledger where user_id = '$CU' and payout > 0), (select balance from public.account_wallets where user_id = '$CU')")
 echo "crash concurrency: bets=$CBETS payouts=$CPAYS balance=$CBAL"
 [ "$CBETS" = 1 ] && [ "$CPAYS" = 1 ] && [ "$CBAL" -ge 1100 ] && [ "$CBAL" -le 1115 ] || { echo "CRASH CONCURRENCY TEST FAILED"; exit 1; }
+# Horse racing: 20 simultaneous bets (different request ids) on one race book exactly one; then 10 simultaneous
+# settlements after the finish pay the winner exactly once.
+HU=00000000-0000-0000-000a-0000000000ee
+psql -q -d "$DB" -c "insert into auth.users (id, email_confirmed_at) values ('$HU', now()); insert into public.account_wallets (user_id, balance) values ('$HU', 1000); insert into public.terms_acceptances (user_id, version, adult_confirmed) values ('$HU', public.terms_version(), true)"
+psql -q -d "$DB" -c "select public.horse_state(); update public.horse_races set starts_at = clock_timestamp() + interval '60 seconds', finish_at = clock_timestamp() + interval '120 seconds' where id = (select max(id) from public.horse_races)" >/dev/null
+HWIN=$(psql -At -d "$DB" -c "select finish_order[1] from public.horse_races order by id desc limit 1")
+for i in $(seq 1 20); do
+  psql -q -d "$DB" -c "set role authenticated; select set_config('request.jwt.claim.sub', '$HU', false); select public.horse_bet(gen_random_uuid(), $HWIN, 100)" >/dev/null 2>&1 &
+done
+wait
+psql -q -d "$DB" -c "update public.horse_races set starts_at = clock_timestamp() - interval '60 seconds', finish_at = clock_timestamp() - interval '1 second' where id = (select max(id) from public.horse_races)"
+for i in $(seq 1 10); do
+  psql -q -d "$DB" -c "set role anon; select public.horse_state()" >/dev/null 2>&1 &
+done
+wait
+read -r HBETS HPAYS HBAL HEXP < <(psql -At -F ' ' -d "$DB" -c "select (select count(*) from public.horse_bets where user_id = '$HU'), (select count(*) from public.account_ledger where user_id = '$HU' and payout > 0), (select balance from public.account_wallets where user_id = '$HU'), (select 900 + floor(100 * odds / 100.0)::bigint from public.horse_bets where user_id = '$HU')")
+echo "horse concurrency: bets=$HBETS payouts=$HPAYS balance=$HBAL expected=$HEXP"
+[ "$HBETS" = 1 ] && [ "$HPAYS" = 1 ] && [ "$HBAL" = "$HEXP" ] || { echo "HORSE CONCURRENCY TEST FAILED"; exit 1; }
 echo "all SQL tests passed"

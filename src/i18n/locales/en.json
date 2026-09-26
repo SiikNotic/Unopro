@@ -589,6 +589,10 @@
     "crash": {
       "name": "Crash",
       "description": "Rocket multiplier: cash out before it explodes."
+    },
+    "horse": {
+      "name": "Carta Horse Racing",
+      "description": "Bet on the winner and watch the race."
     }
   },
   "profile": {
@@ -1400,7 +1404,8 @@
       "economy": "Economy",
       "bans": "Bans",
       "audit": "Audit log",
-      "games": "Games"
+      "games": "Games",
+      "horse": "Racing"
     },
     "errors": {
       "forbidden": "You're not allowed to do this (or the user is protected).",
@@ -1501,7 +1506,8 @@
       "username": "name {from} → {to}",
       "role": "role {from} → {to}",
       "gameOn": "{game} in service",
-      "gameOff": "{game} out of service"
+      "gameOff": "{game} out of service",
+      "horseConfig": "Horse Racing: RTP {rtp}%, bets {min}–{max}"
     },
     "kpi": {
       "registered": "Registered users",
@@ -1585,8 +1591,50 @@
         "domino": "Dominoes",
         "bingo": "Bingo",
         "carta": "Carta",
-        "crash": "Crash"
+        "crash": "Crash",
+        "horse": "Horse Racing"
       }
+    },
+    "horse": {
+      "title": "Horse Racing",
+      "config": "Configuration",
+      "minBet": "Minimum bet",
+      "maxBet": "Maximum bet",
+      "save": "Save",
+      "saved": "Saved. It applies to the races created from now on.",
+      "invalid": "RTP between 80 and 99%, minimum ≥ 1, maximum ≤ 1,000,000 and minimum ≤ maximum.",
+      "configNote": "Changes apply to new races (an open race keeps its odds and limits) and are recorded in the audit log.",
+      "configReadOnly": "Only an admin or the owner can change the configuration.",
+      "lastChange": "Last change: {who}, {when}.",
+      "stats": "Statistics",
+      "period": "Period",
+      "days": "{n} d",
+      "races": "Races",
+      "bets": "Bets",
+      "players": "Players",
+      "staked": "Staked",
+      "paid": "Paid",
+      "net": "House",
+      "rtpRealized": "Actual RTP",
+      "rtpTarget": "Target {rtp}",
+      "horse": "Horse",
+      "wins": "Wins",
+      "runs": "Runs",
+      "raceList": "Recent races",
+      "race": "Race",
+      "when": "Time",
+      "winner": "Winner",
+      "pending": "Running",
+      "latestBets": "Latest bets",
+      "player": "Player",
+      "amount": "Bet",
+      "odds": "Odds",
+      "result": "Result",
+      "back": "Back",
+      "raceN": "Race #{n}",
+      "limits": "limits {min}–{max}",
+      "seed": "Seed",
+      "place": "Place"
     }
   },
   "bank": {
@@ -1896,6 +1944,10 @@
       "crash": {
         "name": "Crash",
         "desc": "Cash out before it explodes."
+      },
+      "horse": {
+        "name": "Horse Racing",
+        "desc": "Luxury racecourse: bet on the winner."
       }
     },
     "nav": {
@@ -1920,7 +1972,8 @@
       "blackjack": "Blackjack",
       "roulette": "Roulette",
       "poker": "Poker",
-      "crash": "Crash"
+      "crash": "Crash",
+      "horse": "Horse Racing"
     }
   },
   "apk": {
@@ -1999,6 +2052,93 @@
       "crash": "At any moment the rocket explodes. If you haven't cashed out, you lose that round's bet.",
       "fair": "The crash point is fixed before the round and its SHA-256 fingerprint is published; afterwards the seed is revealed so you can check it. On average 97% of what is bet is paid back.",
       "coins": "Crash uses only your account's virtual coins, with no real value: no money, no purchases, no withdrawals."
+    }
+  },
+  "horse": {
+    "title": "Carta Horse Racing",
+    "subtitle": "Pick your horse, place your bet and watch the race",
+    "race": "Race #{n}",
+    "loading": "Connecting…",
+    "players": "{n} players",
+    "history": "Latest winners",
+    "phase": {
+      "betting": "Next race",
+      "countdown": "Start",
+      "racing": "Racing",
+      "result": "Result"
+    },
+    "nextRaceTitle": "Next race · pick your horse",
+    "start": "START",
+    "finish": "FINISH",
+    "go": "GO!",
+    "horses": "Horses",
+    "place": "{n}.",
+    "odds": "Odds",
+    "pays": "Pays",
+    "amount": "Bet amount",
+    "less": "Less",
+    "more": "More",
+    "pickHint": "Pick a horse from the list",
+    "pickLater": "You can bet on the next race",
+    "pickFirst": "Pick a horse",
+    "confirm": "Confirm bet · #{n} · 🪙 {coins}",
+    "placing": "Confirming…",
+    "betPlaced": "Bet: #{n} · 🪙 {coins} · pays 🪙 {pays}",
+    "racingYours": "Racing · your horse is #{n}",
+    "youWon": "You won! +🪙 {coins}",
+    "youLost": "#{n} won · good luck next race",
+    "waitNext": "Race running · bet on the next one",
+    "nextRace": "The next race opens in a few seconds",
+    "winner": "WINNER",
+    "horseN": "Horse #{n}",
+    "resultWon": "You bet 🪙 {coins} at {odds}: you won 🪙 {win}",
+    "resultLost": "You bet 🪙 {coins} on #{n}: not this time",
+    "positions": "Positions",
+    "signIn": "Create an account or sign in to bet",
+    "guest": "You're watching the race live. Betting needs an account: Horse Racing plays with your account coins.",
+    "bets": "Bets",
+    "myBets": "My bets",
+    "noBets": "No bets in this race yet.",
+    "noMyBets": "You haven't bet on Horse Racing yet.",
+    "col": {
+      "player": "Player",
+      "race": "Race",
+      "horse": "Horse",
+      "bet": "Bet",
+      "result": "Result"
+    },
+    "fairDetail": "This seed gives this podium: {order}",
+    "offline": "Can't reach the server. Retrying…",
+    "disabled": "Horse Racing is temporarily out of service. Your coins are safe.",
+    "errors": {
+      "race_closed": "Bets for this race are closed. Bet on the next one.",
+      "disabled": "Horse Racing is temporarily out of service.",
+      "insufficient_funds": "You don't have enough coins for that bet.",
+      "conflict": "You already have a bet in this race.",
+      "not_registered": "You need a confirmed account and to accept the terms to bet.",
+      "banned": "Your account is suspended.",
+      "invalid": "Invalid bet (check the horse and the limits).",
+      "network": "No connection. Try again.",
+      "server": "The server didn't answer. Try again."
+    },
+    "helpTitle": "How to play Horse Racing",
+    "help": {
+      "how": "Each race has 6 to 8 horses. While the race is open, pick a horse, an amount and confirm your bet.",
+      "odds": "Every horse has fixed odds shown before you bet: favourites pay less, outsiders pay more.",
+      "race": "When the countdown ends the stalls open and the race lasts 32 to 40 seconds. Every player watches the same race.",
+      "pay": "If your horse wins, you get bet × odds automatically when the race ends. Only the winner counts.",
+      "fair": "The server decides the race before any bet and publishes its SHA-256 fingerprint; afterwards it reveals the seed so you can check the odds, the winner and the podium.",
+      "coins": "Horse Racing uses only your account's virtual coins, with no real value: no money, no purchases, no withdrawals."
+    },
+    "names": {
+      "1": "Black Thunder",
+      "2": "Royal Emerald",
+      "3": "Sapphire",
+      "4": "Golden Fortune",
+      "5": "Ivory",
+      "6": "King of Coins",
+      "7": "Ember",
+      "8": "Queen of Hearts"
     }
   }
 }

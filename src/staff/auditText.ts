@@ -16,6 +16,10 @@ export function auditLine(a: AuditRow, t: (k: string, v?: Record<string, string 
       return t('staff.audit.username', { from: String(m.from ?? ''), to: String(m.to ?? '') });
     case 'GAME_AVAILABILITY':
       return t(m.to ? 'staff.audit.gameOn' : 'staff.audit.gameOff', { game: t(`availability.games.${String(m.game ?? '')}`) });
+    case 'HORSE_CONFIG': {
+      const to = (m.to ?? {}) as Record<string, number>;
+      return t('staff.audit.horseConfig', { rtp: (Number(to.rtp ?? 0) / 100).toFixed(2), min: fmtNum(Number(to.minBet ?? 0), lang), max: fmtNum(Number(to.maxBet ?? 0), lang) });
+    }
     case 'ROLE_CHANGE':
       return t('staff.audit.role', { from: String(m.from ?? '—'), to: String(m.to ?? m.role ?? '') });
     default:

@@ -11,10 +11,10 @@ import type { ControlledGame } from '@/games/online/protocol';
 import type { Screen, ScreenParams } from '@/types/navigation';
 
 export type { ControlledGame };
-export const CONTROLLED_GAMES: ControlledGame[] = ['slots', 'domino', 'carta', 'bingo', 'blackjack', 'roulette', 'poker', 'crash'];
+export const CONTROLLED_GAMES: ControlledGame[] = ['slots', 'domino', 'carta', 'bingo', 'blackjack', 'roulette', 'poker', 'crash', 'horse'];
 
 export type Availability = Record<ControlledGame, boolean>;
-const ALL_ON: Availability = { slots: true, domino: true, carta: true, bingo: true, blackjack: true, roulette: true, poker: true, crash: true };
+const ALL_ON: Availability = { slots: true, domino: true, carta: true, bingo: true, blackjack: true, roulette: true, poker: true, crash: true, horse: true };
 
 let current: Availability = ALL_ON;
 let loaded = false;
@@ -166,6 +166,8 @@ export function screenGame(screen: Screen, params: Pick<ScreenParams, 'game' | '
       return 'slots';
     case 'crash':
       return 'crash';
+    case 'horse':
+      return 'horse';
     case 'dominoSetup':
       return 'domino';
     case 'bingoSetup':
