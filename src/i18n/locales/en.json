@@ -1565,6 +1565,23 @@
       "reasonPlaceholder": "Reason (required, kept in the log)",
       "noteOwner": "A game out of service accepts no new matches (running ones finish). The server enforces it and it is logged.",
       "noteStaff": "Only the owner can change the state of the games."
+    },
+    "byGame": {
+      "title": "By game (24 h)",
+      "game": "Game",
+      "rounds": "Rounds",
+      "staked": "Staked",
+      "paid": "Paid",
+      "net": "House",
+      "games": {
+        "premium": "Premium slots",
+        "slots": "Classic slots",
+        "roulette": "Roulette",
+        "blackjack": "Blackjack",
+        "domino": "Dominoes",
+        "bingo": "Bingo",
+        "carta": "Carta"
+      }
     }
   },
   "bank": {

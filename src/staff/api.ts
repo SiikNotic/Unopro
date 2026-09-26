@@ -22,6 +22,8 @@ export interface Overview {
   loans24h?: number;
   adRewards24h?: number;
   bankPaid24h?: number;
+  /** Per coin game, last 24 h: bets, coins staked (refunds subtracted) and paid. */
+  byGame24h?: Record<string, { rounds: number; staked: number; paid: number }>;
   at: string;
 }
 

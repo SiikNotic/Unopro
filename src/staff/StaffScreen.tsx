@@ -332,6 +332,35 @@ function EconomyTab({ overview, version, onOpen }: { overview: Overview | null; 
         <Kpi label={t('staff.kpi.adRewards24h')} value={n(overview?.adRewards24h)} />
         <Kpi label={t('staff.kpi.bankPaid24h')} value={n(overview?.bankPaid24h)} />
       </div>
+      {overview?.byGame24h && Object.keys(overview.byGame24h).length > 0 && (
+        <section className="sd-card overflow-x-auto">
+          <h3 className="cz-label px-3 pt-3">{t('staff.byGame.title')}</h3>
+          <table className="sd-table">
+            <thead>
+              <tr>
+                <th>{t('staff.byGame.game')}</th>
+                <th className="text-right">{t('staff.byGame.rounds')}</th>
+                <th className="text-right">{t('staff.byGame.staked')}</th>
+                <th className="text-right">{t('staff.byGame.paid')}</th>
+                <th className="text-right">{t('staff.byGame.net')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Object.entries(overview.byGame24h)
+                .sort((a, b) => Number(b[1].staked) - Number(a[1].staked))
+                .map(([game, g]) => (
+                  <tr key={game}>
+                    <td>{t(`staff.byGame.games.${game}`)}</td>
+                    <td className="text-right tabular-nums">{fmtNum(Number(g.rounds), language)}</td>
+                    <td className="text-right tabular-nums">{fmtNum(Number(g.staked), language)}</td>
+                    <td className="text-right tabular-nums">{fmtNum(Number(g.paid), language)}</td>
+                    <td className="text-right tabular-nums">{signed(Number(g.staked) - Number(g.paid), language)}</td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
+        </section>
+      )}
       <section className="sd-card">
         <h3 className="cz-label px-3 pt-3">{t('staff.bank.title')}</h3>
         <p className="px-3 text-[11px] text-[var(--cz-muted)]">{t('staff.bank.hint')}</p>

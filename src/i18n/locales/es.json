@@ -1565,6 +1565,23 @@
       "reasonPlaceholder": "Motivo (obligatorio, queda en el registro)",
       "noteOwner": "Un juego fuera de servicio no admite partidas nuevas (las que están en curso terminan). El servidor lo aplica y queda en el registro.",
       "noteStaff": "Solo el propietario puede cambiar el estado de los juegos."
+    },
+    "byGame": {
+      "title": "Por juego (24 h)",
+      "game": "Juego",
+      "rounds": "Rondas",
+      "staked": "Apostado",
+      "paid": "Pagado",
+      "net": "Casa",
+      "games": {
+        "premium": "Tragamonedas premium",
+        "slots": "Tragamonedas clásica",
+        "roulette": "Ruleta",
+        "blackjack": "Blackjack",
+        "domino": "Dominó",
+        "bingo": "Bingo",
+        "carta": "Carta"
+      }
     }
   },
   "bank": {

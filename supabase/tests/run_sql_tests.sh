@@ -34,6 +34,9 @@ psql -q -v ON_ERROR_STOP=1 -d "$DB" -f game_control_test.sql
 psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20261004000000_orphan_stakes.sql
 psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20261004000000_orphan_stakes.sql
 psql -q -v ON_ERROR_STOP=1 -d "$DB" -f orphan_stakes_test.sql
+psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20261005000000_staff_overview_games.sql
+psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20261005000000_staff_overview_games.sql
+psql -q -v ON_ERROR_STOP=1 -d "$DB" -f staff_overview_test.sql
 
 # Two players ask for the same username at the same instant: exactly one gets it.
 for u in 21 22 23 24 25 26; do
