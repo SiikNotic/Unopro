@@ -2583,7 +2583,7 @@ async function progress(room, now, deps, balances) {
 }
 var walletError = (code, detail) => code === "insufficient_funds" || code === "not_registered" || code === "banned" || code === "disabled" ? fail2(code, detail) : code === "conflict" || code === "invalid" ? fail2("rule", code) : fail2("busy");
 async function outOfService(game, deps) {
-  if (!isStakeGame(game) || !deps.availability) return null;
+  if (!isStakeGame(game) && !isCoinGame(game) || !deps.availability) return null;
   return await deps.availability(game) ? null : fail2("disabled");
 }
 async function giveBack(debits, deps, code, balances) {
@@ -2784,8 +2784,8 @@ async function handleRoomRequest(userId, body, deps) {
       case "join": {
         if (me) return { ok: true, view: viewFor(room, me, t) };
         const coin = isCoinGame(room.game);
-        if (!coin) {
-          if (room.status !== "lobby") return fail2("started");
+        if (!coin && room.status !== "lobby") return fail2("started");
+        {
           const off = await outOfService(room.game, deps);
           if (off) return off;
         }

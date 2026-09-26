@@ -1906,7 +1906,10 @@
       "slots": "Tragamonedas",
       "domino": "Dominó",
       "carta": "Carta",
-      "bingo": "Bingo"
+      "bingo": "Bingo",
+      "blackjack": "Blackjack",
+      "roulette": "Ruleta",
+      "poker": "Póker"
     }
   }
 }

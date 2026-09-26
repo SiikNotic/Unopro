@@ -236,11 +236,11 @@ describe('casino server: blackjack', () => {
   });
 });
 
-describe('casino server: slots out of service', () => {
+describe('casino server: games out of service', () => {
   it('refuses new slot rounds (premium and classic) but still returns rounds already booked; roulette unaffected', async () => {
     const s = setup();
     let on = true;
-    s.deps.slotsEnabled = async () => on;
+    s.deps.gameEnabled = async (g) => g !== 'slots' || on;
     await s.post(ANA, { op: 'claim', requestId: rid() });
     const machine = Object.keys(MACHINES)[0] as keyof typeof MACHINES;
     const bet = MACHINES[machine].betLevels[0];
@@ -255,5 +255,25 @@ describe('casino server: slots out of service', () => {
     expect((await s.post(ANA, { op: 'roulette', requestId: rid(), bets: [{ type: 'red', amount: 5 }] })).status).toBe(200);
     on = true;
     expect((await s.post(ANA, { requestId: rid(), machine, bet })).status).toBe(200);
+  });
+
+  it('refuses a new roulette spin and a new blackjack hand, but a hand already dealt finishes', async () => {
+    const s = setup(3);
+    const off = new Set<string>();
+    s.deps.gameEnabled = async (g) => !off.has(g);
+    await s.post(ANA, { op: 'claim', requestId: rid() });
+    // find a deal that doesn't settle at once (no natural)
+    let hand: BlackjackView | null = null;
+    for (let i = 0; i < 30 && !hand; i++) {
+      const r = (await s.post(ANA, { op: 'bj_deal', requestId: rid(), bet: 10 })).body as BlackjackView;
+      if (r.phase === 'PLAYER') hand = r;
+    }
+    expect(hand).not.toBeNull();
+    off.add('blackjack');
+    off.add('roulette');
+    expect((await s.post(ANA, { op: 'roulette', requestId: rid(), bets: [{ type: 'red', amount: 5 }] })).status).toBe(423);
+    const done = await s.post(ANA, { op: 'bj_act', requestId: hand!.requestId, action: 'stand' });
+    expect(done.status).toBe(200);
+    expect((await s.post(ANA, { op: 'bj_deal', requestId: rid(), bet: 10 })).status).toBe(423);
   });
 });

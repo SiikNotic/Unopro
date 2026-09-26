@@ -70,8 +70,8 @@ export interface CasinoDeps {
   rng?: () => Rng;
   seed?: () => number;
   allow?: (userId: string) => boolean;
-  /** Owner's game control: are slots in service (game_enabled('slots'))? Absent = always. */
-  slotsEnabled?: () => Promise<boolean>;
+  /** Owner's game control (game_enabled): is this game in service? Absent = always. */
+  gameEnabled?: (game: 'slots' | 'roulette' | 'blackjack') => Promise<boolean>;
 }
 
 export interface HttpIn {
@@ -187,7 +187,7 @@ export async function handleCasinoRequest(req: HttpIn, deps: CasinoDeps): Promis
       const existing = await store.find(user.id, id);
       if (existing) return existing.game === 'premium' && existing.detail.machine === machine && existing.stake === bet ? ok(premiumReceipt(existing)) : fail('conflict');
       // Out of service: no new round (a round already booked is still returned above). account_play refuses it too.
-      if (deps.slotsEnabled && !(await deps.slotsEnabled())) return fail('game_disabled');
+      if (deps.gameEnabled && !(await deps.gameEnabled('slots'))) return fail('game_disabled');
       const round = playRound(MACHINES[machine], bet, deps.random ?? cryptoUint32);
       const booked = await store.play({ userId: user.id, requestId: id, game: 'premium', stake: bet, payout: round.payout, detail: { machine, draws: round.draws } });
       if (booked.detail.machine !== machine) return fail('conflict');
@@ -214,6 +214,7 @@ export async function handleCasinoRequest(req: HttpIn, deps: CasinoDeps): Promis
           if (existing.game !== 'roulette' || existing.stake !== stake) return fail('conflict');
           return ok({ requestId, pocket: existing.detail.pocket as number, stake, payout: existing.payout, balance: existing.balance } satisfies RouletteResult);
         }
+        if (deps.gameEnabled && !(await deps.gameEnabled('roulette'))) return fail('game_disabled');
         const pocket = spinWheel(rng());
         const booked = await store.play({ userId: user.id, requestId, game: 'roulette', stake, payout: roulettePayout(bets, pocket), detail: { pocket, bets } });
         return ok({ requestId, pocket: booked.detail.pocket as number, stake, payout: booked.payout, balance: booked.balance } satisfies RouletteResult);
@@ -228,7 +229,7 @@ export async function handleCasinoRequest(req: HttpIn, deps: CasinoDeps): Promis
         const existing = await store.find(user.id, requestId);
         const answer = (bk: Booking): SlotsResult => ({ requestId, stops: bk.detail.stops as number[], lines: l, betPerLine: bpl, payout: bk.payout, balance: bk.balance });
         if (existing) return existing.game === 'slots' && existing.stake === stake && existing.detail.lines === l ? ok(answer(existing)) : fail('conflict');
-        if (deps.slotsEnabled && !(await deps.slotsEnabled())) return fail('game_disabled');
+        if (deps.gameEnabled && !(await deps.gameEnabled('slots'))) return fail('game_disabled');
         const stops = spinReels(rng());
         const outcome = evaluateSpin(stops, l, bpl);
         return ok(answer(await store.play({ userId: user.id, requestId, game: 'slots', stake, payout: outcome.total, detail: { stops, lines: l, betPerLine: bpl } })));
@@ -249,6 +250,8 @@ export async function handleCasinoRequest(req: HttpIn, deps: CasinoDeps): Promis
           if (current.requestId !== requestId) return fail('conflict');
           return ok(bjView(current, (await store.account(user.id)).balance));
         }
+        // A new hand only while blackjack is in service (a hand already dealt finishes: bj_act).
+        if (deps.gameEnabled && !(await deps.gameEnabled('blackjack'))) return fail('game_disabled');
         const state = bj.deal(bj.createBlackjack(seed()), bet);
         let balance = await store.bjOpen(user.id, requestId, bet, state);
         if (state.phase === 'SETTLED') {

@@ -55,7 +55,7 @@ const wallet: TableWallet = {
 };
 
 /** Owner's game control (game_availability). If the database can't be read, a new match is refused. */
-async function availability(game: 'domino' | 'bingo' | 'carta'): Promise<boolean> {
+async function availability(game: 'domino' | 'bingo' | 'carta' | 'blackjack' | 'roulette'): Promise<boolean> {
   const res = await rpc<boolean>('game_enabled', { p_game: game });
   return res.ok && res.data === true;
 }

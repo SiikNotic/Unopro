@@ -3,7 +3,7 @@ import { fetchAvailability, parseAvailability, screenGame } from '../availabilit
 
 describe('game availability (what the app shows; the servers enforce it)', () => {
   it('parses the public table, ignoring unknown games and bad rows', () => {
-    expect(parseAvailability([{ game: 'slots', enabled: false }, { game: 'domino', enabled: true }, { game: 'poker', enabled: false }, { game: 'bingo', enabled: 'no' }, null])).toEqual({ slots: false, domino: true, carta: true, bingo: true });
+    expect(parseAvailability([{ game: 'slots', enabled: false }, { game: 'domino', enabled: true }, { game: 'lotto', enabled: false }, { game: 'bingo', enabled: 'no' }, null])).toEqual({ slots: false, domino: true, carta: true, bingo: true, blackjack: true, roulette: true, poker: true });
     expect(parseAvailability({})).toBeNull();
   });
 
@@ -26,7 +26,10 @@ describe('game availability (what the app shows; the servers enforce it)', () =>
     expect(screenGame('domino', { room: 'AB7K2' })).toBeNull();
     expect(screenGame('room', { game: 'bingo' })).toBe('bingo');
     expect(screenGame('room', { game: 'bingo', room: 'AB7K2' })).toBeNull();
-    expect(screenGame('room', { game: 'blackjack' })).toBeNull();
+    expect(screenGame('room', { game: 'blackjack' })).toBe('blackjack');
+    expect(screenGame('blackjackTable', { room: 'AB7K2' })).toBeNull();
+    expect(screenGame('poker', {})).toBe('poker');
+    expect(screenGame('rouletteSetup', {})).toBe('roulette');
     expect(screenGame('play', {})).toBe('carta');
     expect(screenGame('home', {})).toBeNull();
   });

@@ -260,8 +260,12 @@ describe('games out of service', () => {
     expect(await s.call('ana', { op: 'rematch', code: b.code })).toMatchObject({ ok: false, code: 'disabled' });
     s.advance(10_000);
     expect(await s.call('ana', { op: 'tick', code: b.code })).toMatchObject({ ok: true });
-    // coin tables aren't part of this switch
-    expect(await s.call('ana', { op: 'quick', game: 'roulette', name: 'Ana' })).toMatchObject({ ok: true });
+    // coin tables have their own switch
+    const table = await s.ok('ana', { op: 'quick', game: 'roulette', name: 'Ana' });
+    enabled.roulette = false;
+    expect(await s.call('beto', { op: 'quick', game: 'roulette', name: 'Beto' })).toMatchObject({ ok: false, code: 'disabled' });
+    expect(await s.call('beto', { op: 'join', code: table.code, name: 'Beto' })).toMatchObject({ ok: false, code: 'disabled' });
+    expect(await s.call('ana', { op: 'tick', code: table.code })).toMatchObject({ ok: true });
     enabled.domino = true;
     expect(await s.call('ana', { op: 'start', code: a.code })).toMatchObject({ ok: true });
   });

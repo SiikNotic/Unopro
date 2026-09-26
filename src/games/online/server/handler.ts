@@ -119,7 +119,7 @@ export interface RoomDeps {
   /** Required for the coin tables and staked rooms. */
   wallet?: TableWallet;
   /** Is this game in service (game_enabled)? Checked before any new match. Absent = always. */
-  availability?: (game: 'domino' | 'bingo' | 'carta') => Promise<boolean>;
+  availability?: (game: 'domino' | 'bingo' | 'carta' | 'blackjack' | 'roulette') => Promise<boolean>;
   /** Deterministic wallet request id for a key (SHA-256 → uuid in production). */
   requestId?: (key: string) => Promise<string>;
 }
@@ -506,7 +506,7 @@ const walletError = (code: WalletFailure, detail?: string): RoomResponse =>
 
 /** Refused when the owner has taken the game out of service (only new matches; running ones finish). */
 async function outOfService(game: RoomGame, deps: RoomDeps): Promise<RoomResponse | null> {
-  if (!isStakeGame(game) || !deps.availability) return null;
+  if ((!isStakeGame(game) && !isCoinGame(game)) || !deps.availability) return null;
   return (await deps.availability(game)) ? null : fail('disabled');
 }
 
@@ -754,8 +754,8 @@ export async function handleRoomRequest(userId: string | null, body: unknown, de
       case 'join': {
         if (me) return { ok: true, view: viewFor(room, me, t) };
         const coin = isCoinGame(room.game);
-        if (!coin) {
-          if (room.status !== 'lobby') return fail('started');
+        if (!coin && room.status !== 'lobby') return fail('started');
+        {
           const off = await outOfService(room.game, deps);
           if (off) return off;
         }

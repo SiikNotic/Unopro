@@ -1024,7 +1024,7 @@ async function handleCasinoRequest(req, deps) {
       const id = requestId2.toLowerCase();
       const existing = await store2.find(user.id, id);
       if (existing) return existing.game === "premium" && existing.detail.machine === machine && existing.stake === bet ? ok(premiumReceipt(existing)) : fail("conflict");
-      if (deps.slotsEnabled && !await deps.slotsEnabled()) return fail("game_disabled");
+      if (deps.gameEnabled && !await deps.gameEnabled("slots")) return fail("game_disabled");
       const round = playRound(MACHINES[machine], bet, deps.random ?? cryptoUint32);
       const booked = await store2.play({ userId: user.id, requestId: id, game: "premium", stake: bet, payout: round.payout, detail: { machine, draws: round.draws } });
       if (booked.detail.machine !== machine) return fail("conflict");
@@ -1047,6 +1047,7 @@ async function handleCasinoRequest(req, deps) {
           if (existing.game !== "roulette" || existing.stake !== stake) return fail("conflict");
           return ok({ requestId, pocket: existing.detail.pocket, stake, payout: existing.payout, balance: existing.balance });
         }
+        if (deps.gameEnabled && !await deps.gameEnabled("roulette")) return fail("game_disabled");
         const pocket = spin(rng());
         const booked = await store2.play({ userId: user.id, requestId, game: "roulette", stake, payout: totalPayout(bets, pocket), detail: { pocket, bets } });
         return ok({ requestId, pocket: booked.detail.pocket, stake, payout: booked.payout, balance: booked.balance });
@@ -1060,7 +1061,7 @@ async function handleCasinoRequest(req, deps) {
         const existing = await store2.find(user.id, requestId);
         const answer = (bk) => ({ requestId, stops: bk.detail.stops, lines: l, betPerLine: bpl, payout: bk.payout, balance: bk.balance });
         if (existing) return existing.game === "slots" && existing.stake === stake && existing.detail.lines === l ? ok(answer(existing)) : fail("conflict");
-        if (deps.slotsEnabled && !await deps.slotsEnabled()) return fail("game_disabled");
+        if (deps.gameEnabled && !await deps.gameEnabled("slots")) return fail("game_disabled");
         const stops = spinReels(rng());
         const outcome = evaluateSpin2(stops, l, bpl);
         return ok(answer(await store2.play({ userId: user.id, requestId, game: "slots", stake, payout: outcome.total, detail: { stops, lines: l, betPerLine: bpl } })));
@@ -1078,6 +1079,7 @@ async function handleCasinoRequest(req, deps) {
           if (current.requestId !== requestId) return fail("conflict");
           return ok(bjView(current, (await store2.account(user.id)).balance));
         }
+        if (deps.gameEnabled && !await deps.gameEnabled("blackjack")) return fail("game_disabled");
         const state = deal(createBlackjack(seed()), bet);
         let balance = await store2.bjOpen(user.id, requestId, bet, state);
         if (state.phase === "SETTLED") {
@@ -1180,12 +1182,12 @@ var ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
 var SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 var ALLOWED = /* @__PURE__ */ new Set(["https://siiknotic.github.io", "http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:4173"]);
 var store = postgrestCasinoStore(SUPABASE_URL, SERVICE_KEY);
-async function slotsEnabled() {
+async function gameEnabled(game) {
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/game_enabled`, {
       method: "POST",
       headers: { "content-type": "application/json", apikey: SERVICE_KEY, authorization: `Bearer ${SERVICE_KEY}` },
-      body: JSON.stringify({ p_game: "slots" })
+      body: JSON.stringify({ p_game: game })
     });
     return res.ok && await res.json() === true;
   } catch {
@@ -1230,7 +1232,7 @@ Deno.serve(async (req) => {
     }
   }
   try {
-    const out = await handleCasinoRequest({ method: req.method, url: req.url, user: await verifiedUser(req), body }, { store, allow, slotsEnabled });
+    const out = await handleCasinoRequest({ method: req.method, url: req.url, user: await verifiedUser(req), body }, { store, allow, gameEnabled });
     return Response.json(out.body, { status: out.status, headers: { ...cors, "cache-control": "no-store" } });
   } catch (e) {
     console.error("casino", e instanceof Error ? e.message : e);

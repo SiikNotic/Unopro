@@ -8,13 +8,13 @@ import { useEffect, useSyncExternalStore } from 'react';
 import { onlineConfig } from '@/games/online/client';
 import type { OnlineConfig } from '@/games/online/client';
 import type { ControlledGame } from '@/games/online/protocol';
-import type { Screen } from '@/types/navigation';
+import type { Screen, ScreenParams } from '@/types/navigation';
 
 export type { ControlledGame };
-export const CONTROLLED_GAMES: ControlledGame[] = ['slots', 'domino', 'carta', 'bingo'];
+export const CONTROLLED_GAMES: ControlledGame[] = ['slots', 'domino', 'carta', 'bingo', 'blackjack', 'roulette', 'poker'];
 
 export type Availability = Record<ControlledGame, boolean>;
-const ALL_ON: Availability = { slots: true, domino: true, carta: true, bingo: true };
+const ALL_ON: Availability = { slots: true, domino: true, carta: true, bingo: true, blackjack: true, roulette: true, poker: true };
 
 let current: Availability = ALL_ON;
 let loaded = false;
@@ -109,7 +109,7 @@ export const availabilityLoaded = () => loaded;
  * The controlled game a screen starts, or null. Screens that show a match already running (an online room
  * with a code) are left alone: turning a game off stops new matches, not the ones being played.
  */
-export function screenGame(screen: Screen, params: { game?: string; room?: string }): ControlledGame | null {
+export function screenGame(screen: Screen, params: Pick<ScreenParams, 'game' | 'room'>): ControlledGame | null {
   switch (screen) {
     case 'slotLobby':
     case 'slotMachine':
@@ -125,8 +125,17 @@ export function screenGame(screen: Screen, params: { game?: string; room?: strin
     case 'domino':
     case 'bingo':
       return params.room ? null : screen;
+    case 'blackjackSetup':
+    case 'blackjack':
+      return 'blackjack';
+    case 'rouletteSetup':
+    case 'roulette':
+      return 'roulette';
+    case 'pokerSetup':
+    case 'poker':
+      return 'poker';
     case 'room':
-      return !params.room && (params.game === 'domino' || params.game === 'bingo' || params.game === 'carta') ? params.game : null;
+      return !params.room && params.game ? params.game : null;
     default:
       return null;
   }
