@@ -98,7 +98,7 @@ latest bets.
 
 **Track:** one canvas draws everything.
 
-- A grandstand band (procedural, or the painted tile when it exists), the turf with mowing stripes, rails,
+- A grandstand band, the turf and the finish post (painted when the art exists, drawn otherwise), rails,
   distance poles, the starting stalls that swing open, the chequered finish line and post, and "START / FINISH"
   banners.
 - The horses and jockeys are drawn by code: a four-beat gallop, nodding head, waving mane and tail, silks and
@@ -127,7 +127,9 @@ cheer, and win or lose. All are synthesized on the shared effects bus, with the 
 | File | Used for |
 |---|---|
 | `bg-portrait.webp`, `bg-landscape.webp` | screen backgrounds |
-| `horse-01.webp` … `horse-08.webp` | portraits in the horse list and the winner card; a silk medallion until then |
+| `horse-01.webp` … `horse-08.webp` | head portraits in the horse list, the dock and the podium; a silk medallion if one is missing |
 | `grandstand.webp` | the stand band on the track |
+| `turf.webp` | the track turf (mirrored so it repeats without seams) |
+| `finish-post.webp` | the finish post |
 | `trophy.webp` | the winner card |
 | `src/screens/home/art/card-horse-racing.webp` | the lobby card |

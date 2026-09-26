@@ -254,7 +254,7 @@ export function HorseScreen() {
           </div>
           <div className="hr-stage">
             {race && phase ? (
-              <HorseTrack race={race} phase={phase} serverNow={serverNow} mine={mine?.horse ?? null} reduced={reduced} labels={labels} onRanks={setRanks} grandstand={HORSE_ART.grandstand} />
+              <HorseTrack race={race} phase={phase} serverNow={serverNow} mine={mine?.horse ?? null} reduced={reduced} labels={labels} onRanks={setRanks} grandstand={HORSE_ART.grandstand} turf={HORSE_ART.turf} finishPost={HORSE_ART.finishPost} />
             ) : (
               <div className="hr-track is-loading">
                 <span className="hr-state">{game.offline && !game.loading ? t('horse.offline') : t('horse.loading')}</span>

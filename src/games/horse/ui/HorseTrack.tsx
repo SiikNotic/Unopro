@@ -22,6 +22,9 @@ interface Props {
   onRanks?: (ranks: number[]) => void;
   /** Painted grandstand tile, when the asset exists. */
   grandstand?: string;
+  /** Painted turf texture and finish post, when the assets exist. */
+  turf?: string;
+  finishPost?: string;
 }
 
 interface Dust {
@@ -111,7 +114,7 @@ function grandstandTile(h: number, dpr: number): HTMLCanvasElement {
   return c;
 }
 
-export const HorseTrack = memo(function HorseTrack({ race, phase, serverNow, mine, reduced, labels, onRanks, grandstand }: Props) {
+export const HorseTrack = memo(function HorseTrack({ race, phase, serverNow, mine, reduced, labels, onRanks, grandstand, turf: turfSrc, finishPost }: Props) {
   const box = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
@@ -120,6 +123,8 @@ export const HorseTrack = memo(function HorseTrack({ race, phase, serverNow, min
   const dust = useRef<Dust[]>([]);
   const tile = useRef<{ key: string; img: CanvasImageSource; w: number } | null>(null);
   const standImg = useRef<HTMLImageElement | null>(null);
+  const turfImg = useLoadedImage(turfSrc);
+  const postImg = useLoadedImage(finishPost);
   const lite = useRef(isLiteDevice());
   const crossed = useRef<{ race: number; start: boolean; finish: boolean }>({ race: 0, start: false, finish: false });
   const onRanksRef = useRef(onRanks);
@@ -199,6 +204,10 @@ export const HorseTrack = memo(function HorseTrack({ race, phase, serverNow, min
         tile.current = { key: tileKey, img: grandstandTile(standH, dpr), w: 960 };
       }
     }
+    // the turf tile repeats about every two lanes' height (at least 160 px)
+    const turfTile = turfImg ? mirroredTile(turfImg) : null;
+    const turfScale = turfTile ? Math.max(320, laneH * 4.4) / turfTile.width : 1;
+    const turfPattern = turfTile ? g.createPattern(turfTile, 'repeat') : null;
     let raf = 0;
     let last = performance.now();
     let lastRanks = '';
@@ -238,18 +247,27 @@ export const HorseTrack = memo(function HorseTrack({ race, phase, serverNow, min
       const off = -((camX * 0.35) % tl.w);
       for (let x = off - tl.w; x < w + tl.w; x += tl.w) g.drawImage(tl.img, x, 0, tl.w, standH);
 
-      // turf
-      const turf = g.createLinearGradient(0, standH, 0, h);
-      turf.addColorStop(0, '#1a5f37');
-      turf.addColorStop(1, '#0f4526');
-      g.fillStyle = turf;
-      g.fillRect(0, standH, w, h - standH);
-      const band = 150;
-      const first = Math.floor((camX - w) / band);
-      for (let k = first; k < first + Math.ceil(w / band) + 3; k++) {
-        if (k % 2) continue;
-        g.fillStyle = 'rgba(255,255,255,0.045)';
-        g.fillRect(sx(k * band), trackTop, band, trackBottom - trackTop);
+      // turf: the painted texture (scrolling with the camera) or a gradient with mowing stripes
+      if (turfPattern) {
+        const size = turfTile!.width * turfScale;
+        turfPattern.setTransform(new DOMMatrix([turfScale, 0, 0, turfScale, -(camX % size), standH]));
+        g.fillStyle = turfPattern;
+        g.fillRect(0, standH, w, h - standH);
+        g.fillStyle = 'rgba(4,24,12,0.18)';
+        g.fillRect(0, standH, w, h - standH);
+      } else {
+        const turf = g.createLinearGradient(0, standH, 0, h);
+        turf.addColorStop(0, '#1a5f37');
+        turf.addColorStop(1, '#0f4526');
+        g.fillStyle = turf;
+        g.fillRect(0, standH, w, h - standH);
+        const band = 150;
+        const first = Math.floor((camX - w) / band);
+        for (let k = first; k < first + Math.ceil(w / band) + 3; k++) {
+          if (k % 2) continue;
+          g.fillStyle = 'rgba(255,255,255,0.045)';
+          g.fillRect(sx(k * band), trackTop, band, trackBottom - trackTop);
+        }
       }
       // lane lines
       g.strokeStyle = 'rgba(0,0,0,0.16)';
@@ -306,20 +324,26 @@ export const HorseTrack = memo(function HorseTrack({ race, phase, serverNow, min
         g.fillStyle = '#e8c46a';
         g.fillRect(fx - sq - 2, trackTop, 2, trackBottom - trackTop);
         const postH = Math.min(standH * 0.9, 90);
-        g.fillStyle = '#141212';
-        g.fillRect(fx - 3, trackTop - postH, 6, postH);
-        g.fillStyle = '#e8c46a';
-        for (let k = 1; k < 4; k++) g.fillRect(fx - 4, trackTop - (postH * k) / 4, 8, 2);
-        g.beginPath();
-        g.arc(fx, trackTop - postH - 10, 12, 0, Math.PI * 2);
-        g.fill();
-        g.fillStyle = '#141212';
-        g.beginPath();
-        g.arc(fx, trackTop - postH - 10, 9, 0, Math.PI * 2);
-        g.fill();
-        g.fillStyle = '#f5f2ea';
-        g.fillRect(fx - 9, trackTop - postH - 10, 9, 9);
-        g.fillRect(fx, trackTop - postH - 19, 9, 9);
+        if (postImg) {
+          const ph = Math.min(standH * 1.15, 150);
+          const pw = (ph * postImg.width) / postImg.height;
+          g.drawImage(postImg, fx - pw / 2, trackTop + 4 - ph, pw, ph);
+        } else {
+          g.fillStyle = '#141212';
+          g.fillRect(fx - 3, trackTop - postH, 6, postH);
+          g.fillStyle = '#e8c46a';
+          for (let k = 1; k < 4; k++) g.fillRect(fx - 4, trackTop - (postH * k) / 4, 8, 2);
+          g.beginPath();
+          g.arc(fx, trackTop - postH - 10, 12, 0, Math.PI * 2);
+          g.fill();
+          g.fillStyle = '#141212';
+          g.beginPath();
+          g.arc(fx, trackTop - postH - 10, 9, 0, Math.PI * 2);
+          g.fill();
+          g.fillStyle = '#f5f2ea';
+          g.fillRect(fx - 9, trackTop - postH - 10, 9, 9);
+          g.fillRect(fx, trackTop - postH - 19, 9, 9);
+        }
       }
 
       // SALIDA / META banners on the far rail
@@ -437,7 +461,7 @@ export const HorseTrack = memo(function HorseTrack({ race, phase, serverNow, min
       document.removeEventListener('visibilitychange', onHidden);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- restarts per phase/race/size; reads the latest refs
-  }, [size.w, size.h, phase, race.id, race.paths, race.order, reduced, mine, labels.start, labels.finish]);
+  }, [size.w, size.h, phase, race.id, race.paths, race.order, reduced, mine, labels.start, labels.finish, turfImg, postImg]);
 
   return (
     <div ref={box} className={`hr-track ${phase === 'racing' ? 'is-racing' : ''}`}>
@@ -450,3 +474,41 @@ export const HorseTrack = memo(function HorseTrack({ race, phase, serverNow, min
     </div>
   );
 });
+
+/** The texture beside and below its mirror images, so the pattern repeats without visible seams. */
+const mirrored = new WeakMap<HTMLImageElement, HTMLCanvasElement>();
+function mirroredTile(img: HTMLImageElement): HTMLCanvasElement {
+  const done = mirrored.get(img);
+  if (done) return done;
+  const w = img.width;
+  const h = img.height;
+  const c = document.createElement('canvas');
+  c.width = w * 2;
+  c.height = h * 2;
+  const g = c.getContext('2d')!;
+  for (const [fx, fy] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) {
+    g.setTransform(fx, 0, 0, fy, fx < 0 ? w * 2 : 0, fy < 0 ? h * 2 : 0);
+    g.drawImage(img, 0, 0);
+  }
+  mirrored.set(img, c);
+  return c;
+}
+
+/** An image element once it has loaded (null until then, or without a source). */
+function useLoadedImage(src?: string): HTMLImageElement | null {
+  const [img, setImg] = useState<HTMLImageElement | null>(null);
+  useEffect(() => {
+    setImg(null);
+    if (!src) return;
+    let live = true;
+    const el = new Image();
+    el.onload = () => {
+      if (live) setImg(el);
+    };
+    el.src = src;
+    return () => {
+      live = false;
+    };
+  }, [src]);
+  return img;
+}

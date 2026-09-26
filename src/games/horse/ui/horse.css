@@ -89,7 +89,7 @@
 /* Horse badge: painted portrait, or silk medallion with the number */
 .hr-badge { flex: none; position: relative; display: grid; place-items: center; border-radius: 50%; overflow: hidden; background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--silk) 70%, #fff) 0%, var(--silk) 45%, color-mix(in srgb, var(--silk) 60%, #000) 100%); box-shadow: 0 0 0 1.5px #e8c46a, 0 3px 8px rgba(0, 0, 0, 0.5); }
 .hr-badge b { font-weight: 900; color: #fff; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7); }
-.hr-badge img { width: 100%; height: 100%; object-fit: cover; object-position: 62% 18%; transform: scale(1.15); }
+.hr-badge img { width: 100%; height: 100%; object-fit: cover; object-position: 72% 34%; transform: scale(1.25); }
 
 /* Runners */
 .hr-runners { padding: 10px; display: flex; flex-direction: column; gap: 8px; border-color: rgba(216, 178, 106, 0.35); }
