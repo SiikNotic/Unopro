@@ -14,6 +14,20 @@ const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const ALLOWED = new Set(['https://siiknotic.github.io', 'http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:4173']);
 const store = postgrestCasinoStore(SUPABASE_URL, SERVICE_KEY);
 
+/** Owner's game control: slots in service? If the database can't be read, no new round. */
+async function slotsEnabled(): Promise<boolean> {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/game_enabled`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', apikey: SERVICE_KEY, authorization: `Bearer ${SERVICE_KEY}` },
+      body: JSON.stringify({ p_game: 'slots' }),
+    });
+    return res.ok && (await res.json()) === true;
+  } catch {
+    return false;
+  }
+}
+
 // Per-instance limit: at most 8 requests per second per player.
 const hits = new Map<string, number[]>();
 function allow(userId: string): boolean {
@@ -56,7 +70,7 @@ Deno.serve(async (req) => {
     }
   }
   try {
-    const out = await handleCasinoRequest({ method: req.method, url: req.url, user: await verifiedUser(req), body }, { store, allow });
+    const out = await handleCasinoRequest({ method: req.method, url: req.url, user: await verifiedUser(req), body }, { store, allow, slotsEnabled });
     return Response.json(out.body, { status: out.status, headers: { ...cors, 'cache-control': 'no-store' } });
   } catch (e) {
     console.error('casino', e instanceof Error ? e.message : e);

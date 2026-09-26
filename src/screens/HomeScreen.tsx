@@ -13,11 +13,15 @@ import { formatChips } from '@/casino/chipValues';
 import { useAccount } from '@/account/useAccount';
 import { usePlayerName } from '@/account/usePlayerName';
 import { onlineConfig } from '@/games/online/client';
+import { useGameAvailability } from '@/games/availability';
+import type { ControlledGame } from '@/games/availability';
 import { CASINO, CATEGORIES, EXTRA_IMAGES, HERO_ART, HOME_GAMES, POPULAR, PROMO_IMAGE, RECOMMENDED } from './home/homeGames';
 import type { HomeCategory, HomeGame, HomeGameId } from './home/homeGames';
 import './home/home.css';
 
 const CATEGORY_ICON: Record<HomeCategory, LucideIcon> = { all: LayoutGrid, cards: Spade, table: CircleDot, slots: Cherry, puzzle: Gem };
+/** Home games the owner can take out of service. */
+const CONTROLLED: Partial<Record<HomeGameId, ControlledGame>> = { carta: 'carta', domino: 'domino', bingo: 'bingo', slots: 'slots' };
 
 function Logo() {
   return (
@@ -48,9 +52,13 @@ function SectionHead({ id, icon: Icon, title, action }: { id: string; icon: Luci
 /** A large game card: art, name, short description and a Play button. */
 function GameCard({ game, size = 'big', onPlay }: { game: HomeGame; size?: 'big' | 'small'; onPlay: () => void }) {
   const { t } = useI18n();
+  const availability = useGameAvailability();
+  const controlled = CONTROLLED[game.id];
+  const off = !!controlled && !availability[controlled];
   const name = t(`home2.game.${game.id}.name`);
   return (
-    <button type="button" className={`hm-card is-${size}${game.image ? ' has-image' : ''}`} style={{ '--hm-bg': game.bg, '--hm-accent': game.accent } as CSSProperties} onClick={onPlay} aria-label={t('home2.playAria', { name })}>
+    <button type="button" className={`hm-card is-${size}${game.image ? ' has-image' : ''}${off ? ' is-off' : ''}`} style={{ '--hm-bg': game.bg, '--hm-accent': game.accent } as CSSProperties} onClick={onPlay} aria-label={t('home2.playAria', { name })}>
+      {off && <span className="hm-card-off">{t('availability.badge')}</span>}
       <span className="hm-card-art" aria-hidden>
         {game.image ? <img src={game.image} alt="" loading="lazy" /> : game.art(size === 'big' ? 64 : 52)}
       </span>

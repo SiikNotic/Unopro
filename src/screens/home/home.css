@@ -954,3 +954,24 @@
     align-self: flex-end;
   }
 }
+
+/* A game the owner took out of service: dimmed, with a badge (opening it shows the notice). */
+.hm-card.is-off .hm-card-art,
+.hm-card.is-off .hm-card-body {
+  filter: grayscale(0.85) brightness(0.6);
+}
+.hm-card-off {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 3;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(20, 10, 16, 0.88);
+  border: 1px solid rgba(255, 120, 120, 0.6);
+  color: #ffb3b3;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}

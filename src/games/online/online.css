@@ -6,3 +6,9 @@
 .ol-timer { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 999px; background: rgba(245, 184, 65, 0.18); color: #f5d27a; font-variant-numeric: tabular-nums; }
 .ol-timer.is-hot { background: rgba(239, 90, 90, 0.22); color: #ffb3b3; }
 .ol-center { min-height: 100dvh; display: grid; place-items: center; padding: 24px; text-align: center; color: #fff; }
+/* Staked rooms: the pot, and a refusal (e.g. a rematch a player couldn't cover). */
+.ol-pot { flex: none; display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 999px; background: rgba(231, 191, 106, 0.16); color: #f3d98f; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ol-pot + .ol-timer { margin-left: 0; }
+.ol-bar .ol-pot:first-of-type { margin-left: auto; }
+.ol-pot.is-won { background: rgba(94, 227, 154, 0.2); color: #9ff0c2; }
+.ol-notice { position: relative; z-index: 5; margin: 0 12px 4px; padding: 6px 10px; border-radius: 10px; font-size: 12px; font-weight: 700; color: #ffd0d0; background: rgba(120, 20, 20, 0.55); border: 1px solid rgba(239, 90, 90, 0.4); }

@@ -22,8 +22,8 @@ import { addBets, advanceRt, canAddBets, createRtTable, hasSlip, markPaid as rtM
 import type { RtTable } from '@/casino/table/rouletteTable';
 import { advanceCarta, applyCarta, botSeat, cartaDeadline, cartaView, createCarta, parseCartaAction } from './carta';
 import { applyAction as applyCartaAction } from '@/game/engine';
-import { COIN_GAMES, QUICK_GAMES, SEAT_RANGE } from '../protocol';
-import type { RoomErrorCode, RoomGame, RoomRequest, RoomResponse, RoomSettings, RoomStatus, RoomView } from '../protocol';
+import { COIN_GAMES, QUICK_GAMES, SEAT_RANGE, STAKE_GAMES, STAKES } from '../protocol';
+import type { PotView, RoomErrorCode, RoomGame, RoomRequest, RoomResponse, RoomSettings, RoomStatus, RoomView, Stake } from '../protocol';
 
 export interface Member {
   userId: string;
@@ -43,6 +43,25 @@ export interface Clock {
   closingAt: number;
   /** When the current round ended (auto next round). */
   roundOverAt: number;
+  /** Staked rooms: the stakes of the current match (stored with the clock, in the room row). */
+  pot?: Pot;
+}
+
+/**
+ * The stakes of one match of a staked room. `nonce` is drawn by the server when the match starts, so the
+ * wallet request ids of a match are unique; the payout ids derive from it and the seat, so paying the same
+ * pot again (a retry, a race between two requests) is always a replay, never a second payment.
+ */
+export interface Pot {
+  match: number;
+  nonce: string;
+  stake: number;
+  /** Who put in a stake this match. */
+  seats: { seat: string; userId: string }[];
+  settled: boolean;
+  /** Seats paid when the pot was settled. */
+  winners: string[];
+  prize: number;
 }
 
 export interface RoomRow {
@@ -81,13 +100,14 @@ export interface RoomStore {
   findOpen?(game: RoomGame, userId: string): Promise<string | null>;
 }
 
-export type WalletFailure = 'insufficient_funds' | 'not_registered' | 'banned' | 'conflict' | 'invalid' | 'server';
+export type WalletFailure = 'insufficient_funds' | 'not_registered' | 'banned' | 'conflict' | 'invalid' | 'disabled' | 'server';
+export type WalletGame = 'blackjack' | 'roulette' | 'domino' | 'bingo' | 'carta';
 
-/** Account coins at the tables (table_player / table_bet / table_pay). Idempotent on the request id. */
+/** Account coins at the tables and staked rooms (table_player / table_bet / table_pay). Idempotent on the request id. */
 export interface TableWallet {
   player(userId: string): Promise<{ registered: boolean; banned: boolean; balance: number }>;
-  bet(userId: string, requestId: string, game: 'blackjack' | 'roulette', stake: number, detail: Record<string, unknown>): Promise<{ ok: true; balance: number; replayed: boolean } | { ok: false; code: WalletFailure }>;
-  pay(userId: string, requestId: string, game: 'blackjack' | 'roulette', payout: number, detail: Record<string, unknown>): Promise<{ ok: true; balance: number } | { ok: false; code: WalletFailure }>;
+  bet(userId: string, requestId: string, game: WalletGame, stake: number, detail: Record<string, unknown>): Promise<{ ok: true; balance: number; replayed: boolean } | { ok: false; code: WalletFailure }>;
+  pay(userId: string, requestId: string, game: WalletGame, payout: number, detail: Record<string, unknown>): Promise<{ ok: true; balance: number } | { ok: false; code: WalletFailure }>;
 }
 
 export interface RoomDeps {
@@ -96,8 +116,10 @@ export interface RoomDeps {
   /** Uniform integer in [0, n) — crypto in production. */
   randomInt?: (n: number) => number;
   allow?: (userId: string) => boolean;
-  /** Required for the coin tables. */
+  /** Required for the coin tables and staked rooms. */
   wallet?: TableWallet;
+  /** Is this game in service (game_enabled)? Checked before any new match. Absent = always. */
+  availability?: (game: 'domino' | 'bingo' | 'carta') => Promise<boolean>;
   /** Deterministic wallet request id for a key (SHA-256 → uuid in production). */
   requestId?: (key: string) => Promise<string>;
 }
@@ -170,9 +192,27 @@ function cleanSettings(game: RoomGame, raw: unknown): RoomSettings | null {
   if (isCoinGame(game)) return { difficulty: 'normal', public: r.public === true };
   if (!DIFFICULTIES.includes(r.difficulty as never)) return null;
   const difficulty = r.difficulty as RoomSettings['difficulty'];
-  if (game === 'carta') return { difficulty, public: r.public === true };
-  if (game === 'domino') return r.target === 100 || r.target === 200 ? { difficulty, target: r.target } : null;
-  return BINGO_SPEEDS.includes(r.speed as never) ? { difficulty, speed: r.speed as RoomSettings['speed'] } : null;
+  // A stake is one of the fixed amounts (anything else is refused, not rounded). Public rooms, found by
+  // quick match, are never played for coins.
+  if (r.stake !== undefined && r.stake !== 0 && !(STAKES as readonly unknown[]).includes(r.stake)) return null;
+  const stake = r.public === true ? 0 : ((r.stake as Stake | undefined) ?? 0);
+  const staked = stake > 0 ? { stake } : {};
+  if (game === 'carta') return { difficulty, public: r.public === true, ...staked };
+  if (game === 'domino') return r.target === 100 || r.target === 200 ? { difficulty, target: r.target, ...staked } : null;
+  return BINGO_SPEEDS.includes(r.speed as never) ? { difficulty, speed: r.speed as RoomSettings['speed'], ...staked } : null;
+}
+
+const isStakeGame = (g: RoomGame): g is 'domino' | 'bingo' | 'carta' => (STAKE_GAMES as readonly string[]).includes(g);
+/** The coins each player puts in when a match of this room starts (0 = not played for coins). */
+const stakeOf = (room: Pick<RoomRow, 'game' | 'settings'>): number => (isStakeGame(room.game) ? (room.settings.stake ?? 0) : 0);
+
+/** What the players see of the pot. */
+function potView(room: RoomRow): PotView | null {
+  const stake = stakeOf(room);
+  if (!stake) return null;
+  const p = room.clock.pot;
+  if (!p) return { stake, players: 0, total: 0, settled: false, winners: [], prize: 0 };
+  return { stake: p.stake, players: p.seats.length, total: p.stake * p.seats.length, settled: p.settled, winners: p.winners, prize: p.prize };
 }
 
 const GAMES: RoomGame[] = ['domino', 'bingo', 'carta', 'blackjack', 'roulette'];
@@ -263,6 +303,7 @@ export function viewFor(room: RoomRow, member: Member, now: number, events: (Dom
     carta,
     blackjack,
     roulette,
+    pot: potView(room),
     balance,
     events: room.game === 'domino' || room.game === 'bingo' ? sanitizeEvents(room.game, events, member.seat) : [],
   };
@@ -334,6 +375,8 @@ export function advance(room: RoomRow, now: number): { room: RoomRow; events: (D
   for (let guard = 0; guard < 400; guard++) {
     const s = r.state as BingoState;
     if (s.status === 'round_over') {
+      // A staked Bingo match is one round: the next one takes new stakes (the host's rematch).
+      if (stakeOf(r) > 0) break;
       if (now < r.clock.roundOverAt + TIMING.nextRound) break;
       const res = applyBingo(s, { type: 'NEXT_ROUND', playerId: s.players[0].id });
       if (!res.ok) break;
@@ -458,8 +501,101 @@ async function progress(room: RoomRow, now: number, deps: RoomDeps, balances: Ma
   return { room: r, events };
 }
 
-const walletError = (code: WalletFailure): RoomResponse =>
-  code === 'insufficient_funds' || code === 'not_registered' || code === 'banned' ? fail(code) : code === 'conflict' || code === 'invalid' ? fail('rule', code) : fail('busy');
+const walletError = (code: WalletFailure, detail?: string): RoomResponse =>
+  code === 'insufficient_funds' || code === 'not_registered' || code === 'banned' || code === 'disabled' ? fail(code, detail) : code === 'conflict' || code === 'invalid' ? fail('rule', code) : fail('busy');
+
+/** Refused when the owner has taken the game out of service (only new matches; running ones finish). */
+async function outOfService(game: RoomGame, deps: RoomDeps): Promise<RoomResponse | null> {
+  if (!isStakeGame(game) || !deps.availability) return null;
+  return (await deps.availability(game)) ? null : fail('disabled');
+}
+
+/** Coins taken by this request that must be given back if what they paid for doesn't happen. */
+type Debit = { userId: string; id: string; amount: number; game: WalletGame };
+
+async function giveBack(debits: Debit[], deps: RoomDeps, code: string, balances: Map<string, number>) {
+  if (!deps.wallet) return;
+  for (const d of debits.splice(0)) {
+    const res = await deps.wallet.pay(d.userId, await idFor(deps)(`${d.id}|refund`), d.game, d.amount, { room: code, refund: true });
+    if (res.ok) balances.set(d.userId, res.balance);
+  }
+}
+
+/**
+ * Starts the stakes of a new match: every player at the table puts in the room's stake, taken from their
+ * account wallet by the database (balance checked there, under a row lock). If anyone can't pay, the
+ * stakes already taken are given back and the match doesn't start. Needs two or more players.
+ */
+async function collectStakes(room: RoomRow, deps: RoomDeps, randomInt: (n: number) => number, balances: Map<string, number>, debits: Debit[]): Promise<{ ok: true; room: RoomRow } | { ok: false; res: RoomResponse }> {
+  const stake = stakeOf(room);
+  if (!stake) return { ok: true, room };
+  const game = room.game as 'domino' | 'bingo' | 'carta';
+  if (!deps.wallet) return { ok: false, res: fail('not_registered') };
+  if (room.members.length < 2) return { ok: false, res: fail('need_players') };
+  const match = (room.clock.pot?.match ?? 0) + 1;
+  const nonce = [newSeed(randomInt), newSeed(randomInt)].map((n) => n.toString(16).padStart(8, '0')).join('');
+  const taken: Debit[] = [];
+  for (const m of room.members) {
+    const id = await idFor(deps)(`${room.id}|pot|${match}|${nonce}|${m.seat}|stake`);
+    const res = await deps.wallet.bet(m.userId, id, game, stake, { room: room.code, match, seat: m.seat, kind: 'stake' });
+    if (!res.ok) {
+      await giveBack(taken, deps, room.code, balances);
+      return { ok: false, res: walletError(res.code, m.name) };
+    }
+    balances.set(m.userId, res.balance);
+    taken.push({ userId: m.userId, id, amount: stake, game });
+  }
+  debits.push(...taken);
+  const pot: Pot = { match, nonce, stake, seats: room.members.map((m) => ({ seat: m.seat, userId: m.userId })), settled: false, winners: [], prize: 0 };
+  return { ok: true, room: { ...room, clock: { ...room.clock, pot } } };
+}
+
+/** The seats that won the match, once it is over (null while it's still being played). */
+export function matchWinners(room: RoomRow): string[] | null {
+  const st = room.state;
+  if (room.status !== 'playing' || !st) return null;
+  if (room.game === 'domino') {
+    const d = st as DominoState;
+    return d.status === 'game_over' ? d.matchWinners : null;
+  }
+  if (room.game === 'bingo') {
+    const b = st as BingoState;
+    return b.status === 'round_over' ? (b.lastResult?.winners ?? []) : null;
+  }
+  if (room.game === 'carta') {
+    const c = st as GameState;
+    if (c.status !== 'GAME_OVER') return null;
+    if (c.gameWinnerTeamId) return c.players.filter((p) => p.teamId === c.gameWinnerTeamId).map((p) => p.id);
+    return c.gameWinnerId ? [c.gameWinnerId] : [];
+  }
+  return null;
+}
+
+/**
+ * Pays the pot of a finished match: split evenly between the winning seats whose player put in a stake and
+ * is still at the table (the remainder, if any, to the first). A seat won by a bot or by someone who left
+ * pays nobody; the stakes of the losers stay lost. Payout ids derive from the pot and the seat, so a repeat
+ * is a replay in the database. If a payment fails the pot stays unsettled and is tried again next request.
+ */
+async function settlePot(room: RoomRow, deps: RoomDeps, balances: Map<string, number>): Promise<RoomRow> {
+  const pot = room.clock.pot;
+  if (!pot || pot.settled || !deps.wallet) return room;
+  const won = matchWinners(room);
+  if (won === null) return room;
+  const game = room.game as 'domino' | 'bingo' | 'carta';
+  const winners = pot.seats.filter((s) => won.includes(s.seat) && room.members.some((m) => m.userId === s.userId && m.seat === s.seat));
+  const total = pot.stake * pot.seats.length;
+  const each = winners.length ? Math.floor(total / winners.length) : 0;
+  for (let i = 0; i < winners.length; i++) {
+    const w = winners[i];
+    const amount = each + (i === 0 ? total - each * winners.length : 0);
+    const id = await idFor(deps)(`${room.id}|pot|${pot.match}|${pot.nonce}|${w.seat}|win`);
+    const res = await deps.wallet.pay(w.userId, id, game, amount, { room: room.code, match: pot.match, seat: w.seat, kind: 'pot' });
+    if (!res.ok) return room;
+    balances.set(w.userId, res.balance);
+  }
+  return { ...room, clock: { ...room.clock, pot: { ...pot, settled: true, winners: winners.map((w) => w.seat), prize: each } } };
+}
 
 /** Registered, not banned: required to sit at a coin table. */
 async function mayPlayForCoins(userId: string, deps: RoomDeps): Promise<RoomResponse | null> {
@@ -540,6 +676,8 @@ export async function handleRoomRequest(userId: string | null, body: unknown, de
   const randomInt = deps.randomInt ?? cryptoInt;
 
   if (req.op === 'quick') {
+    const off = await outOfService(req.game, deps);
+    if (off) return off;
     if (isCoinGame(req.game)) {
       const refused = await mayPlayForCoins(userId, deps);
       if (refused) return refused;
@@ -555,7 +693,10 @@ export async function handleRoomRequest(userId: string | null, body: unknown, de
   }
 
   if (req.op === 'create') {
-    if (isCoinGame(req.game)) {
+    const off = await outOfService(req.game, deps);
+    if (off) return off;
+    // Coin tables and staked rooms: a registered, non-banned account (the database checks it again).
+    if (isCoinGame(req.game) || stakeOf(req) > 0) {
       const refused = await mayPlayForCoins(userId, deps);
       if (refused) return refused;
     }
@@ -585,6 +726,8 @@ export async function handleRoomRequest(userId: string | null, body: unknown, de
   // Everything else changes an existing room: load, decide, commit with a version check; retry on a race.
   const balances = new Map<string, number>();
   const debited: { id: string; amount: number }[] = [];
+  // Stakes taken for a match this request is starting; given back if the start isn't committed.
+  const stakes: Debit[] = [];
   const refund = async (room: RoomRow) => {
     // Coins taken by an earlier attempt of this request that couldn't join the table: give them back.
     if (!deps.wallet || !debited.length) return;
@@ -608,10 +751,15 @@ export async function handleRoomRequest(userId: string | null, body: unknown, de
       case 'join': {
         if (me) return { ok: true, view: viewFor(room, me, t) };
         const coin = isCoinGame(room.game);
-        if (coin) {
+        if (!coin) {
+          if (room.status !== 'lobby') return fail('started');
+          const off = await outOfService(room.game, deps);
+          if (off) return off;
+        }
+        if (coin || stakeOf(room) > 0) {
           const refused = await mayPlayForCoins(userId, deps);
           if (refused) return refused;
-        } else if (room.status !== 'lobby') return fail('started');
+        }
         const seat = SEATS.slice(0, room.seats).find((s) => !room.members.some((m) => m.seat === s));
         if (!seat) return fail('full');
         const auto = coin || !!room.settings.public;
@@ -628,25 +776,45 @@ export async function handleRoomRequest(userId: string | null, body: unknown, de
         if (room.host !== userId) return fail('not_host');
         if (room.status !== 'lobby') return fail('started');
         if (!room.members.every((m) => m.ready)) return fail('not_ready');
-        next = newMatch(room, t, randomInt);
+        {
+          const off = await outOfService(room.game, deps);
+          if (off) return off;
+          const staked = await collectStakes(newMatch(room, t, randomInt), deps, randomInt, balances, stakes);
+          if (!staked.ok) return staked.res;
+          next = staked.room;
+        }
         break;
       case 'rematch': {
         if (!me) return fail('not_member');
         if (room.host !== userId) return fail('not_host');
+        if (!isCoinGame(room.game)) {
+          const off = await outOfService(room.game, deps);
+          if (off) return off;
+          // The last pot is paid before a new match can take new stakes.
+          if (room.clock.pot && !room.clock.pot.settled) return fail('rule', 'pot_open');
+        }
         if (room.game === 'carta') {
           const s = room.state as GameState | null;
           if (room.status !== 'playing' || !s || s.status !== 'GAME_OVER') return fail('not_playing');
           const res = applyCartaAction(s, { type: 'RESTART_GAME', timestamp: t });
           if (!res.ok) return fail('rule', res.error);
           next = { ...room, state: trimCarta(res.state), clock: { ...room.clock, lastAt: t } };
-          break;
-        }
-        if (isCoinGame(room.game)) return fail('not_playing');
+        } else {
+          if (isCoinGame(room.game)) return fail('not_playing');
         const over = room.state && ((room.state as DominoState).status === 'game_over' || room.game === 'bingo');
         if (room.status !== 'playing' || !over) return fail('not_playing');
-        if (room.game === 'domino') {
-          next = { ...room, state: dominoRematch(room.state as DominoState, newSeed(randomInt)), clock: { ...room.clock, lastAt: t } };
-        } else next = newMatch(room, t, randomInt);
+          if (room.game === 'domino') {
+            next = { ...room, state: dominoRematch(room.state as DominoState, newSeed(randomInt)), clock: { ...room.clock, lastAt: t } };
+          } else {
+            const fresh = newMatch(room, t, randomInt);
+            next = { ...fresh, clock: { ...fresh.clock, pot: room.clock.pot } };
+          }
+        }
+        {
+          const staked = await collectStakes(next, deps, randomInt, balances, stakes);
+          if (!staked.ok) return staked.res;
+          next = staked.room;
+        }
         break;
       }
       case 'leave': {
@@ -722,6 +890,8 @@ export async function handleRoomRequest(userId: string | null, body: unknown, de
         const action = room.game === 'domino' ? parseDominoAction(req.action) : parseBingoAction(req.action);
         if (!action || !('playerId' in action)) return fail('forbidden');
         if (action.playerId !== me.seat) return fail('forbidden');
+        // A staked Bingo match is one round: a new round takes new stakes (the host's rematch).
+        if (room.game === 'bingo' && action.type === 'NEXT_ROUND' && stakeOf(room) > 0) return fail('rule', 'stake_rematch');
         const res = room.game === 'domino' ? applyDomino(caught.room.state as DominoState, action as DominoAction) : applyBingo(caught.room.state as BingoState, action as BingoAction);
         if (!res.ok) {
           // Still persist the catch-up (if any) so everyone moves on; report the rule error.
@@ -758,20 +928,26 @@ export async function handleRoomRequest(userId: string | null, body: unknown, de
           break;
         }
         const after = await progress(room, t, deps, balances);
-        if (after.room === room && !dirty) return { ok: true, view: viewFor(room, me, t, [], balances.get(userId) ?? null) };
-        next = after.room;
+        const paid = await settlePot(after.room, deps, balances);
+        if (paid === room && !dirty) return { ok: true, view: viewFor(room, me, t, [], balances.get(userId) ?? null) };
+        next = paid;
         events = after.events;
         break;
       }
     }
 
+    // A match that just ended pays its pot before the new state is stored.
+    next = await settlePot(next, deps, balances);
     try {
       const version = await deps.store.commit(next, viewsFor({ ...next, version: next.version + 1 }, t, events, balances));
+      stakes.length = 0;
       const committed = { ...next, version };
       const self = committed.members.find((m) => m.userId === userId);
       if (!self) return { ok: true, view: viewFor({ ...committed, status: 'closed' }, me ?? { userId, seat: 's0', name: '', ready: false }, t) };
       return { ok: true, view: viewFor(committed, self, t, events, balances.get(userId) ?? null) };
     } catch (e) {
+      // The start didn't happen: the stakes this attempt took go back (a retry draws a new pot).
+      await giveBack(stakes, deps, req.code, balances);
       if (e instanceof RoomStoreError && e.code === 'conflict') continue;
       throw e;
     }

@@ -27,6 +27,10 @@ psql -q -v ON_ERROR_STOP=1 -d "$DB" -f bank_test.sql
 psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20260929000000_tables.sql
 psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20260929000000_tables.sql
 psql -q -v ON_ERROR_STOP=1 -d "$DB" -f tables_test.sql
+for m in 20260930000000_account_deletion 20261001000000_guest_migration_cap 20261002000000_terms_acceptance 20261003000000_game_control_stakes 20261003000000_game_control_stakes; do
+  psql -q -v ON_ERROR_STOP=1 -d "$DB" -f "../migrations/$m.sql"
+done
+psql -q -v ON_ERROR_STOP=1 -d "$DB" -f game_control_test.sql
 
 # Two players ask for the same username at the same instant: exactly one gets it.
 for u in 21 22 23 24 25 26; do
@@ -55,7 +59,7 @@ echo "concurrency: spins=$SPINS balance=$BAL replayed_id_rows=$REPLAYS"
 [ "$SPINS" = 5 ] && [ "$BAL" = 0 ] && [ "$REPLAYS" -le 1 ] || { echo "CONCURRENCY TEST FAILED"; exit 1; }
 
 # Concurrency on account coins: 30 parallel roulette bookings of 250 for a player with 1,000 coins.
-psql -q -d "$DB" -c "insert into auth.users (id, email_confirmed_at) values ('00000000-0000-0000-0000-0000000000dd', now())"
+psql -q -d "$DB" -c "insert into auth.users (id, email_confirmed_at) values ('00000000-0000-0000-0000-0000000000dd', now()); insert into public.terms_acceptances (user_id, version, adult_confirmed) values ('00000000-0000-0000-0000-0000000000dd', public.terms_version(), true)"
 psql -q -d "$DB" -c "set role service_role; select * from public.account_claim_bonus('00000000-0000-0000-0000-0000000000dd', gen_random_uuid())" >/dev/null
 for i in $(seq 1 30); do
   psql -q -d "$DB" -c "set role service_role; select * from public.account_play('00000000-0000-0000-0000-0000000000dd', gen_random_uuid(), 'roulette', 250, 0, '{}')" >/dev/null 2>&1 &
@@ -67,7 +71,7 @@ echo "account concurrency: rounds=$ROUNDS balance=$ABAL"
 # Bank: 20 simultaneous loan claims (5 of them replaying one request id) pay exactly one loan of 500,
 # and 10 simultaneous deliveries of one ad reward id pay 100 exactly once.
 BU=00000000-0000-0000-0003-0000000000ee
-psql -q -d "$DB" -c "insert into auth.users (id, email_confirmed_at) values ('$BU', now())"
+psql -q -d "$DB" -c "insert into auth.users (id, email_confirmed_at) values ('$BU', now()); insert into public.terms_acceptances (user_id, version, adult_confirmed) values ('$BU', public.terms_version(), true)"
 LREPLAY=33333333-3333-4333-8333-333333333333
 for i in $(seq 1 20); do
   if [ "$i" -le 5 ]; then RID=$LREPLAY; else RID=$(cat /proc/sys/kernel/random/uuid); fi
@@ -83,7 +87,7 @@ echo "bank concurrency: loans=$LOANS ad_payments=$ADS balance=$BBAL"
 # Tables: 20 simultaneous bets of 100 against a balance of 500 (5 of them replaying one request id):
 # exactly 5 bets are taken, never a negative balance.
 TU=00000000-0000-0000-0004-0000000000ee
-psql -q -d "$DB" -c "insert into auth.users (id, email_confirmed_at) values ('$TU', now()); insert into public.account_wallets (user_id, balance) values ('$TU', 500)"
+psql -q -d "$DB" -c "insert into auth.users (id, email_confirmed_at) values ('$TU', now()); insert into public.account_wallets (user_id, balance) values ('$TU', 500); insert into public.terms_acceptances (user_id, version, adult_confirmed) values ('$TU', public.terms_version(), true)"
 TREPLAY=44444444-4444-4444-8444-444444444444
 for i in $(seq 1 20); do
   if [ "$i" -le 5 ]; then RID=$TREPLAY; else RID=$(cat /proc/sys/kernel/random/uuid); fi
@@ -93,4 +97,15 @@ wait
 read -r TBETS TBAL < <(psql -At -F ' ' -d "$DB" -c "select (select count(*) from public.account_ledger where user_id = '$TU'), (select balance from public.account_wallets where user_id = '$TU')")
 echo "table concurrency: bets=$TBETS balance=$TBAL"
 [ "$TBETS" = 5 ] && [ "$TBAL" = 0 ] || { echo "TABLE CONCURRENCY TEST FAILED"; exit 1; }
+# Staked rooms: 10 simultaneous deliveries of one Domino pot payout (the same request id) pay it once.
+PU=00000000-0000-0000-0005-0000000000ee
+psql -q -d "$DB" -c "insert into auth.users (id, email_confirmed_at) values ('$PU', now()); insert into public.account_wallets (user_id, balance) values ('$PU', 0); insert into public.terms_acceptances (user_id, version, adult_confirmed) values ('$PU', public.terms_version(), true)"
+PREPLAY=55555555-5555-4555-8555-555555555555
+for i in $(seq 1 10); do
+  psql -q -d "$DB" -c "set role service_role; select * from public.table_pay('$PU', '$PREPLAY', 'domino', 400, '{}')" >/dev/null 2>&1 &
+done
+wait
+read -r PAYS PBAL < <(psql -At -F ' ' -d "$DB" -c "select (select count(*) from public.account_ledger where user_id = '$PU'), (select balance from public.account_wallets where user_id = '$PU')")
+echo "pot payout concurrency: payouts=$PAYS balance=$PBAL"
+[ "$PAYS" = 1 ] && [ "$PBAL" = 400 ] || { echo "POT PAYOUT CONCURRENCY TEST FAILED"; exit 1; }
 echo "all SQL tests passed"

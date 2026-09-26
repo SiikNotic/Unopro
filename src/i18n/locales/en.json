@@ -904,7 +904,8 @@
       "server": "Server error. Your spin isn't confirmed: press Retry to recover it.",
       "bad_response": "Incomplete answer from the server. Your spin isn't confirmed: press Retry.",
       "uncertain": "We can't confirm your last spin yet. Nothing is ever charged or paid twice: press Retry.",
-      "other_tab": "You're playing in another tab: press “Play here” above. Nothing was charged."
+      "other_tab": "You're playing in another tab: press “Play here” above. Nothing was charged.",
+      "game_disabled": "Slots are out of service. Nothing was charged."
     },
     "rules": {
       "title": "How to play",
@@ -1104,7 +1105,15 @@
       "carta": "Carta",
       "blackjack": "Blackjack",
       "roulette": "Roulette"
-    }
+    },
+    "stakeLabel": "Stake per player (coins)",
+    "stakeFree": "Free",
+    "stakeNote": "Every player pays the stake when the match starts and the winner takes the pot. If a bot wins, nobody is paid. Virtual coins only.",
+    "stakeFreeNote": "Friendly match: no coins at stake.",
+    "stakeNeedsAccount": "You need a registered account to play for coins.",
+    "stakeRoom": "Match for coins: {stake} per player",
+    "stakeLobbyNote": "Charged when the match starts. Pot with the current players: {pot}. The winner takes it; a tie splits it.",
+    "startStaked": "Start (stake {stake})"
   },
   "domino": {
     "roundOf": "Hand {n} · to {target}",
@@ -1240,9 +1249,17 @@
       "rule": "Invalid move.",
       "insufficient_funds": "You don't have enough coins for that bet.",
       "not_registered": "You need an account to play at the coin tables.",
-      "banned": "Your account is suspended."
+      "banned": "Your account is suspended.",
+      "disabled": "This game is out of service. New matches can't be started.",
+      "need_players": "A match for coins needs at least 2 players in the room.",
+      "insufficientWho": "{name} doesn't have enough coins for the stake. Nobody was charged.",
+      "potOpen": "The last match's pot is still being paid. Try again in a moment."
     },
-    "polling": "syncing"
+    "polling": "syncing",
+    "pot": "Pot {total}",
+    "potTitle": "Stake of {stake} per player",
+    "potWon": "You won {prize}!",
+    "potLost": "Pot paid out"
   },
   "account": {
     "title": "Your account",
@@ -1378,7 +1395,8 @@
       "users": "Users",
       "economy": "Economy",
       "bans": "Bans",
-      "audit": "Audit log"
+      "audit": "Audit log",
+      "games": "Games"
     },
     "errors": {
       "forbidden": "You're not allowed to do this (or the user is protected).",
@@ -1477,7 +1495,9 @@
       "banTemporary": "{hours} h ban",
       "unban": "ban lifted",
       "username": "name {from} → {to}",
-      "role": "role {from} → {to}"
+      "role": "role {from} → {to}",
+      "gameOn": "{game} in service",
+      "gameOff": "{game} out of service"
     },
     "kpi": {
       "registered": "Registered users",
@@ -1534,6 +1554,17 @@
         "daily_cap": "Rejected: daily limit",
         "other": "Rejected"
       }
+    },
+    "games": {
+      "on": "In service",
+      "off": "Out of service",
+      "turnOff": "Turn off",
+      "turnOn": "Turn on",
+      "confirmOff": "Confirm: out of service",
+      "confirmOn": "Confirm: in service",
+      "reasonPlaceholder": "Reason (required, kept in the log)",
+      "noteOwner": "A game out of service accepts no new matches (running ones finish). The server enforces it and it is logged.",
+      "noteStaff": "Only the owner can change the state of the games."
     }
   },
   "bank": {
@@ -1848,6 +1879,17 @@
       "bank": "Bank",
       "profile": "Profile",
       "more": "More"
+    }
+  },
+  "availability": {
+    "badge": "Out of service",
+    "text": "This game is temporarily out of service for maintenance. Your coins are safe; please try again later.",
+    "back": "Back to home",
+    "games": {
+      "slots": "Slots",
+      "domino": "Dominoes",
+      "carta": "Carta",
+      "bingo": "Bingo"
     }
   }
 }

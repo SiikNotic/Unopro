@@ -39,6 +39,7 @@ export function postgrestCasinoStore(supabaseUrl: string, serviceKey: string, fe
       if (code === 'P0409') throw new CasinoStoreError('conflict');
       if (code === 'P0400') throw new CasinoStoreError('invalid_bet');
       if (code === 'P0403') throw new CasinoStoreError('not_registered');
+      if (code === 'P0423') throw new CasinoStoreError('game_disabled');
       throw new Error(`rpc ${fn} failed: ${res.status}`);
     }
     return body as T;

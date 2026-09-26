@@ -16,19 +16,26 @@ const store = postgrestRoomStore(SUPABASE_URL, SERVICE_KEY);
 
 /** Service-role call to a database function; errors come back as their Postgres code. */
 async function rpc<T>(fn: string, args: Record<string, unknown>): Promise<{ ok: true; data: T } | { ok: false; code: string }> {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', apikey: SERVICE_KEY, authorization: `Bearer ${SERVICE_KEY}` },
-    body: JSON.stringify(args),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', apikey: SERVICE_KEY, authorization: `Bearer ${SERVICE_KEY}` },
+      body: JSON.stringify(args),
+    });
+  } catch {
+    // Network trouble reaching the database: reported as a failure, never as a thrown request (the
+    // handler then gives back any stake it took and the player can retry).
+    return { ok: false, code: 'network' };
+  }
   const body = (await res.json().catch(() => null)) as unknown;
   if (!res.ok) return { ok: false, code: String((body as { code?: unknown } | null)?.code ?? res.status) };
   return { ok: true, data: body as T };
 }
 
-const FAILURES: Record<string, WalletFailure> = { P0402: 'insufficient_funds', P0403: 'not_registered', P0451: 'banned', P0409: 'conflict', P0400: 'invalid' };
+const FAILURES: Record<string, WalletFailure> = { P0402: 'insufficient_funds', P0403: 'not_registered', P0451: 'banned', P0409: 'conflict', P0400: 'invalid', P0423: 'disabled' };
 
-/** Account coins at the tables: table_player / table_bet / table_pay (see the tables migration). */
+/** Account coins at the tables and staked rooms: table_player / table_bet / table_pay (see the tables and game_control_stakes migrations). */
 const wallet: TableWallet = {
   async player(userId) {
     const res = await rpc<{ registered: boolean; banned: boolean; balance: number }[]>('table_player', { p_user: userId });
@@ -46,6 +53,12 @@ const wallet: TableWallet = {
     return { ok: true, balance: Number(res.data[0].balance) };
   },
 };
+
+/** Owner's game control (game_availability). If the database can't be read, a new match is refused. */
+async function availability(game: 'domino' | 'bingo' | 'carta'): Promise<boolean> {
+  const res = await rpc<boolean>('game_enabled', { p_game: game });
+  return res.ok && res.data === true;
+}
 
 store.findOpen = async (game, userId) => {
   const res = await rpc<string | null>('room_find_open', { p_game: game, p_user: userId });
@@ -92,7 +105,7 @@ Deno.serve(async (req) => {
     return Response.json({ ok: false, code: 'bad_request' }, { status: 400, headers: cors });
   }
   try {
-    const out = await handleRoomRequest(await verifiedUser(req), body, { store, allow, wallet });
+    const out = await handleRoomRequest(await verifiedUser(req), body, { store, allow, wallet, availability });
     const status = out.ok ? 200 : out.code === 'unauthorized' ? 401 : out.code === 'rate_limited' ? 429 : out.code === 'not_found' ? 404 : 400;
     return Response.json(out, { status, headers: { ...cors, 'cache-control': 'no-store' } });
   } catch (e) {

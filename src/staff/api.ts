@@ -4,6 +4,9 @@ import { rpc } from '@/account/rpc';
 import type { RpcResult } from '@/account/rpc';
 import { newId } from '@/casino/random';
 import type { Role } from '@/account/accountContext';
+import { onlineConfig } from '@/games/online/client';
+import { fetchAvailability } from '@/games/availability';
+import type { Availability, ControlledGame } from '@/games/availability';
 
 export interface Overview {
   registered: number;
@@ -84,7 +87,7 @@ export interface AuditRow {
   actor_username?: string | null;
   target_id: string | null;
   target_username?: string | null;
-  action: 'ADD_COINS' | 'REMOVE_COINS' | 'BAN' | 'UNBAN' | 'USERNAME_CHANGE' | 'ROLE_CHANGE' | 'GUEST_MIGRATION';
+  action: 'ADD_COINS' | 'REMOVE_COINS' | 'BAN' | 'UNBAN' | 'USERNAME_CHANGE' | 'ROLE_CHANGE' | 'GUEST_MIGRATION' | 'GAME_AVAILABILITY';
   reason: string | null;
   metadata: Record<string, unknown>;
 }
@@ -127,6 +130,14 @@ export const staffApi = {
   ban: (target: string, reason: string, hours: number | null) => rpc<number>('staff_ban', { p_target: target, p_reason: reason, p_hours: hours }),
   unban: (target: string, reason: string) => rpc<null>('staff_unban', { p_target: target, p_reason: reason }),
   setRole: (target: string, role: Exclude<Role, 'owner'>, reason: string) => rpc<null>('owner_set_role', { p_target: target, p_role: role, p_reason: reason }),
+  /** Which games are in service (public table). */
+  games: async (): Promise<RpcResult<Availability>> => {
+    const cfg = onlineConfig();
+    const a = cfg ? await fetchAvailability(cfg) : null;
+    return a ? { ok: true, data: a } : { ok: false, code: 'network', detail: '' };
+  },
+  /** Owner only: the database checks the caller's role and records the change in the audit log. */
+  setGame: (game: ControlledGame, enabled: boolean, reason: string) => rpc<null>('owner_set_game_enabled', { p_game: game, p_enabled: enabled, p_reason: reason }),
 };
 
 export type { RpcResult };

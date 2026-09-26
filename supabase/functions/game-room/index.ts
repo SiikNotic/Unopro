@@ -251,10 +251,10 @@ function finishRound(state, events, dominoBy, reason) {
   const result = { round: state.round, winnerId, reason, points, pips };
   const top = Math.max(...Object.values(scores));
   const over = top >= state.settings.targetScore;
-  const matchWinners = over ? state.players.filter((p) => scores[p.id] === top).map((p) => p.id) : [];
-  const next = { ...state, scores, lastResult: result, status: over ? "game_over" : "round_over", matchWinners };
+  const matchWinners2 = over ? state.players.filter((p) => scores[p.id] === top).map((p) => p.id) : [];
+  const next = { ...state, scores, lastResult: result, status: over ? "game_over" : "round_over", matchWinners: matchWinners2 };
   events.push({ type: "round_over", result });
-  if (over) events.push({ type: "game_over", winners: matchWinners });
+  if (over) events.push({ type: "game_over", winners: matchWinners2 });
   return { ok: true, state: next, events };
 }
 function rematch(state, seed) {
@@ -2249,6 +2249,8 @@ var botSeat = (state, seat) => ({ ...state, players: state.players.map((p) => p.
 
 // src/games/online/protocol.ts
 var COIN_GAMES = ["blackjack", "roulette"];
+var STAKE_GAMES = ["domino", "bingo", "carta"];
+var STAKES = [0, 100, 500, 1e3, 5e3];
 var QUICK_GAMES = ["carta", "blackjack", "roulette"];
 var SEAT_RANGE = {
   domino: { min: 2, max: 4, quick: 4 },
@@ -2318,9 +2320,21 @@ function cleanSettings(game, raw) {
   if (isCoinGame(game)) return { difficulty: "normal", public: r.public === true };
   if (!DIFFICULTIES.includes(r.difficulty)) return null;
   const difficulty = r.difficulty;
-  if (game === "carta") return { difficulty, public: r.public === true };
-  if (game === "domino") return r.target === 100 || r.target === 200 ? { difficulty, target: r.target } : null;
-  return BINGO_SPEEDS.includes(r.speed) ? { difficulty, speed: r.speed } : null;
+  if (r.stake !== void 0 && r.stake !== 0 && !STAKES.includes(r.stake)) return null;
+  const stake = r.public === true ? 0 : r.stake ?? 0;
+  const staked = stake > 0 ? { stake } : {};
+  if (game === "carta") return { difficulty, public: r.public === true, ...staked };
+  if (game === "domino") return r.target === 100 || r.target === 200 ? { difficulty, target: r.target, ...staked } : null;
+  return BINGO_SPEEDS.includes(r.speed) ? { difficulty, speed: r.speed, ...staked } : null;
+}
+var isStakeGame = (g) => STAKE_GAMES.includes(g);
+var stakeOf = (room) => isStakeGame(room.game) ? room.settings.stake ?? 0 : 0;
+function potView(room) {
+  const stake = stakeOf(room);
+  if (!stake) return null;
+  const p = room.clock.pot;
+  if (!p) return { stake, players: 0, total: 0, settled: false, winners: [], prize: 0 };
+  return { stake: p.stake, players: p.seats.length, total: p.stake * p.seats.length, settled: p.settled, winners: p.winners, prize: p.prize };
 }
 var GAMES = ["domino", "bingo", "carta", "blackjack", "roulette"];
 function parseRequest(raw) {
@@ -2400,6 +2414,7 @@ function viewFor(room, member, now, events = [], balance = null) {
     carta,
     blackjack,
     roulette,
+    pot: potView(room),
     balance,
     events: room.game === "domino" || room.game === "bingo" ? sanitizeEvents(room.game, events, member.seat) : []
   };
@@ -2458,6 +2473,7 @@ function advance(room, now) {
   for (let guard = 0; guard < 400; guard++) {
     const s = r.state;
     if (s.status === "round_over") {
+      if (stakeOf(r) > 0) break;
       if (now < r.clock.roundOverAt + TIMING.nextRound) break;
       const res2 = applyBingo(s, { type: "NEXT_ROUND", playerId: s.players[0].id });
       if (!res2.ok) break;
@@ -2565,7 +2581,79 @@ async function progress(room, now, deps, balances) {
   }
   return { room: r, events };
 }
-var walletError = (code) => code === "insufficient_funds" || code === "not_registered" || code === "banned" ? fail2(code) : code === "conflict" || code === "invalid" ? fail2("rule", code) : fail2("busy");
+var walletError = (code, detail) => code === "insufficient_funds" || code === "not_registered" || code === "banned" || code === "disabled" ? fail2(code, detail) : code === "conflict" || code === "invalid" ? fail2("rule", code) : fail2("busy");
+async function outOfService(game, deps) {
+  if (!isStakeGame(game) || !deps.availability) return null;
+  return await deps.availability(game) ? null : fail2("disabled");
+}
+async function giveBack(debits, deps, code, balances) {
+  if (!deps.wallet) return;
+  for (const d of debits.splice(0)) {
+    const res = await deps.wallet.pay(d.userId, await idFor(deps)(`${d.id}|refund`), d.game, d.amount, { room: code, refund: true });
+    if (res.ok) balances.set(d.userId, res.balance);
+  }
+}
+async function collectStakes(room, deps, randomInt, balances, debits) {
+  const stake = stakeOf(room);
+  if (!stake) return { ok: true, room };
+  const game = room.game;
+  if (!deps.wallet) return { ok: false, res: fail2("not_registered") };
+  if (room.members.length < 2) return { ok: false, res: fail2("need_players") };
+  const match = (room.clock.pot?.match ?? 0) + 1;
+  const nonce = [newSeed2(randomInt), newSeed2(randomInt)].map((n) => n.toString(16).padStart(8, "0")).join("");
+  const taken = [];
+  for (const m of room.members) {
+    const id = await idFor(deps)(`${room.id}|pot|${match}|${nonce}|${m.seat}|stake`);
+    const res = await deps.wallet.bet(m.userId, id, game, stake, { room: room.code, match, seat: m.seat, kind: "stake" });
+    if (!res.ok) {
+      await giveBack(taken, deps, room.code, balances);
+      return { ok: false, res: walletError(res.code, m.name) };
+    }
+    balances.set(m.userId, res.balance);
+    taken.push({ userId: m.userId, id, amount: stake, game });
+  }
+  debits.push(...taken);
+  const pot = { match, nonce, stake, seats: room.members.map((m) => ({ seat: m.seat, userId: m.userId })), settled: false, winners: [], prize: 0 };
+  return { ok: true, room: { ...room, clock: { ...room.clock, pot } } };
+}
+function matchWinners(room) {
+  const st = room.state;
+  if (room.status !== "playing" || !st) return null;
+  if (room.game === "domino") {
+    const d = st;
+    return d.status === "game_over" ? d.matchWinners : null;
+  }
+  if (room.game === "bingo") {
+    const b = st;
+    return b.status === "round_over" ? b.lastResult?.winners ?? [] : null;
+  }
+  if (room.game === "carta") {
+    const c = st;
+    if (c.status !== "GAME_OVER") return null;
+    if (c.gameWinnerTeamId) return c.players.filter((p) => p.teamId === c.gameWinnerTeamId).map((p) => p.id);
+    return c.gameWinnerId ? [c.gameWinnerId] : [];
+  }
+  return null;
+}
+async function settlePot(room, deps, balances) {
+  const pot = room.clock.pot;
+  if (!pot || pot.settled || !deps.wallet) return room;
+  const won = matchWinners(room);
+  if (won === null) return room;
+  const game = room.game;
+  const winners = pot.seats.filter((s) => won.includes(s.seat) && room.members.some((m) => m.userId === s.userId && m.seat === s.seat));
+  const total = pot.stake * pot.seats.length;
+  const each = winners.length ? Math.floor(total / winners.length) : 0;
+  for (let i = 0; i < winners.length; i++) {
+    const w = winners[i];
+    const amount = each + (i === 0 ? total - each * winners.length : 0);
+    const id = await idFor(deps)(`${room.id}|pot|${pot.match}|${pot.nonce}|${w.seat}|win`);
+    const res = await deps.wallet.pay(w.userId, id, game, amount, { room: room.code, match: pot.match, seat: w.seat, kind: "pot" });
+    if (!res.ok) return room;
+    balances.set(w.userId, res.balance);
+  }
+  return { ...room, clock: { ...room.clock, pot: { ...pot, settled: true, winners: winners.map((w) => w.seat), prize: each } } };
+}
 async function mayPlayForCoins(userId, deps) {
   if (!deps.wallet) return fail2("not_registered");
   const p = await deps.wallet.player(userId);
@@ -2629,6 +2717,8 @@ async function handleRoomRequest(userId, body, deps) {
   const now = deps.now ?? Date.now;
   const randomInt = deps.randomInt ?? cryptoInt;
   if (req.op === "quick") {
+    const off = await outOfService(req.game, deps);
+    if (off) return off;
     if (isCoinGame(req.game)) {
       const refused = await mayPlayForCoins(userId, deps);
       if (refused) return refused;
@@ -2643,7 +2733,9 @@ async function handleRoomRequest(userId, body, deps) {
     return handleRoomRequest(userId, { op: "create", game: req.game, seats: SEAT_RANGE[req.game].quick, name: req.name, settings }, { ...deps, allow: void 0 });
   }
   if (req.op === "create") {
-    if (isCoinGame(req.game)) {
+    const off = await outOfService(req.game, deps);
+    if (off) return off;
+    if (isCoinGame(req.game) || stakeOf(req) > 0) {
       const refused = await mayPlayForCoins(userId, deps);
       if (refused) return refused;
     }
@@ -2670,6 +2762,7 @@ async function handleRoomRequest(userId, body, deps) {
   }
   const balances = /* @__PURE__ */ new Map();
   const debited = [];
+  const stakes = [];
   const refund = async (room) => {
     if (!deps.wallet || !debited.length) return;
     for (const d of debited) {
@@ -2691,10 +2784,15 @@ async function handleRoomRequest(userId, body, deps) {
       case "join": {
         if (me) return { ok: true, view: viewFor(room, me, t) };
         const coin = isCoinGame(room.game);
-        if (coin) {
+        if (!coin) {
+          if (room.status !== "lobby") return fail2("started");
+          const off = await outOfService(room.game, deps);
+          if (off) return off;
+        }
+        if (coin || stakeOf(room) > 0) {
           const refused = await mayPlayForCoins(userId, deps);
           if (refused) return refused;
-        } else if (room.status !== "lobby") return fail2("started");
+        }
         const seat = SEATS.slice(0, room.seats).find((s) => !room.members.some((m) => m.seat === s));
         if (!seat) return fail2("full");
         const auto = coin || !!room.settings.public;
@@ -2711,25 +2809,44 @@ async function handleRoomRequest(userId, body, deps) {
         if (room.host !== userId) return fail2("not_host");
         if (room.status !== "lobby") return fail2("started");
         if (!room.members.every((m) => m.ready)) return fail2("not_ready");
-        next = newMatch(room, t, randomInt);
+        {
+          const off = await outOfService(room.game, deps);
+          if (off) return off;
+          const staked = await collectStakes(newMatch(room, t, randomInt), deps, randomInt, balances, stakes);
+          if (!staked.ok) return staked.res;
+          next = staked.room;
+        }
         break;
       case "rematch": {
         if (!me) return fail2("not_member");
         if (room.host !== userId) return fail2("not_host");
+        if (!isCoinGame(room.game)) {
+          const off = await outOfService(room.game, deps);
+          if (off) return off;
+          if (room.clock.pot && !room.clock.pot.settled) return fail2("rule", "pot_open");
+        }
         if (room.game === "carta") {
           const s = room.state;
           if (room.status !== "playing" || !s || s.status !== "GAME_OVER") return fail2("not_playing");
           const res = applyAction(s, { type: "RESTART_GAME", timestamp: t });
           if (!res.ok) return fail2("rule", res.error);
           next = { ...room, state: trimCarta(res.state), clock: { ...room.clock, lastAt: t } };
-          break;
+        } else {
+          if (isCoinGame(room.game)) return fail2("not_playing");
+          const over = room.state && (room.state.status === "game_over" || room.game === "bingo");
+          if (room.status !== "playing" || !over) return fail2("not_playing");
+          if (room.game === "domino") {
+            next = { ...room, state: rematch(room.state, newSeed2(randomInt)), clock: { ...room.clock, lastAt: t } };
+          } else {
+            const fresh = newMatch(room, t, randomInt);
+            next = { ...fresh, clock: { ...fresh.clock, pot: room.clock.pot } };
+          }
         }
-        if (isCoinGame(room.game)) return fail2("not_playing");
-        const over = room.state && (room.state.status === "game_over" || room.game === "bingo");
-        if (room.status !== "playing" || !over) return fail2("not_playing");
-        if (room.game === "domino") {
-          next = { ...room, state: rematch(room.state, newSeed2(randomInt)), clock: { ...room.clock, lastAt: t } };
-        } else next = newMatch(room, t, randomInt);
+        {
+          const staked = await collectStakes(next, deps, randomInt, balances, stakes);
+          if (!staked.ok) return staked.res;
+          next = staked.room;
+        }
         break;
       }
       case "leave": {
@@ -2798,6 +2915,7 @@ async function handleRoomRequest(userId, body, deps) {
         const action = room.game === "domino" ? parseDominoAction(req.action) : parseBingoAction(req.action);
         if (!action || !("playerId" in action)) return fail2("forbidden");
         if (action.playerId !== me.seat) return fail2("forbidden");
+        if (room.game === "bingo" && action.type === "NEXT_ROUND" && stakeOf(room) > 0) return fail2("rule", "stake_rematch");
         const res = room.game === "domino" ? applyDomino(caught.room.state, action) : applyBingo(caught.room.state, action);
         if (!res.ok) {
           if (caught.events.length) {
@@ -2830,19 +2948,23 @@ async function handleRoomRequest(userId, body, deps) {
           break;
         }
         const after = await progress(room, t, deps, balances);
-        if (after.room === room && !dirty) return { ok: true, view: viewFor(room, me, t, [], balances.get(userId) ?? null) };
-        next = after.room;
+        const paid = await settlePot(after.room, deps, balances);
+        if (paid === room && !dirty) return { ok: true, view: viewFor(room, me, t, [], balances.get(userId) ?? null) };
+        next = paid;
         events = after.events;
         break;
       }
     }
+    next = await settlePot(next, deps, balances);
     try {
       const version = await deps.store.commit(next, viewsFor({ ...next, version: next.version + 1 }, t, events, balances));
+      stakes.length = 0;
       const committed = { ...next, version };
       const self = committed.members.find((m) => m.userId === userId);
       if (!self) return { ok: true, view: viewFor({ ...committed, status: "closed" }, me ?? { userId, seat: "s0", name: "", ready: false }, t) };
       return { ok: true, view: viewFor(committed, self, t, events, balances.get(userId) ?? null) };
     } catch (e) {
+      await giveBack(stakes, deps, req.code, balances);
       if (e instanceof RoomStoreError && e.code === "conflict") continue;
       throw e;
     }
@@ -2923,16 +3045,21 @@ var SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 var ALLOWED = /* @__PURE__ */ new Set(["https://siiknotic.github.io", "http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:4173"]);
 var store = postgrestRoomStore(SUPABASE_URL, SERVICE_KEY);
 async function rpc(fn, args) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
-    method: "POST",
-    headers: { "content-type": "application/json", apikey: SERVICE_KEY, authorization: `Bearer ${SERVICE_KEY}` },
-    body: JSON.stringify(args)
-  });
+  let res;
+  try {
+    res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+      method: "POST",
+      headers: { "content-type": "application/json", apikey: SERVICE_KEY, authorization: `Bearer ${SERVICE_KEY}` },
+      body: JSON.stringify(args)
+    });
+  } catch {
+    return { ok: false, code: "network" };
+  }
   const body = await res.json().catch(() => null);
   if (!res.ok) return { ok: false, code: String(body?.code ?? res.status) };
   return { ok: true, data: body };
 }
-var FAILURES = { P0402: "insufficient_funds", P0403: "not_registered", P0451: "banned", P0409: "conflict", P0400: "invalid" };
+var FAILURES = { P0402: "insufficient_funds", P0403: "not_registered", P0451: "banned", P0409: "conflict", P0400: "invalid", P0423: "disabled" };
 var wallet = {
   async player(userId) {
     const res = await rpc("table_player", { p_user: userId });
@@ -2950,6 +3077,10 @@ var wallet = {
     return { ok: true, balance: Number(res.data[0].balance) };
   }
 };
+async function availability(game) {
+  const res = await rpc("game_enabled", { p_game: game });
+  return res.ok && res.data === true;
+}
 store.findOpen = async (game, userId) => {
   const res = await rpc("room_find_open", { p_game: game, p_user: userId });
   return res.ok && typeof res.data === "string" ? res.data : null;
@@ -2990,7 +3121,7 @@ Deno.serve(async (req) => {
     return Response.json({ ok: false, code: "bad_request" }, { status: 400, headers: cors });
   }
   try {
-    const out = await handleRoomRequest(await verifiedUser(req), body, { store, allow, wallet });
+    const out = await handleRoomRequest(await verifiedUser(req), body, { store, allow, wallet, availability });
     const status = out.ok ? 200 : out.code === "unauthorized" ? 401 : out.code === "rate_limited" ? 429 : out.code === "not_found" ? 404 : 400;
     return Response.json(out, { status, headers: { ...cors, "cache-control": "no-store" } });
   } catch (e) {

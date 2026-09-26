@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Bot, Check, CircleUserRound, CloudOff, Copy, Crown, KeyRound, LogOut, Play, Timer, Users, Zap } from 'lucide-react';
+import { ArrowLeft, Bot, Check, CircleUserRound, CloudOff, Coins, Copy, Crown, KeyRound, LogOut, Play, Timer, Users, Zap } from 'lucide-react';
 import { useNavigation } from '@/components/Navigation';
 import { useI18n } from '@/i18n';
 import { useProfileName } from '@/settings/profile';
@@ -14,8 +14,10 @@ import type { OnlineConfig } from '@/games/online/client';
 import { useOnlineRoom } from '@/games/online/useOnlineRoom';
 import { matchScreen } from '@/games/online/screens';
 import { OnlineGate } from '@/games/online/OnlineGate';
-import { COIN_GAMES, QUICK_GAMES, SEAT_RANGE } from '@/games/online/protocol';
-import type { RoomErrorCode, RoomGame, RoomView } from '@/games/online/protocol';
+import { roomErrorText } from '@/games/online/errors';
+import { COIN_GAMES, QUICK_GAMES, SEAT_RANGE, STAKE_GAMES, STAKES } from '@/games/online/protocol';
+import type { RoomErrorCode, RoomGame, RoomView, Stake } from '@/games/online/protocol';
+import { formatChips } from '@/casino/chipValues';
 import './hub.css';
 
 /**
@@ -78,7 +80,12 @@ function RoomEntry({ game, cfg, joining }: { game: OnlineGame; cfg: OnlineConfig
   const coins = (COIN_GAMES as readonly string[]).includes(game);
   const quick = (QUICK_GAMES as readonly string[]).includes(game);
   // Coin tables: only a registered account (the server checks it again).
-  const needAccount = coins && !(account.status === 'user' && account.coins?.registered);
+  const registered = account.status === 'user' && !!account.coins?.registered;
+  const needAccount = coins && !registered;
+  // Domino / Bingo / Carta rooms may be played for coins: the server takes the stakes when the match
+  // starts and pays the pot to the winner. The browser only picks one of the fixed amounts.
+  const stakeGame = (STAKE_GAMES as readonly string[]).includes(game);
+  const [stake, setStake] = useState<Stake>(0);
 
   const open = (v: RoomView) => {
     if (v.status === 'lobby') navigate('room', { game: v.game, room: v.code }, { replace: true });
@@ -115,7 +122,8 @@ function RoomEntry({ game, cfg, joining }: { game: OnlineGame; cfg: OnlineConfig
     setError(null);
     const d = loadDominoSetup();
     const b = loadBingoSetup();
-    const settings = game === 'domino' ? { difficulty: d.difficulty, target: d.target } : game === 'bingo' ? { difficulty: b.difficulty, speed: b.speed } : { difficulty: preferences.difficulty };
+    const base = game === 'domino' ? { difficulty: d.difficulty, target: d.target } : game === 'bingo' ? { difficulty: b.difficulty, speed: b.speed } : { difficulty: preferences.difficulty };
+    const settings = stakeGame && stake > 0 ? { ...base, stake } : base;
     const res = mode === 'join' ? await roomCall(cfg, { op: 'join', code: joinCode!, name: clean }) : await roomCall(cfg, { op: 'create', game: game as RoomGame, seats, name: clean, settings });
     setBusy(null);
     if (!res.ok) return setError(res.code);
@@ -178,6 +186,19 @@ function RoomEntry({ game, cfg, joining }: { game: OnlineGame; cfg: OnlineConfig
               ))}
             </div>
             <p className="ms-note mt-2">{t(coins ? 'room.seatsNoteTable' : 'room.seatsNote')}</p>
+            {stakeGame && (
+              <div className="mt-4">
+                <span className="ms-label">{t('room.stakeLabel')}</span>
+                <div className="ms-seg" role="group" aria-label={t('room.stakeLabel')}>
+                  {STAKES.map((n) => (
+                    <button key={n} type="button" aria-pressed={stake === n} disabled={n > 0 && !registered} onClick={() => setStake(n)}>
+                      {n === 0 ? t('room.stakeFree') : formatChips(n)}
+                    </button>
+                  ))}
+                </div>
+                <p className="ms-note mt-2">{t(registered ? (stake > 0 ? 'room.stakeNote' : 'room.stakeFreeNote') : 'room.stakeNeedsAccount')}</p>
+              </div>
+            )}
           </div>
         )}
         <button type="button" className={`cz-btn ${quick ? 'cz-btn-secondary' : 'cz-btn-primary'} cz-btn-game w-full mt-5`} onClick={submit} disabled={!!busy || waitingForAccount} aria-busy={busy === 'form' || waitingForAccount}>
@@ -214,6 +235,7 @@ function Lobby({ code }: { code: string }) {
   const { navigate } = useNavigation();
   const room = useOnlineRoom(code);
   const [copied, setCopied] = useState(false);
+  const [startError, setStartError] = useState<{ code?: RoomErrorCode; detail?: string } | null>(null);
   const v = room.view;
   useEffect(() => {
     if (v?.status === 'playing') navigate(matchScreen(v.game), { room: code }, { replace: true });
@@ -243,6 +265,13 @@ function Lobby({ code }: { code: string }) {
     home();
   };
   const seats = Array.from({ length: v.seats }, (_, i) => `s${i}`);
+  const staked = !!v.pot;
+  const tooFew = staked && v.members.length < 2;
+  const start = async () => {
+    setStartError(null);
+    const res = await room.send({ op: 'start' });
+    if (!res.ok) setStartError({ code: res.code, detail: res.detail });
+  };
 
   return (
     <Shell game={v.game} title={t('room.createTitle', { game: gameName(v.game, t) })} onBack={leave}>
@@ -269,6 +298,15 @@ function Lobby({ code }: { code: string }) {
         </button>
         <p className="ms-note mt-1">{t('room.shareHint', { game: gameName(v.game, t) })}</p>
       </section>
+      {v.pot && (
+        <section className="ms-panel flex gap-3 items-start" role="note">
+          <Coins className="w-5 h-5 shrink-0 mt-0.5 text-[var(--cz-gold)]" aria-hidden />
+          <div className="min-w-0">
+            <p className="font-bold text-white">{t('room.stakeRoom', { stake: formatChips(v.pot.stake) })}</p>
+            <p className="ms-note mt-1">{t('room.stakeLobbyNote', { pot: formatChips(v.pot.stake * v.members.length) })}</p>
+          </div>
+        </section>
+      )}
       <section className="ms-panel">
         <span className="ms-label">{t('room.players', { n: v.members.length, total: v.seats })}</span>
         <ul className="flex flex-col gap-2" aria-live="polite">
@@ -302,10 +340,16 @@ function Lobby({ code }: { code: string }) {
         </ul>
         {me.host ? (
           <>
-            <button type="button" className="cz-btn cz-btn-primary cz-btn-game w-full mt-4" disabled={!allReady} onClick={() => void room.send({ op: 'start' })}>
-              <Play className="w-5 h-5" /> {t('room.startOnline')}
+            <button type="button" className="cz-btn cz-btn-primary cz-btn-game w-full mt-4" disabled={!allReady || tooFew} onClick={() => void start()}>
+              <Play className="w-5 h-5" /> {staked ? t('room.startStaked', { stake: formatChips(v.pot!.stake) }) : t('room.startOnline')}
             </button>
             {!allReady && <p className="ms-note mt-2 text-center">{t('room.waitReady')}</p>}
+            {allReady && tooFew && <p className="ms-note mt-2 text-center">{t('online.errors.need_players')}</p>}
+            {startError?.code && (
+              <p className="ms-note mt-2 text-center !text-[#ffb3b3]" role="alert">
+                {roomErrorText(t, startError)}
+              </p>
+            )}
           </>
         ) : (
           <>

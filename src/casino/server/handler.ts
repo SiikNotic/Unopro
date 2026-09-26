@@ -38,7 +38,7 @@ export interface BjRow {
   version: number;
 }
 
-export type CasinoStoreErrorCode = 'insufficient_funds' | 'conflict' | 'invalid_bet' | 'not_registered';
+export type CasinoStoreErrorCode = 'insufficient_funds' | 'conflict' | 'invalid_bet' | 'not_registered' | 'game_disabled';
 export class CasinoStoreError extends Error {
   constructor(readonly code: CasinoStoreErrorCode) {
     super(code);
@@ -70,6 +70,8 @@ export interface CasinoDeps {
   rng?: () => Rng;
   seed?: () => number;
   allow?: (userId: string) => boolean;
+  /** Owner's game control: are slots in service (game_enabled('slots'))? Absent = always. */
+  slotsEnabled?: () => Promise<boolean>;
 }
 
 export interface HttpIn {
@@ -91,6 +93,7 @@ const STATUS: Record<CasinoErrorCode, number> = {
   conflict: 409,
   rate_limited: 429,
   bad_request: 400,
+  game_disabled: 423,
   server: 500,
 };
 const fail = (code: CasinoErrorCode): HttpOut => ({ status: STATUS[code], body: { code } });
@@ -183,6 +186,8 @@ export async function handleCasinoRequest(req: HttpIn, deps: CasinoDeps): Promis
       const id = requestId.toLowerCase();
       const existing = await store.find(user.id, id);
       if (existing) return existing.game === 'premium' && existing.detail.machine === machine && existing.stake === bet ? ok(premiumReceipt(existing)) : fail('conflict');
+      // Out of service: no new round (a round already booked is still returned above). account_play refuses it too.
+      if (deps.slotsEnabled && !(await deps.slotsEnabled())) return fail('game_disabled');
       const round = playRound(MACHINES[machine], bet, deps.random ?? cryptoUint32);
       const booked = await store.play({ userId: user.id, requestId: id, game: 'premium', stake: bet, payout: round.payout, detail: { machine, draws: round.draws } });
       if (booked.detail.machine !== machine) return fail('conflict');
@@ -223,6 +228,7 @@ export async function handleCasinoRequest(req: HttpIn, deps: CasinoDeps): Promis
         const existing = await store.find(user.id, requestId);
         const answer = (bk: Booking): SlotsResult => ({ requestId, stops: bk.detail.stops as number[], lines: l, betPerLine: bpl, payout: bk.payout, balance: bk.balance });
         if (existing) return existing.game === 'slots' && existing.stake === stake && existing.detail.lines === l ? ok(answer(existing)) : fail('conflict');
+        if (deps.slotsEnabled && !(await deps.slotsEnabled())) return fail('game_disabled');
         const stops = spinReels(rng());
         const outcome = evaluateSpin(stops, l, bpl);
         return ok(answer(await store.play({ userId: user.id, requestId, game: 'slots', stake, payout: outcome.total, detail: { stops, lines: l, betPerLine: bpl } })));

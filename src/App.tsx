@@ -18,6 +18,7 @@ import { AccountProvider } from '@/account/AccountProvider';
 import { AccountOverlay } from '@/account/AccountOverlay';
 import { AccessGate } from '@/account/AccessGate';
 import { SocialCasinoNotice } from '@/legal/SocialCasinoNotice';
+import { AvailabilityGate } from '@/games/OutOfService';
 import type { Screen } from '@/types/navigation';
 
 // The slot machines (engine, math, art, sounds) load only when a player opens them.
@@ -88,7 +89,9 @@ function ScreenRouter() {
     <main className="relative min-h-screen w-full">
       <Background />
       <AccessGate>
-        <Suspense fallback={<div className="min-h-screen" aria-busy="true" />}>{screens[currentScreen]}</Suspense>
+        <Suspense fallback={<div className="min-h-screen" aria-busy="true" />}>
+          <AvailabilityGate>{screens[currentScreen]}</AvailabilityGate>
+        </Suspense>
         <SocialCasinoNotice />
       </AccessGate>
       <AccountOverlay />

@@ -1,4 +1,6 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useI18n } from '@/i18n';
+import { roomErrorText } from '@/games/online/errors';
 import { useNavigation } from '@/components/Navigation';
 import { DOMINO_SCENES, loadDominoSetup, pickScene } from '@/games/shared/setup';
 import { useOnlineRoom } from '@/games/online/useOnlineRoom';
@@ -13,6 +15,10 @@ export function DominoOnline({ code }: { code: string }) {
   const room = useOnlineRoom(code);
   const scene = useMemo(() => pickScene(loadDominoSetup().scene, DOMINO_SCENES, 'games.domino.lastScene'), []);
   const v = room.view;
+  const { t } = useI18n();
+  const [notice, setNotice] = useState<string | null>(null);
+  // A new match of a staked room takes new stakes: say why if the server refuses it.
+  const rematch = async () => setNotice(roomErrorText(t, await room.send({ op: 'rematch' })));
   // Still in the lobby (e.g. opened from a link): go to the room screen.
   useEffect(() => {
     if (v?.status === 'lobby') navigate('room', { game: 'domino', room: code }, { replace: true });
@@ -35,10 +41,10 @@ export function DominoOnline({ code }: { code: string }) {
         scene,
         curtain: null,
         hideHandWhenIdle: false,
-        onRematch: host ? () => void room.send({ op: 'rematch' }) : null,
+        onRematch: host ? () => void rematch() : null,
         onExit: leave,
         onBack: leave,
-        banner: <OnlineBar view={v} link={room.link} error={room.error} myTurn={d.status === 'playing' && d.currentId === v.you} />,
+        banner: <OnlineBar view={v} link={room.link} error={room.error} myTurn={d.status === 'playing' && d.currentId === v.you} notice={notice} />,
       }}
     />
   );

@@ -14,6 +14,8 @@ export function auditLine(a: AuditRow, t: (k: string, v?: Record<string, string 
       return t('staff.audit.unban');
     case 'USERNAME_CHANGE':
       return t('staff.audit.username', { from: String(m.from ?? ''), to: String(m.to ?? '') });
+    case 'GAME_AVAILABILITY':
+      return t(m.to ? 'staff.audit.gameOn' : 'staff.audit.gameOff', { game: t(`availability.games.${String(m.game ?? '')}`) });
     case 'ROLE_CHANGE':
       return t('staff.audit.role', { from: String(m.from ?? '—'), to: String(m.to ?? m.role ?? '') });
     default:

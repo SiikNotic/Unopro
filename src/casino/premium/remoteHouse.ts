@@ -22,6 +22,7 @@ const STATUS_CODES: Record<number, SpinErrorCode> = {
   402: 'insufficient_funds',
   409: 'conflict',
   422: 'invalid_bet',
+  423: 'game_disabled',
   429: 'rate_limited',
 };
 
@@ -55,7 +56,7 @@ export function createRemoteSlotService(opts: RemoteHouseOptions): SlotService {
       }
       if (!res.ok) {
         const code = (body as { code?: unknown } | null)?.code;
-        if (typeof code === 'string' && code in { insufficient_funds: 1, invalid_bet: 1, invalid_machine: 1, conflict: 1, unauthorized: 1, rate_limited: 1 }) throw new SpinError(code as SpinErrorCode);
+        if (typeof code === 'string' && code in { insufficient_funds: 1, invalid_bet: 1, invalid_machine: 1, game_disabled: 1, conflict: 1, unauthorized: 1, rate_limited: 1 }) throw new SpinError(code as SpinErrorCode);
         if (res.status === 404) return null;
         throw new SpinError(STATUS_CODES[res.status] ?? 'server', `HTTP ${res.status}`);
       }

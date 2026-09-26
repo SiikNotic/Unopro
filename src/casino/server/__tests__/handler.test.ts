@@ -235,3 +235,25 @@ describe('casino server: blackjack', () => {
     expect((await s.post(ANA, { op: 'bj_deal', requestId: rid(), bet: 0 })).status).toBe(400);
   });
 });
+
+describe('casino server: slots out of service', () => {
+  it('refuses new slot rounds (premium and classic) but still returns rounds already booked; roulette unaffected', async () => {
+    const s = setup();
+    let on = true;
+    s.deps.slotsEnabled = async () => on;
+    await s.post(ANA, { op: 'claim', requestId: rid() });
+    const machine = Object.keys(MACHINES)[0] as keyof typeof MACHINES;
+    const bet = MACHINES[machine].betLevels[0];
+    const id = rid();
+    const first = await s.post(ANA, { requestId: id, machine, bet });
+    expect(first.status).toBe(200);
+    on = false;
+    expect(await s.post(ANA, { requestId: rid(), machine, bet })).toEqual({ status: 423, body: { code: 'game_disabled' } });
+    expect((await s.post(ANA, { op: 'slots', requestId: rid(), lines: 10, betPerLine: 2 })).status).toBe(423);
+    // a retry of the round booked before is answered with that round, not played again
+    expect((await s.post(ANA, { requestId: id, machine, bet })).body).toEqual(first.body);
+    expect((await s.post(ANA, { op: 'roulette', requestId: rid(), bets: [{ type: 'red', amount: 5 }] })).status).toBe(200);
+    on = true;
+    expect((await s.post(ANA, { requestId: rid(), machine, bet })).status).toBe(200);
+  });
+});

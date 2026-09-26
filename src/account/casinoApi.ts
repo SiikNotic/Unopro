@@ -7,7 +7,7 @@ export const casinoUrl = (cfg: OnlineConfig) => `${cfg.base}/functions/v1/casino
 
 export type CasinoResult<T> = { ok: true; data: T } | { ok: false; code: CasinoErrorCode };
 
-const CODES: CasinoErrorCode[] = ['unauthorized', 'account_required', 'insufficient_funds', 'invalid_bet', 'conflict', 'rate_limited', 'bad_request', 'server'];
+const CODES: CasinoErrorCode[] = ['unauthorized', 'account_required', 'insufficient_funds', 'invalid_bet', 'conflict', 'rate_limited', 'bad_request', 'game_disabled', 'server'];
 
 /** One call. Network trouble and timeouts come back as 'server' (the caller may retry with the same id). */
 export async function casinoCall<T>(req: CasinoRequest, cfg: OnlineConfig | null = onlineConfig(), fetchImpl: typeof fetch = (...a) => fetch(...a), timeoutMs = 10000): Promise<CasinoResult<T>> {

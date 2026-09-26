@@ -36,6 +36,8 @@ export interface BingoSession {
   /** Local balls and bots wait while a sheet is open. */
   onSheet?: (open: boolean) => void;
   onRematch: (() => void) | null;
+  /** False when the next round must be a new match (staked online rooms). Default true. */
+  canNextRound?: boolean;
   onExit: () => void;
   onBack: () => void;
   banner?: ReactNode;
@@ -348,9 +350,11 @@ export function BingoTable({ session }: { session: BingoSession }) {
               ))}
           </ul>
           <div className="mt-5 flex flex-col sm:flex-row gap-2">
-            <button type="button" className="cz-btn cz-btn-primary cz-btn-lg flex-1" onClick={nextRound}>
-              <Play className="w-5 h-5" /> {t('bingo.nextRound')}
-            </button>
+            {session.canNextRound !== false && (
+              <button type="button" className="cz-btn cz-btn-primary cz-btn-lg flex-1" onClick={nextRound}>
+                <Play className="w-5 h-5" /> {t('bingo.nextRound')}
+              </button>
+            )}
             {newMatch && (
               <button type="button" className="cz-btn cz-btn-secondary cz-btn-lg flex-1" onClick={newMatch}>
                 <RotateCcw className="w-5 h-5" /> {t('games.rematch')}

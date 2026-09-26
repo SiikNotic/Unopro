@@ -1,4 +1,6 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useI18n } from '@/i18n';
+import { roomErrorText } from '@/games/online/errors';
 import { useNavigation } from '@/components/Navigation';
 import { BINGO_SCENES, loadBingoSetup, pickScene } from '@/games/shared/setup';
 import { useOnlineRoom } from '@/games/online/useOnlineRoom';
@@ -14,6 +16,10 @@ export function BingoOnline({ code }: { code: string }) {
   const setup = useMemo(() => loadBingoSetup(), []);
   const scene = useMemo(() => pickScene(setup.scene, BINGO_SCENES, 'games.bingo.lastScene'), [setup.scene]);
   const v = room.view;
+  const { t } = useI18n();
+  const [notice, setNotice] = useState<string | null>(null);
+  // A new match of a staked room takes new stakes: say why if the server refuses it.
+  const rematch = async () => setNotice(roomErrorText(t, await room.send({ op: 'rematch' })));
   useEffect(() => {
     if (v?.status === 'lobby') navigate('room', { game: 'bingo', room: code }, { replace: true });
   }, [v?.status, code, navigate]);
@@ -36,10 +42,12 @@ export function BingoOnline({ code }: { code: string }) {
         scene,
         autoMark: setup.autoMark,
         paused: null,
-        onRematch: host ? () => void room.send({ op: 'rematch' }) : null,
+        // A staked round is a whole match: the next one is the host's rematch (new stakes).
+        canNextRound: !v.pot,
+        onRematch: host ? () => void rematch() : null,
         onExit: leave,
         onBack: leave,
-        banner: <OnlineBar view={v} link={room.link} error={room.error} myTurn={false} />,
+        banner: <OnlineBar view={v} link={room.link} error={room.error} myTurn={false} notice={notice} />,
       }}
     />
   );

@@ -9,6 +9,13 @@ import type { RtView } from '@/casino/table/rouletteTable';
 export type RoomGame = 'domino' | 'bingo' | 'carta' | 'blackjack' | 'roulette';
 /** Games played for account coins (registered, non-banned accounts only). */
 export const COIN_GAMES: readonly RoomGame[] = ['blackjack', 'roulette'];
+/** Games whose rooms may be played for account coins (a stake per player, the pot to the winner). */
+export const STAKE_GAMES: readonly RoomGame[] = ['domino', 'bingo', 'carta'];
+/** The stakes a room may be created with (0 = no coins). The server accepts nothing else. */
+export const STAKES = [0, 100, 500, 1000, 5000] as const;
+export type Stake = (typeof STAKES)[number];
+/** Games the owner can take out of service (see the game_control_stakes migration). */
+export type ControlledGame = 'slots' | 'domino' | 'carta' | 'bingo';
 /** Games with quick match ("Jugar ahora"). */
 export const QUICK_GAMES: readonly RoomGame[] = ['carta', 'blackjack', 'roulette'];
 /** Seats allowed per game (min, max) and the default for quick match. */
@@ -29,6 +36,24 @@ export interface RoomSettings {
   speed?: BingoSpeed;
   /** Found by quick match. */
   public?: boolean;
+  /** Domino / Bingo / Carta: coins each player puts in the pot when a match starts (absent = no coins). */
+  stake?: Stake;
+}
+
+/**
+ * The pot of a staked room. Stakes are taken by the server when the match starts; when it ends the pot is
+ * split between the winning players still at the table (a seat won by a bot, or by a player who left,
+ * pays nobody). Seats are ids like "s0".
+ */
+export interface PotView {
+  stake: number;
+  /** Players who put in a stake this match (0 before the first match). */
+  players: number;
+  total: number;
+  settled: boolean;
+  winners: string[];
+  /** Paid to each winner. */
+  prize: number;
 }
 
 export interface RoomMemberView {
@@ -60,6 +85,8 @@ export interface RoomView {
   carta: CartaView | null;
   blackjack: BjView | null;
   roulette: RtView | null;
+  /** Staked rooms: the pot (null when the room isn't played for coins). */
+  pot: PotView | null;
   /** Coin tables: your account balance after the server's last coin operation for you, if any. */
   balance: number | null;
   /** Events of the change that produced this view (sanitised for this player). */
@@ -94,6 +121,10 @@ export type RoomErrorCode =
   | 'rule'
   | 'insufficient_funds'
   | 'not_registered'
-  | 'banned';
+  | 'banned'
+  /** The owner took this game out of service: no new matches. */
+  | 'disabled'
+  /** A staked match needs at least two players at the table. */
+  | 'need_players';
 
 export type RoomResponse = { ok: true; view: RoomView } | { ok: false; code: RoomErrorCode; detail?: string };

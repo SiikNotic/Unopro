@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Ban, Coins, LayoutDashboard, ScrollText, Search, ShieldX, Users } from 'lucide-react';
+import { ArrowLeft, Ban, Coins, Gamepad2, LayoutDashboard, Power, ScrollText, Search, ShieldX, Users } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useNavigation } from '@/components/Navigation';
 import { useI18n } from '@/i18n';
@@ -14,13 +14,16 @@ import { createStaffFeed } from './feed';
 import { ago, fmtDate, fmtNum, shortId, signed } from './format';
 import { RoleBadge, UserDetailPanel } from './UserDetail';
 import { auditLine } from './auditText';
+import { CONTROLLED_GAMES, setAvailability } from '@/games/availability';
+import type { ControlledGame } from '@/games/availability';
 import './staff.css';
 
-type Tab = 'overview' | 'users' | 'economy' | 'bans' | 'audit';
+type Tab = 'overview' | 'users' | 'economy' | 'games' | 'bans' | 'audit';
 const TABS: { id: Tab; icon: LucideIcon }[] = [
   { id: 'overview', icon: LayoutDashboard },
   { id: 'users', icon: Users },
   { id: 'economy', icon: Coins },
+  { id: 'games', icon: Gamepad2 },
   { id: 'bans', icon: Ban },
   { id: 'audit', icon: ScrollText },
 ];
@@ -119,6 +122,7 @@ export function StaffScreen() {
           {tab === 'overview' && <OverviewTab overview={overview} version={version} onOpen={setSelected} />}
           {tab === 'users' && <UsersTab version={version} onOpen={setSelected} selected={selected} />}
           {tab === 'economy' && <EconomyTab overview={overview} version={version} onOpen={setSelected} />}
+          {tab === 'games' && <GamesTab version={version} isOwner={myRole === 'owner'} onChanged={() => setVersion((v) => v + 1)} />}
           {tab === 'bans' && <BansTab version={version} onOpen={setSelected} />}
           {tab === 'audit' && <AuditTab version={version} onOpen={setSelected} />}
         </main>
@@ -386,6 +390,75 @@ function BansTab({ version, onOpen }: { version: number; onOpen: (id: string) =>
   );
 }
 
+/**
+ * Games in service. Everyone on staff sees the state; only the owner gets the switches, and the switch is
+ * the database function owner_set_game_enabled, which checks the owner role itself (a hidden button would
+ * protect nothing) and writes the audit log.
+ */
+function GamesTab({ version, isOwner, onChanged }: { version: number; isOwner: boolean; onChanged: () => void }) {
+  const { t } = useI18n();
+  const games = useLoader(() => staffApi.games(), [version]);
+  const [editing, setEditing] = useState<ControlledGame | null>(null);
+  const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const apply = async (game: ControlledGame, enabled: boolean) => {
+    setBusy(true);
+    setError(null);
+    const r = await staffApi.setGame(game, enabled, reason.trim());
+    setBusy(false);
+    if (!r.ok) return setError(r.code);
+    if (games.data) setAvailability({ ...games.data, [game]: enabled });
+    setEditing(null);
+    setReason('');
+    onChanged();
+  };
+  return (
+    <>
+      <h2 className="sd-h">{t('staff.tabs.games')}</h2>
+      <p className="text-xs text-[var(--cz-muted)]">{t(isOwner ? 'staff.games.noteOwner' : 'staff.games.noteStaff')}</p>
+      <ErrorLine code={games.error} />
+      <ErrorLine code={error} />
+      <section className="sd-card divide-y divide-[var(--cz-line)]">
+        {games.data &&
+          CONTROLLED_GAMES.map((g) => {
+            const on = games.data![g];
+            return (
+              <div key={g} className="p-4 flex flex-col gap-3">
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+                  <div className="min-w-0">
+                    <p className="font-bold text-white text-base truncate">{t(`availability.games.${g}`)}</p>
+                    <span className={`mt-1 inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold ${on ? 'bg-emerald-400/15 text-emerald-300' : 'bg-red-400/15 text-[#ffb3b3]'}`} role="status">
+                      <i className={`h-2 w-2 rounded-full ${on ? 'bg-emerald-300' : 'bg-[#ff7a7a]'}`} aria-hidden /> {t(on ? 'staff.games.on' : 'staff.games.off')}
+                    </span>
+                  </div>
+                  {isOwner && editing !== g && (
+                    <button type="button" className={`cz-btn ${on ? 'cz-btn-secondary' : 'cz-btn-primary'} cz-btn-sm`} onClick={() => { setEditing(g); setReason(''); setError(null); }}>
+                      <Power className="w-4 h-4" aria-hidden /> {t(on ? 'staff.games.turnOff' : 'staff.games.turnOn')}
+                    </button>
+                  )}
+                </div>
+                {isOwner && editing === g && (
+                  <div className="flex flex-col gap-2">
+                    <textarea className="sd-textarea" placeholder={t('staff.games.reasonPlaceholder')} value={reason} maxLength={500} onChange={(e) => setReason(e.target.value)} aria-label={t('staff.reason')} required />
+                    <div className="flex gap-2 flex-wrap">
+                      <button type="button" className={`cz-btn ${on ? 'cz-btn-secondary !border-[rgba(224,122,122,0.6)] !text-[#ffd0d0]' : 'cz-btn-primary'} cz-btn-sm`} disabled={busy || reason.trim().length < 3} onClick={() => void apply(g, !on)}>
+                        {t(on ? 'staff.games.confirmOff' : 'staff.games.confirmOn')}
+                      </button>
+                      <button type="button" className="cz-btn cz-btn-quiet cz-btn-sm" onClick={() => setEditing(null)}>
+                        {t('common.cancel')}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+      </section>
+    </>
+  );
+}
+
 function AuditTab({ version, onOpen }: { version: number; onOpen: (id: string) => void }) {
   const { t } = useI18n();
   const [filter, setFilter] = useState<string>('all');
@@ -408,7 +481,7 @@ function AuditTab({ version, onOpen }: { version: number; onOpen: (id: string) =
       <h2 className="sd-h">{t('staff.tabs.audit')}</h2>
       <p className="text-xs text-[var(--cz-muted)]">{t('staff.auditNote')}</p>
       <div className="sd-seg" role="group" aria-label={t('staff.filter')}>
-        {['all', 'ADD_COINS', 'REMOVE_COINS', 'BAN', 'UNBAN', 'USERNAME_CHANGE', 'ROLE_CHANGE'].map((f) => (
+        {['all', 'ADD_COINS', 'REMOVE_COINS', 'BAN', 'UNBAN', 'USERNAME_CHANGE', 'ROLE_CHANGE', 'GAME_AVAILABILITY'].map((f) => (
           <button key={f} type="button" aria-pressed={filter === f} onClick={() => setFilter(f)}>
             {f === 'all' ? t('staff.all') : f}
           </button>

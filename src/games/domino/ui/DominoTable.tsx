@@ -66,7 +66,11 @@ export function DominoTable({ session }: { session: DominoSession }) {
   const { preferences } = usePreferences();
   const reduced = useReducedMotion();
   const animate = preferences.animations && !reduced;
-  const vw = useViewport().width;
+  const { width: vw, height: vh } = useViewport();
+  // A phone on its side: the table takes the left and your tiles a column on the right, so everything
+  // (opponents, line, hand, actions) fits the short screen without scrolling or covering each other.
+  const side = vw > vh && vh < 560 && vw >= 600;
+  const sideWidth = Math.round(Math.max(230, Math.min(380, vw * 0.34)));
   const fire = useFeedback('domino');
   useGameMusic('domino');
 
@@ -195,10 +199,20 @@ export function DominoTable({ session }: { session: DominoSession }) {
 
   // ---------- layout ----------
   const handCount = view.hand.length;
-  const perRow = handCount > 9 ? Math.ceil(handCount / 2) : Math.max(handCount, 1);
-  const handWidth = Math.min(vw, 760) - 28;
-  const gap = vw < 360 ? 5 : 8;
-  const tileSize = Math.round(Math.max(24, Math.min(vw >= 768 ? 44 : 38, (handWidth - gap * (perRow - 1)) / perRow)));
+  const gap = vw < 360 || side ? 5 : 8;
+  let perRow: number;
+  let tileSize: number;
+  if (side) {
+    // Two rows of tiles at most in the side column, sized by the screen's height.
+    const handWidth = sideWidth - 20;
+    const tallest = Math.max(22, Math.min(36, Math.floor((vh - 170) / 4.6)));
+    perRow = Math.max(1, Math.min(handCount, Math.max(Math.ceil(handCount / 2), Math.floor((handWidth + gap) / (tallest + gap)))));
+    tileSize = Math.round(Math.max(18, Math.min(tallest, (handWidth - gap * (perRow - 1)) / perRow)));
+  } else {
+    perRow = handCount > 9 ? Math.ceil(handCount / 2) : Math.max(handCount, 1);
+    const handWidth = Math.min(vw, 760) - 28;
+    tileSize = Math.round(Math.max(24, Math.min(vw >= 768 ? 44 : 38, (handWidth - gap * (perRow - 1)) / perRow)));
+  }
   // Everyone else, in turn order starting after the viewer.
   const at = view.seats.findIndex((s) => s.id === viewer);
   const others = [...view.seats.slice(at + 1), ...view.seats.slice(0, at)].map((s) => s.id);
@@ -219,7 +233,7 @@ export function DominoTable({ session }: { session: DominoSession }) {
   const seatView = (id: string) => view.seats.find((s) => s.id === id)!;
 
   return (
-    <div className="dm" style={TABLE[scene] as React.CSSProperties}>
+    <div className={`dm ${side ? 'is-side' : ''}`} style={{ ...(TABLE[scene] as React.CSSProperties), '--dm-side': `${sideWidth}px` } as React.CSSProperties}>
       <GameSceneBackground scene={scene} />
       <FxLayer kind="gold" colors={['#f3dfae', '#d9b56a', '#fff7e6', '#b98b3e']} />
       <header className="dm-top">
@@ -290,6 +304,7 @@ export function DominoTable({ session }: { session: DominoSession }) {
             flightFrom={() => flight.current}
             animate={animate}
             emptyLabel={view.status === 'playing' ? (myTurn ? t('domino.youLead') : t('domino.waitingLead', { name: current.name })) : ''}
+            reserveBottom={view.boneyardCount > 0 || view.seats.length < 4 ? 50 : 0}
           >
             {view.boneyardCount > 0 || view.seats.length < 4 ? (
               canDraw ? (

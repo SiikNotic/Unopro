@@ -904,7 +904,8 @@
       "server": "Error del servidor. Tu tirada no está confirmada: pulsa Reintentar para recuperarla.",
       "bad_response": "Respuesta incompleta del servidor. Tu tirada no está confirmada: pulsa Reintentar.",
       "uncertain": "Aún no podemos confirmar tu última tirada. Nunca se cobra ni se paga dos veces: pulsa Reintentar.",
-      "other_tab": "Estás jugando en otra pestaña: pulsa «Jugar aquí» arriba. No se cobró nada."
+      "other_tab": "Estás jugando en otra pestaña: pulsa «Jugar aquí» arriba. No se cobró nada.",
+      "game_disabled": "Las tragamonedas están fuera de servicio. No se cobró nada."
     },
     "rules": {
       "title": "Cómo jugar",
@@ -1104,7 +1105,15 @@
       "carta": "Carta",
       "blackjack": "Blackjack",
       "roulette": "Ruleta"
-    }
+    },
+    "stakeLabel": "Apuesta por jugador (monedas)",
+    "stakeFree": "Gratis",
+    "stakeNote": "Cada jugador paga la apuesta al empezar la partida y el ganador se lleva el bote. Si gana un bot, nadie cobra. Solo monedas virtuales.",
+    "stakeFreeNote": "Partida amistosa: no se juegan monedas.",
+    "stakeNeedsAccount": "Para jugar con monedas necesitas una cuenta registrada.",
+    "stakeRoom": "Partida con monedas: {stake} por jugador",
+    "stakeLobbyNote": "Se cobra al empezar. Bote con los jugadores actuales: {pot}. El ganador se lo lleva; con empate se reparte.",
+    "startStaked": "Empezar (apuesta {stake})"
   },
   "domino": {
     "roundOf": "Ronda {n} · a {target}",
@@ -1240,9 +1249,17 @@
       "rule": "Jugada no válida.",
       "insufficient_funds": "No tienes monedas suficientes para esa apuesta.",
       "not_registered": "Necesitas una cuenta para jugar en las mesas con monedas.",
-      "banned": "Tu cuenta está suspendida."
+      "banned": "Tu cuenta está suspendida.",
+      "disabled": "Este juego está fuera de servicio. No se pueden empezar partidas nuevas.",
+      "need_players": "Una partida con monedas necesita al menos 2 jugadores en la sala.",
+      "insufficientWho": "{name} no tiene monedas suficientes para la apuesta. No se cobró a nadie.",
+      "potOpen": "El bote de la partida anterior aún se está pagando. Inténtalo en un momento."
     },
-    "polling": "sincronizando"
+    "polling": "sincronizando",
+    "pot": "Bote {total}",
+    "potTitle": "Apuesta de {stake} por jugador",
+    "potWon": "¡Ganaste {prize}!",
+    "potLost": "Bote entregado"
   },
   "account": {
     "title": "Tu cuenta",
@@ -1378,7 +1395,8 @@
       "users": "Usuarios",
       "economy": "Economía",
       "bans": "Baneos",
-      "audit": "Registro"
+      "audit": "Registro",
+      "games": "Juegos"
     },
     "errors": {
       "forbidden": "No tienes permiso para esta acción (o el usuario está protegido).",
@@ -1477,7 +1495,9 @@
       "banTemporary": "baneo de {hours} h",
       "unban": "baneo levantado",
       "username": "nombre {from} → {to}",
-      "role": "rol {from} → {to}"
+      "role": "rol {from} → {to}",
+      "gameOn": "{game} en servicio",
+      "gameOff": "{game} fuera de servicio"
     },
     "kpi": {
       "registered": "Usuarios registrados",
@@ -1534,6 +1554,17 @@
         "daily_cap": "Rechazado: límite diario",
         "other": "Rechazado"
       }
+    },
+    "games": {
+      "on": "En servicio",
+      "off": "Fuera de servicio",
+      "turnOff": "Desactivar",
+      "turnOn": "Activar",
+      "confirmOff": "Confirmar: fuera de servicio",
+      "confirmOn": "Confirmar: en servicio",
+      "reasonPlaceholder": "Motivo (obligatorio, queda en el registro)",
+      "noteOwner": "Un juego fuera de servicio no admite partidas nuevas (las que están en curso terminan). El servidor lo aplica y queda en el registro.",
+      "noteStaff": "Solo el propietario puede cambiar el estado de los juegos."
     }
   },
   "bank": {
@@ -1848,6 +1879,17 @@
       "bank": "Banco",
       "profile": "Perfil",
       "more": "Más"
+    }
+  },
+  "availability": {
+    "badge": "Fuera de servicio",
+    "text": "Este juego está fuera de servicio temporalmente por mantenimiento. Tus monedas están a salvo; vuelve a intentarlo más tarde.",
+    "back": "Volver al inicio",
+    "games": {
+      "slots": "Tragamonedas",
+      "domino": "Dominó",
+      "carta": "Carta",
+      "bingo": "Bingo"
     }
   }
 }

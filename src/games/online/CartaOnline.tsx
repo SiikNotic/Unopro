@@ -12,6 +12,8 @@ import type { OnlineRoom } from './useOnlineRoom';
 import type { RoomView } from './protocol';
 import { OnlineGate } from './OnlineGate';
 import { OnlineBar } from './OnlineBar';
+import { roomErrorText } from './errors';
+import { useI18n } from '@/i18n';
 import type { CartaView } from './server/carta';
 
 /** The view without the draw pile's cards: stand-ins keep its size for the table. */
@@ -35,6 +37,8 @@ function CartaOnlineTable({ room, view, carta, onLeft }: { room: OnlineRoom; vie
   const { preferences } = usePreferences();
   const [scenario] = useState<ScenarioId>(() => pickScenario(preferences.scenario, null));
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const { t } = useI18n();
   const state = useMemo(() => withDeck(carta), [carta]);
   const you = view.you;
   useGameSounds(state, you);
@@ -44,7 +48,7 @@ function CartaOnlineTable({ room, view, carta, onLeft }: { room: OnlineRoom; vie
       // Rounds deal by themselves on the server; a new game after the last round is the host's rematch.
       if (action.type === 'START_GAME') return { ok: true, state };
       if (action.type === 'RESTART_GAME') {
-        void room.send({ op: 'rematch' });
+        void room.send({ op: 'rematch' }).then((r) => setNotice(roomErrorText(t, r)));
         return { ok: true, state };
       }
       const check = validateAction(state, action);
@@ -52,7 +56,7 @@ function CartaOnlineTable({ room, view, carta, onLeft }: { room: OnlineRoom; vie
       void room.act(action as unknown as Record<string, unknown>).then((r) => setError(r.ok ? null : (r.detail ?? r.code ?? null)));
       return { ok: true, state };
     },
-    [state, room]
+    [state, room, t]
   );
 
   const leave = async () => {
@@ -69,7 +73,7 @@ function CartaOnlineTable({ room, view, carta, onLeft }: { room: OnlineRoom; vie
       onExit={() => void leave()}
       engineError={error}
       scenario={scenario}
-      banner={<OnlineBar view={view} link={room.link} error={room.error} myTurn={actor === you} />}
+      banner={<OnlineBar view={view} link={room.link} error={room.error} myTurn={actor === you} notice={notice} />}
     />
   );
 }

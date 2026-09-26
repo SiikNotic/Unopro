@@ -30,6 +30,8 @@ export type SpinErrorCode =
   | 'insufficient_funds'
   | 'invalid_bet'
   | 'invalid_machine'
+  /** The owner took the slots out of service: nothing was charged. */
+  | 'game_disabled'
   /** The request id was already used for a different bet. */
   | 'conflict'
   /** Another tab of this browser is the one playing (local mode). */

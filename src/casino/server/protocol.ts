@@ -14,6 +14,8 @@ export type CasinoErrorCode =
   | 'conflict'
   | 'rate_limited'
   | 'bad_request'
+  /** The owner took this game out of service (see the game_control_stakes migration). */
+  | 'game_disabled'
   | 'server';
 
 export interface AccountInfo {

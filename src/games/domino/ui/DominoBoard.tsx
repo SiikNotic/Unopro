@@ -20,6 +20,8 @@ interface BoardProps {
   flightFrom: () => DOMRect | null;
   animate: boolean;
   emptyLabel: string;
+  /** Height (px) kept clear at the bottom of the cloth for what sits there (the boneyard): no tile goes under it. */
+  reserveBottom?: number;
   children?: React.ReactNode;
 }
 
@@ -30,7 +32,7 @@ function metrics(w: number) {
   return { unit, halfWidth };
 }
 
-export function DominoBoard({ line, ghostTile, ghosts, onGhost, flightFrom, animate, emptyLabel, children }: BoardProps) {
+export function DominoBoard({ line, ghostTile, ghosts, onGhost, flightFrom, animate, emptyLabel, reserveBottom = 0, children }: BoardProps) {
   const cloth = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
   useLayoutEffect(() => {
@@ -54,14 +56,17 @@ export function DominoBoard({ line, ghostTile, ghosts, onGhost, flightFrom, anim
     });
   }, [ghostTile, ghosts, line, halfWidth]);
 
-  // Fit the whole line (and any ghost) inside the cloth, centred.
+  // Fit the whole line (and any ghost) inside the cloth, centred in the part of it that is free (above the
+  // reserved band), so no tile ever lies under the boneyard or runs off the cloth.
   const all: TileBox[] = [...boxes, ...ghostBoxes.map((g) => g.box)];
   const b = bounds(all);
   const pad = 14;
-  const scale = all.length ? Math.min(1, (size.w - pad * 2) / ((b.maxX - b.minX) * unit), (size.h - pad * 2) / ((b.maxY - b.minY) * unit)) : 1;
+  const reserve = Math.min(reserveBottom, Math.max(0, size.h / 3));
+  const freeH = size.h - reserve;
+  const scale = all.length ? Math.max(0.05, Math.min(1, (size.w - pad * 2) / ((b.maxX - b.minX) * unit), (freeH - pad * 2) / ((b.maxY - b.minY) * unit))) : 1;
   const u = unit * scale;
   const cx = ((b.minX + b.maxX) / 2) * u;
-  const cy = ((b.minY + b.maxY) / 2) * u;
+  const cy = ((b.minY + b.maxY) / 2) * u + reserve / 2;
 
   // The newest tile flies in from where it was played, lands with a little weight, and settles.
   const slots = useRef(new Map<number, HTMLDivElement>());

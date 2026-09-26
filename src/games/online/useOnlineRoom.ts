@@ -15,7 +15,8 @@ export interface OnlineRoom {
   error: RoomErrorCode | null;
   link: LinkState;
   act: (action: DominoAction | BingoAction | Record<string, unknown>) => Promise<{ ok: boolean; code?: RoomErrorCode; detail?: string }>;
-  send: (req: { op: 'ready'; ready: boolean } | { op: 'start' | 'leave' | 'rematch' }) => Promise<boolean>;
+  /** Resolves with the outcome, so a screen can say why a start or rematch was refused. */
+  send: (req: { op: 'ready'; ready: boolean } | { op: 'start' | 'leave' | 'rematch' }) => Promise<{ ok: boolean; code?: RoomErrorCode; detail?: string }>;
 }
 
 /**
@@ -95,7 +96,13 @@ export function useOnlineRoom(code: string, config?: OnlineConfig | null): Onlin
     },
     [call, code]
   );
-  const send = useCallback<OnlineRoom['send']>(async (req) => (await call({ ...req, code } as RoomRequest)).ok, [call, code]);
+  const send = useCallback<OnlineRoom['send']>(
+    async (req) => {
+      const res = await call({ ...req, code } as RoomRequest);
+      return res.ok ? { ok: true } : { ok: false, code: res.code, detail: res.detail };
+    },
+    [call, code]
+  );
 
   return { view, seq, error, link, act, send };
 }
