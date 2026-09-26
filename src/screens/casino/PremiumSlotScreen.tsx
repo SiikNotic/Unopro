@@ -678,7 +678,7 @@ function Machine({ machine }: { machine: MachineId }) {
   // ---------- layout ----------
   const reelWidth = windowWidth > 0 ? (windowWidth - 8 - 4 * (REELS - 1)) / REELS : 60;
   // Lucky 7s carries a taller marquee and, on wide screens, a larger control deck.
-  const marquee = machine === 'lucky7s' && !sideways ? (viewport.w >= 900 ? 215 : 70) : 0;
+  const marquee = machine === 'lucky7s' && !sideways ? (viewport.w >= 900 ? 235 : 85) : 0;
   const heightBudget = (viewport.h - marquee - (sideways ? (machine === 'royal' ? 235 : 195) : machine === 'royal' ? 460 : 410)) / 3;
   const cellHeight = Math.round(Math.max(52, Math.min(128, reelWidth * 1.25, Math.max(52, heightBudget))));
 

@@ -764,3 +764,52 @@
     animation: none !important;
   }
 }
+
+/* Lucky 7s with the owner's art: the marquee-bulb gold frame around the reels, the painted SPIN button
+   and the casino-floor backdrop. */
+.mc-lucky7s:not(.sl-tile) .mc-window.has-3d {
+  padding: 4px;
+  border: 22px solid transparent;
+  border-image: var(--frame) 118 / 22px stretch;
+  border-radius: 0;
+  background: #1a0205;
+  background-clip: padding-box;
+  box-shadow: 0 12px 26px -10px rgba(0, 0, 0, 0.75);
+}
+.mc-lucky7s:not(.sl-tile) .mc-window.has-3d .mc-payline::before,
+.mc-lucky7s:not(.sl-tile) .mc-window.has-3d .mc-payline::after {
+  display: none;
+}
+.mc-lucky7s .mc-spin.has-3d {
+  box-shadow: none;
+  font-size: 18px;
+}
+.mc-lucky7s .mc-logo.is-hero img {
+  width: min(92%, 420px);
+  margin: -6px auto -4px;
+}
+.mb-lucky7s {
+  background: linear-gradient(180deg, rgba(10, 1, 3, 0.35), rgba(10, 1, 3, 0.55)), url('./art/lucky7s/background.webp') center 30% / cover no-repeat, #0e0104;
+}
+.mb-lucky7s .mb-glow,
+.mb-lucky7s .mb-bokeh {
+  display: none;
+}
+@media (min-width: 900px) {
+  .mc-lucky7s .mc-spin.has-3d {
+    font-size: 24px;
+  }
+  .mc-lucky7s:not(.sl-tile) .mc-window.has-3d {
+    border-width: 28px;
+    border-image-width: 28px;
+  }
+}
+.mc-lucky7s .mc-logo.is-hero img {
+  width: auto;
+  max-width: 92%;
+  height: clamp(78px, 14vh, 136px);
+}
+/* The owner's 7 WILD art carries its own WILD plate: no extra tag. */
+.mc-lucky7s .ps-3d.ps-k-wild .ps-tag-wild {
+  display: none;
+}
