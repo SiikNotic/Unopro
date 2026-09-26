@@ -213,18 +213,74 @@
   color: #f0cf7e;
 }
 .ol-score {
-  /* The pack's header panel with its winged crest. */
+  /* The pack's header panel with its winged crest, never stretched: everything inside is placed in the
+     navy field around the crest (label left of it, stars earned right of it, score and bar below it). */
+  position: relative;
+  width: 100%;
+  aspect-ratio: 800 / 294;
+  container-type: inline-size;
   background: url('../assets/ui-plaque.webp') center / 100% 100% no-repeat;
-  padding: clamp(26px, 9%, 34px) 18px 12px;
+  padding: 0;
   text-align: center;
 }
+.ol-score .ol-cap,
+.ol-score-stars {
+  position: absolute;
+  top: 37%;
+  width: 27%;
+  font-size: clamp(7px, 3cqw, 12px);
+  letter-spacing: 0.03em;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ol-score .ol-cap { left: 11.5%; }
+.ol-score-stars {
+  right: 12%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3em;
+  color: #fff6dc;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.ol-score-star {
+  width: 1.3em;
+  height: 1.3em;
+}
+/* A small plaque (a phone on its side) has no room for the word: the score speaks for itself. The label
+   stays for screen readers. */
+@container (max-width: 220px) {
+  .ol-score .ol-cap {
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+}
 .ol-score b {
+  position: absolute;
+  left: 20%;
+  right: 20%;
+  top: 52%;
   display: block;
   font-family: var(--serif);
-  font-size: 22px;
+  font-size: clamp(16px, 9cqw, 34px);
   font-weight: 800;
-  line-height: 1.05;
+  line-height: 1;
   font-variant-numeric: tabular-nums;
+}
+.ol-score .ol-bar {
+  position: absolute;
+  left: 16%;
+  right: 16%;
+  bottom: 18%;
+  height: clamp(5px, 2.2cqw, 9px);
+  margin: 0;
 }
 .ol-bar {
   position: relative;
@@ -245,8 +301,8 @@
 .ol-bar > i {
   position: absolute;
   top: 50%;
-  width: 18px;
-  height: 18px;
+  width: clamp(12px, 5.5cqw, 20px);
+  height: clamp(12px, 5.5cqw, 20px);
   transform: translate(-50%, -50%);
 }
 .ol-bar-star {
@@ -1142,6 +1198,17 @@
     height: 62px;
   }
 }
+/* Phones: the moves and the goals share the first row; the score plaque gets its own row, big enough to
+   read (sharing a row it was ~150 px wide). */
+@media (max-width: 767px) {
+  .ol-hud {
+    grid-template-columns: auto 1fr;
+    grid-template-areas: 'moves goals' 'score score';
+  }
+  .ol-hud > .ol-moves { grid-area: moves; }
+  .ol-hud > .ol-goals { grid-area: goals; grid-column: auto; justify-content: flex-end; }
+  .ol-hud > .ol-score { grid-area: score; justify-self: center; width: min(100%, 300px); }
+}
 @media (min-width: 768px) {
   .ol-hud {
     grid-template-columns: auto 1fr auto;
@@ -1152,9 +1219,6 @@
   }
   .ol-moves-plaque b {
     font-size: 30px;
-  }
-  .ol-score b {
-    font-size: 26px;
   }
   .ol-power {
     width: 70px;
@@ -1203,7 +1267,11 @@
     max-width: 260px;
     margin: 0 0 0 auto;
   }
-  .ol-play > .ol-hud .ol-goals { grid-column: auto; }
+  .ol-play > .ol-hud { grid-template-areas: none; }
+  .ol-play > .ol-hud > .ol-moves,
+  .ol-play > .ol-hud > .ol-goals,
+  .ol-play > .ol-hud > .ol-score { grid-area: auto; justify-self: center; }
+  .ol-play > .ol-hud .ol-goals { grid-column: auto; justify-content: center; }
   .ol-play > .ol-hud .ol-score { width: 100%; }
   .ol-play > .ol-area { grid-area: area; padding-top: 0; padding-bottom: 6px; }
   .ol-play > .ol-bottom {

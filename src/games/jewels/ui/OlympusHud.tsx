@@ -60,6 +60,9 @@ export const OlympusHud = memo(function OlympusHud({ level, score, movesLeft, go
       </div>
       <div className="ol-plaque ol-score">
         <span className="ol-cap">{t('jewels.score')}</span>
+        <span className="ol-score-stars" aria-hidden>
+          <StarIcon on className="ol-score-star" /> {level.stars.filter((s) => score >= s).length}/{level.stars.length}
+        </span>
         <b>{score.toLocaleString()}</b>
         <div className="ol-bar" role="progressbar" aria-valuemin={0} aria-valuemax={top} aria-valuenow={Math.min(top, score)} aria-label={t('jewels.progress')}>
           <span style={{ transform: `scaleX(${pct})` }} />
