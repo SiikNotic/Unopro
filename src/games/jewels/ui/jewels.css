@@ -632,7 +632,8 @@
   padding: 64px 34px 62px;
   text-align: center;
   background: url('../assets/ui-card.webp') center / 100% 100% no-repeat;
-  filter: drop-shadow(0 30px 50px rgba(0, 0, 0, 0.6));
+  /* Its own GPU layer and no filter: repainting a filtered panel on each tap made it blink on Android. */
+  transform: translateZ(0);
   animation: ol-card-in 0.42s cubic-bezier(0.2, 1.2, 0.4, 1);
 }
 .ol-card-laurel {
@@ -818,8 +819,8 @@
 .ol-ghost:active {
   transform: translateY(2px) scale(0.98);
 }
-.ol-settings {
-  padding-top: 64px;
+.ol-card.ol-settings {
+  padding: 64px 52px 64px;
   text-align: left;
 }
 .ol-setting {
@@ -1062,9 +1063,10 @@
   gap: 1px;
   margin-top: 3px;
 }
-.ol-node-stars svg {
-  width: 15px;
-  height: 15px;
+.ol-node-stars svg,
+.ol-node-stars img {
+  width: 16px;
+  height: 16px;
 }
 .ol-chapter {
   position: absolute;
@@ -1425,7 +1427,10 @@
 }
 
 /* Stars from the asset pack: dim until earned. */
-.ol-star-img {
+:where(.ol-star-img) {
   display: inline-block;
   object-fit: contain;
+  /* Never larger than its slot: each place sets its own size. */
+  width: 1.2em;
+  height: 1.2em;
 }
