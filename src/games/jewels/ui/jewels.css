@@ -45,11 +45,11 @@
 .ol-bg {
   position: absolute;
   inset: 0;
-  background: var(--ol-bg-portrait) 50% 18% / cover no-repeat, #6d9bdc;
+  background: var(--ol-bg-portrait) 50% 0% / cover no-repeat, #6d9bdc;
 }
 @media (min-aspect-ratio: 4/5) {
   .ol-bg {
-    background: var(--ol-bg-landscape) 58% 40% / cover no-repeat, #6d9bdc;
+    background: var(--ol-bg-landscape) 50% 22% / cover no-repeat, #6d9bdc;
   }
 }
 .ol-rays {

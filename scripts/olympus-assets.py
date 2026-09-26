@@ -4,8 +4,8 @@
 #      python3 scripts/olympus-assets.py upscale <pack dir> <hd dir> <RealESRGAN_x4plus.pth>
 #    The panorama gets a second pass (it becomes the full-screen background):
 #      python3 scripts/olympus-assets.py upscale <hd dir> <hd2 dir> <model> background_olympus_panorama.png
-# 2. Build the game's WebP files from the HD images:
-#      python3 scripts/olympus-assets.py build <hd dir> <hd2 dir>
+# 2. Build the game's WebP files from the HD images (optionally with the cleaned second backgrounds):
+#      python3 scripts/olympus-assets.py build <hd dir> <hd2 dir> [<bg2 dir>]
 #
 # The build crops each image to its content, squares it and sizes it for the screen (gems 320 px, which is
 # sharp up to 4K cells), cuts the topaz to a hexagon (so its outline differs from the round ruby) and the
@@ -171,7 +171,16 @@ def background(hd2):
     save(tall.resize((1320, int(tall.height * 1320 / cw)), Image.LANCZOS), 'bg-portrait', q=82)
 
 
-def build(hd, hd2):
+def backgrounds_v2(src):
+    """The owner's second backgrounds (ChatGPT, cleaned: the sheet's grey edges cropped, downscaled 3x, then
+    upscaled 4x with Real-ESRGAN into <src>: bg_mobile.png, bg_desktop.png)."""
+    m = Image.open(os.path.join(src, 'bg_mobile.png')).convert('RGB')
+    save(m, 'bg-portrait', q=82)
+    d = Image.open(os.path.join(src, 'bg_desktop.png')).convert('RGB')
+    save(d.resize((2560, int(d.height * 2560 / d.width)), Image.LANCZOS), 'bg-landscape', q=82)
+
+
+def build(hd, hd2, bg2=None):
     gems = ['gem_diamond_celestial', 'gem_emerald_divine', 'gem_ruby_fire', 'gem_sapphire_poseidon', 'gem_amethyst_alt']
     for k, n in enumerate(gems):
         save(square(load(hd, n)), f'gem{k}', 320)
@@ -202,7 +211,10 @@ def build(hd, hd2):
         save(im, name, (width, int(im.height * width / im.width)))
     for n in ['settings', 'sound', 'music', 'home', 'help', 'star', 'trophy', 'plus', 'crown']:
         save(disc(hd, 'icon_' + n, 0.86), 'ic-' + n, 128)
-    background(hd2)
+    if bg2:
+        backgrounds_v2(bg2)
+    else:
+        background(hd2)
 
 
 if __name__ == '__main__':
@@ -210,4 +222,4 @@ if __name__ == '__main__':
         upscale(sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5:])
     else:
         os.makedirs(OUT, exist_ok=True)
-        build(sys.argv[2], sys.argv[3])
+        build(sys.argv[2], sys.argv[3], sys.argv[4] if len(sys.argv) > 4 else None)
