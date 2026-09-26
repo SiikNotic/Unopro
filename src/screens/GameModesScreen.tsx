@@ -1,4 +1,4 @@
-import { ChevronRight, Globe, LayoutGrid, ShieldCheck, Users } from 'lucide-react';
+import { ChevronRight, Globe, LayoutGrid, Rocket, ShieldCheck, Users } from 'lucide-react';
 import { onlineConfig } from '@/games/online/client';
 import type { OnlineGame } from '@/types/navigation';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
@@ -31,7 +31,8 @@ const MiniWheel = () => (
   </svg>
 );
 
-const CASINO_GAMES: { screen: Screen; key: 'blackjack' | 'roulette' | 'slots' | 'poker'; art: React.ReactNode }[] = [
+const CASINO_GAMES: { screen: Screen; key: 'blackjack' | 'roulette' | 'slots' | 'poker' | 'crash'; art: React.ReactNode }[] = [
+  { screen: 'crash', key: 'crash', art: <Rocket className="w-5 h-5 text-[var(--cz-gold)]" aria-hidden /> },
   {
     screen: 'blackjackSetup',
     key: 'blackjack',

@@ -3,7 +3,7 @@ import { applyAvailabilityChange, fetchAvailability, parseAvailability, screenGa
 
 describe('game availability (what the app shows; the servers enforce it)', () => {
   it('parses the public table, ignoring unknown games and bad rows', () => {
-    expect(parseAvailability([{ game: 'slots', enabled: false }, { game: 'domino', enabled: true }, { game: 'lotto', enabled: false }, { game: 'bingo', enabled: 'no' }, null])).toEqual({ slots: false, domino: true, carta: true, bingo: true, blackjack: true, roulette: true, poker: true });
+    expect(parseAvailability([{ game: 'slots', enabled: false }, { game: 'domino', enabled: true }, { game: 'lotto', enabled: false }, { game: 'bingo', enabled: 'no' }, null])).toEqual({ slots: false, domino: true, carta: true, bingo: true, blackjack: true, roulette: true, poker: true, crash: true });
     expect(parseAvailability({})).toBeNull();
   });
 
@@ -35,7 +35,7 @@ describe('game availability (what the app shows; the servers enforce it)', () =>
   });
 
   it('applies a live change row, ignoring malformed ones', () => {
-    setAvailability({ slots: true, domino: true, carta: true, bingo: true, blackjack: true, roulette: true, poker: true });
+    setAvailability({ slots: true, domino: true, carta: true, bingo: true, blackjack: true, roulette: true, poker: true, crash: true });
     expect(applyAvailabilityChange({ game: 'bingo', enabled: false })).toBe(true);
     expect(applyAvailabilityChange({ game: 'bingo', enabled: false })).toBe(false);
     expect(applyAvailabilityChange({ game: 'lotto', enabled: false })).toBe(false);

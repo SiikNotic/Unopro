@@ -40,6 +40,9 @@ psql -q -v ON_ERROR_STOP=1 -d "$DB" -f staff_overview_test.sql
 psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20261006000000_game_control_tables.sql
 psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20261006000000_game_control_tables.sql
 psql -q -v ON_ERROR_STOP=1 -d "$DB" -f game_control_tables_test.sql
+psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20261007000000_crash.sql
+psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20261007000000_crash.sql
+psql -q -v ON_ERROR_STOP=1 -d "$DB" -f crash_test.sql
 
 # Two players ask for the same username at the same instant: exactly one gets it.
 for u in 21 22 23 24 25 26; do
@@ -129,4 +132,22 @@ wait
 read -r OREF OBAL < <(psql -At -F ' ' -d "$DB" -c "select (select count(*) from public.account_ledger where user_id = '$OU' and payout > 0), (select balance from public.account_wallets where user_id = '$OU')")
 echo "orphan refund concurrency: refunds=$OREF balance=$OBAL"
 [ "$OREF" = 3 ] && [ "$OBAL" = 300 ] || { echo "ORPHAN REFUND CONCURRENCY TEST FAILED"; exit 1; }
+# Crash: 20 simultaneous bets (different request ids) on one round book exactly one; then 20 simultaneous
+# cash-outs of that bet pay it exactly once.
+CU=00000000-0000-0000-0009-0000000000ee
+psql -q -d "$DB" -c "insert into auth.users (id, email_confirmed_at) values ('$CU', now()); insert into public.account_wallets (user_id, balance) values ('$CU', 1000); insert into public.terms_acceptances (user_id, version, adult_confirmed) values ('$CU', public.terms_version(), true)"
+psql -q -d "$DB" -c "select public.crash_state(); update public.crash_rounds set starts_at = clock_timestamp() + interval '60 seconds', crash_at = clock_timestamp() + interval '600 seconds', crash_multiplier = 500 where id = (select max(id) from public.crash_rounds)" >/dev/null
+for i in $(seq 1 20); do
+  psql -q -d "$DB" -c "set role authenticated; select set_config('request.jwt.claim.sub', '$CU', false); select public.crash_bet(gen_random_uuid(), 100, null)" >/dev/null 2>&1 &
+done
+wait
+psql -q -d "$DB" -c "update public.crash_rounds set starts_at = clock_timestamp() - interval '11.6 seconds' where id = (select max(id) from public.crash_rounds)"
+CROUND=$(psql -At -d "$DB" -c "select max(id) from public.crash_rounds")
+for i in $(seq 1 20); do
+  psql -q -d "$DB" -c "set role authenticated; select set_config('request.jwt.claim.sub', '$CU', false); select public.crash_cashout($CROUND)" >/dev/null 2>&1 &
+done
+wait
+read -r CBETS CPAYS CBAL < <(psql -At -F ' ' -d "$DB" -c "select (select count(*) from public.crash_bets where user_id = '$CU'), (select count(*) from public.account_ledger where user_id = '$CU' and payout > 0), (select balance from public.account_wallets where user_id = '$CU')")
+echo "crash concurrency: bets=$CBETS payouts=$CPAYS balance=$CBAL"
+[ "$CBETS" = 1 ] && [ "$CPAYS" = 1 ] && [ "$CBAL" -ge 1100 ] && [ "$CBAL" -le 1115 ] || { echo "CRASH CONCURRENCY TEST FAILED"; exit 1; }
 echo "all SQL tests passed"

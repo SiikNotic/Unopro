@@ -15,7 +15,7 @@ export const STAKE_GAMES: readonly RoomGame[] = ['domino', 'bingo', 'carta'];
 export const STAKES = [0, 100, 500, 1000, 5000] as const;
 export type Stake = (typeof STAKES)[number];
 /** Games the owner can take out of service (see the game_control_stakes migration). */
-export type ControlledGame = 'slots' | 'domino' | 'carta' | 'bingo' | 'blackjack' | 'roulette' | 'poker';
+export type ControlledGame = 'slots' | 'domino' | 'carta' | 'bingo' | 'blackjack' | 'roulette' | 'poker' | 'crash';
 /** Games with quick match ("Jugar ahora"). */
 export const QUICK_GAMES: readonly RoomGame[] = ['carta', 'blackjack', 'roulette'];
 /** Seats allowed per game (min, max) and the default for quick match. */

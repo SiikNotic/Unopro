@@ -48,6 +48,8 @@ const JewelPlayScreen = lazy(() => import('@/games/jewels/ui/JewelPlayScreen').t
 const PokerSetupScreen = lazy(() => setup().then((m) => ({ default: m.PokerSetupScreen })));
 const PokerScreen = lazy(() => import('@/games/poker/ui/PokerScreen').then((m) => ({ default: m.PokerScreen })));
 const LegalScreen = lazy(() => import('@/legal/LegalScreen').then((m) => ({ default: m.LegalScreen })));
+// Crash (rocket, sounds, art) loads only when opened.
+const CrashScreen = lazy(() => import('@/games/crash/ui/CrashScreen').then((m) => ({ default: m.CrashScreen })));
 const PremiumSlotScreen = lazy(() => import('@/screens/casino/PremiumSlotScreen').then((m) => ({ default: m.PremiumSlotScreen })));
 
 function ScreenRouter() {
@@ -84,6 +86,7 @@ function ScreenRouter() {
     pokerSetup: <PokerSetupScreen />,
     poker: <PokerScreen />,
     legal: <LegalScreen />,
+    crash: <CrashScreen />,
   };
 
   return (

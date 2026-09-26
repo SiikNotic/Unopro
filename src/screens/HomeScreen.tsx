@@ -4,7 +4,7 @@
 // Every card opens an existing screen; nothing here pretends to be a feature the app does not have.
 import { useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
-import { ChevronRight, CircleDot, Cherry, Club, Crown, Gem, Globe, GraduationCap, House, Landmark, LayoutGrid, Menu, Play, Plus, Settings, ShieldCheck, Spade, UserRound } from 'lucide-react';
+import { ChevronRight, CircleDot, Cherry, Club, Crown, Gem, Globe, GraduationCap, House, Rocket, Landmark, LayoutGrid, Menu, Play, Plus, Settings, ShieldCheck, Spade, UserRound } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useNavigation } from '@/components/Navigation';
 import { useI18n } from '@/i18n';
@@ -20,9 +20,9 @@ import type { HomeCategory, HomeGame, HomeGameId } from './home/homeGames';
 import { ApkBanner } from '@/app/ApkBanner';
 import './home/home.css';
 
-const CATEGORY_ICON: Record<HomeCategory, LucideIcon> = { all: LayoutGrid, cards: Spade, table: CircleDot, slots: Cherry, puzzle: Gem };
+const CATEGORY_ICON: Record<HomeCategory, LucideIcon> = { all: LayoutGrid, cards: Spade, table: CircleDot, slots: Cherry, puzzle: Gem, instant: Rocket };
 /** Home games the owner can take out of service. */
-const CONTROLLED: Partial<Record<HomeGameId, ControlledGame>> = { carta: 'carta', domino: 'domino', bingo: 'bingo', slots: 'slots', blackjack: 'blackjack', roulette: 'roulette', poker: 'poker' };
+const CONTROLLED: Partial<Record<HomeGameId, ControlledGame>> = { carta: 'carta', domino: 'domino', bingo: 'bingo', slots: 'slots', blackjack: 'blackjack', roulette: 'roulette', poker: 'poker', crash: 'crash' };
 
 function Logo() {
   return (

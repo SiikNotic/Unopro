@@ -585,6 +585,10 @@
     "poker": {
       "name": "Póker",
       "description": "Texas Hold'em contra bots, de 2 a 6 en la mesa. Solo fichas de práctica."
+    },
+    "crash": {
+      "name": "Crash",
+      "description": "Cohete multiplicador: retira antes de que explote."
     }
   },
   "profile": {
@@ -1580,7 +1584,8 @@
         "blackjack": "Blackjack",
         "domino": "Dominó",
         "bingo": "Bingo",
-        "carta": "Carta"
+        "carta": "Carta",
+        "crash": "Crash"
       }
     }
   },
@@ -1827,7 +1832,8 @@
       "cards": "Cartas",
       "table": "Mesa",
       "slots": "Slots",
-      "puzzle": "Puzzle"
+      "puzzle": "Puzzle",
+      "instant": "Instantáneos"
     },
     "popular": "Juegos populares",
     "casino": "Juegos de casino",
@@ -1886,6 +1892,10 @@
       "jewels": {
         "name": "Jewellery",
         "desc": "Joyas del Olimpo: 20 niveles."
+      },
+      "crash": {
+        "name": "Crash",
+        "desc": "Retira antes de que explote."
       }
     },
     "nav": {
@@ -1909,7 +1919,8 @@
       "bingo": "Bingo",
       "blackjack": "Blackjack",
       "roulette": "Ruleta",
-      "poker": "Póker"
+      "poker": "Póker",
+      "crash": "Crash"
     }
   },
   "apk": {
@@ -1918,5 +1929,76 @@
     "sub": "Siempre la última versión · se actualiza sola dentro de la app",
     "cta": "Descargar APK",
     "close": "Cerrar"
+  },
+  "crash": {
+    "title": "Crash",
+    "subtitle": "El cohete sube, el multiplicador crece: retira antes del crash",
+    "round": "Ronda #{n}",
+    "loading": "Conectando…",
+    "players": "{n} jugadores",
+    "history": "Últimos crash",
+    "phase": {
+      "betting": "Esperando apuestas",
+      "countdown": "Iniciando",
+      "flying": "En vuelo",
+      "crashed": "Crash"
+    },
+    "state": {
+      "waiting": "Esperando apuestas",
+      "flying": "En vuelo",
+      "crashed": "💥 Crash a {x}"
+    },
+    "amount": "Monto de apuesta",
+    "autoCashout": "Auto retiro",
+    "less": "Menos",
+    "more": "Más",
+    "autoHint": "Se retira solo a {x}: cobrarías 🪙 {coins}",
+    "autoOff": "Actívalo para retirar automáticamente al llegar al multiplicador.",
+    "placeBet": "Colocar apuesta · 🪙 {coins}",
+    "placing": "Colocando…",
+    "betPlaced": "Apuesta de 🪙 {coins} colocada · esperando despegue",
+    "cashOutNow": "Retirar ahora",
+    "cashedOut": "Retirado a {x} · +🪙 {coins}",
+    "lost": "Crash · perdiste 🪙 {coins}",
+    "waitNext": "En vuelo · apuesta en la próxima ronda",
+    "nextRound": "Crash · la próxima ronda empieza en segundos",
+    "signIn": "Crea una cuenta o entra para jugar",
+    "guest": "Estás viendo la ronda en directo. Para apostar necesitas una cuenta: Crash juega con tus monedas de la cuenta.",
+    "bets": "Apuestas",
+    "myBets": "Mis apuestas",
+    "noBets": "Nadie ha apostado todavía en esta ronda.",
+    "noMyBets": "Aún no has jugado a Crash.",
+    "col": {
+      "player": "Jugador",
+      "bet": "Apuesta",
+      "cashout": "Retiro",
+      "win": "Ganancia",
+      "round": "Ronda"
+    },
+    "fairDetail": "Esta semilla da el crash a {x}",
+    "offline": "No se puede conectar con el servidor. Reintentando…",
+    "disabled": "Crash está fuera de servicio temporalmente. Tus monedas están a salvo.",
+    "errors": {
+      "round_closed": "Las apuestas de esta ronda ya se cerraron. Apuesta en la siguiente.",
+      "crashed": "Demasiado tarde: el cohete ya explotó.",
+      "disabled": "Crash está fuera de servicio temporalmente.",
+      "insufficient_funds": "No tienes monedas suficientes para esa apuesta.",
+      "conflict": "Ya tienes una apuesta en esta ronda.",
+      "not_registered": "Necesitas una cuenta confirmada y aceptar los términos para jugar.",
+      "banned": "Tu cuenta está suspendida.",
+      "invalid": "Apuesta no válida.",
+      "network": "Sin conexión. Vuelve a intentarlo.",
+      "not_found": "No tienes apuesta en esta ronda.",
+      "server": "El servidor no respondió. Vuelve a intentarlo."
+    },
+    "helpTitle": "Cómo se juega a Crash",
+    "help": {
+      "how": "Apuesta mientras se aceptan apuestas. Al terminar la cuenta atrás el cohete despega y el multiplicador sube desde 1.00×.",
+      "cashout": "Pulsa «Retirar ahora» cuando quieras: cobras tu apuesta por el multiplicador de ese instante.",
+      "auto": "Con el auto retiro, el servidor cobra por ti exactamente al multiplicador que elijas, aunque cierres la app.",
+      "crash": "En cualquier momento el cohete explota. Si no retiraste antes, pierdes la apuesta de esa ronda.",
+      "fair": "El punto de crash se fija antes de la ronda y se publica su huella SHA-256; al terminar se revela la semilla para que puedas verificarlo. De media se devuelve el 97 % de lo apostado.",
+      "coins": "Crash usa solo monedas virtuales de tu cuenta, sin valor real: no hay dinero, ni compras, ni retiros."
+    }
   }
 }

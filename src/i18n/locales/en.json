@@ -585,6 +585,10 @@
     "poker": {
       "name": "Poker",
       "description": "Texas Hold'em against bots, 2 to 6 at the table. Practice chips only."
+    },
+    "crash": {
+      "name": "Crash",
+      "description": "Rocket multiplier: cash out before it explodes."
     }
   },
   "profile": {
@@ -1580,7 +1584,8 @@
         "blackjack": "Blackjack",
         "domino": "Dominoes",
         "bingo": "Bingo",
-        "carta": "Carta"
+        "carta": "Carta",
+        "crash": "Crash"
       }
     }
   },
@@ -1827,7 +1832,8 @@
       "cards": "Cards",
       "table": "Table",
       "slots": "Slots",
-      "puzzle": "Puzzle"
+      "puzzle": "Puzzle",
+      "instant": "Instant"
     },
     "popular": "Popular games",
     "casino": "Casino games",
@@ -1886,6 +1892,10 @@
       "jewels": {
         "name": "Jewellery",
         "desc": "Jewels of Olympus: 20 levels."
+      },
+      "crash": {
+        "name": "Crash",
+        "desc": "Cash out before it explodes."
       }
     },
     "nav": {
@@ -1909,7 +1919,8 @@
       "bingo": "Bingo",
       "blackjack": "Blackjack",
       "roulette": "Roulette",
-      "poker": "Poker"
+      "poker": "Poker",
+      "crash": "Crash"
     }
   },
   "apk": {
@@ -1918,5 +1929,76 @@
     "sub": "Always the latest version · updates itself inside the app",
     "cta": "Download APK",
     "close": "Close"
+  },
+  "crash": {
+    "title": "Crash",
+    "subtitle": "The rocket climbs, the multiplier grows: cash out before it crashes",
+    "round": "Round #{n}",
+    "loading": "Connecting…",
+    "players": "{n} players",
+    "history": "Last crashes",
+    "phase": {
+      "betting": "Taking bets",
+      "countdown": "Starting",
+      "flying": "In flight",
+      "crashed": "Crashed"
+    },
+    "state": {
+      "waiting": "Taking bets",
+      "flying": "In flight",
+      "crashed": "💥 Crashed at {x}"
+    },
+    "amount": "Bet amount",
+    "autoCashout": "Auto cash out",
+    "less": "Less",
+    "more": "More",
+    "autoHint": "Cashes out by itself at {x}: you'd get 🪙 {coins}",
+    "autoOff": "Turn it on to cash out automatically at a multiplier.",
+    "placeBet": "Place bet · 🪙 {coins}",
+    "placing": "Placing…",
+    "betPlaced": "Bet of 🪙 {coins} placed · waiting for take-off",
+    "cashOutNow": "Cash out now",
+    "cashedOut": "Cashed out at {x} · +🪙 {coins}",
+    "lost": "Crashed · you lost 🪙 {coins}",
+    "waitNext": "In flight · bet on the next round",
+    "nextRound": "Crashed · the next round starts in a few seconds",
+    "signIn": "Create an account or sign in to play",
+    "guest": "You're watching the round live. Betting needs an account: Crash plays with your account coins.",
+    "bets": "Bets",
+    "myBets": "My bets",
+    "noBets": "No bets in this round yet.",
+    "noMyBets": "You haven't played Crash yet.",
+    "col": {
+      "player": "Player",
+      "bet": "Bet",
+      "cashout": "Cash out",
+      "win": "Win",
+      "round": "Round"
+    },
+    "fairDetail": "This seed gives the crash at {x}",
+    "offline": "Can't reach the server. Retrying…",
+    "disabled": "Crash is temporarily out of service. Your coins are safe.",
+    "errors": {
+      "round_closed": "Bets for this round are closed. Bet on the next one.",
+      "crashed": "Too late: the rocket already crashed.",
+      "disabled": "Crash is temporarily out of service.",
+      "insufficient_funds": "You don't have enough coins for that bet.",
+      "conflict": "You already have a bet in this round.",
+      "not_registered": "You need a confirmed account and to accept the terms to play.",
+      "banned": "Your account is suspended.",
+      "invalid": "Invalid bet.",
+      "network": "No connection. Try again.",
+      "not_found": "You have no bet in this round.",
+      "server": "The server didn't answer. Try again."
+    },
+    "helpTitle": "How to play Crash",
+    "help": {
+      "how": "Bet while bets are open. When the countdown ends the rocket takes off and the multiplier climbs from 1.00×.",
+      "cashout": "Tap \"Cash out now\" whenever you like: you get your bet times the multiplier at that instant.",
+      "auto": "With auto cash out, the server cashes out for you at exactly the multiplier you chose, even if you close the app.",
+      "crash": "At any moment the rocket explodes. If you haven't cashed out, you lose that round's bet.",
+      "fair": "The crash point is fixed before the round and its SHA-256 fingerprint is published; afterwards the seed is revealed so you can check it. On average 97% of what is bet is paid back.",
+      "coins": "Crash uses only your account's virtual coins, with no real value: no money, no purchases, no withdrawals."
+    }
   }
 }

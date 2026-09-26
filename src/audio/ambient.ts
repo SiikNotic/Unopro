@@ -7,7 +7,7 @@ import { bell, noise, note, pluck, tone } from './voices';
 import type { Voice } from './voices';
 
 /** Slot machines plus the table games that bring their own music. */
-export type AmbientId = MachineId | 'domino' | 'bingo' | 'jewels' | 'poker';
+export type AmbientId = MachineId | 'domino' | 'bingo' | 'jewels' | 'poker' | 'crash';
 
 interface Pattern {
   /** Seconds per beat. */
@@ -104,6 +104,18 @@ export const AMBIENT: Record<AmbientId, Pattern> = {
     },
   },
   // Poker: a late-night lounge — soft seventh chords, a walking bass and brushed hats.
+  // Crash: a tense low pulse and wide space pads, a far-off shimmer.
+  crash: {
+    beat: 0.5,
+    play: (v, t, i, r) => {
+      const bar = Math.floor(i / 8) % 4;
+      const roots = [-9, -9, -5, -7]; // A minor, F, G feel
+      if (i % 8 === 0) chord(v, t, [0, 7, 12, 15].map((n) => roots[bar] + n - 12), 4, 'sine', 0.012, 1400);
+      if (i % 2 === 0) tone(v, t, note(roots[bar] - 24), 0.3, { type: 'triangle', gain: 0.06, lowpass: 420 });
+      if (i % 4 === 3) noise(v, t, 0.06, { type: 'highpass', freq: 7000, gain: 0.01 });
+      if (i % 16 === 8 && r() < 0.6) bell(v, t, note(roots[bar] + 24), 0.005, 1.2);
+    },
+  },
   poker: {
     beat: 0.5,
     play: (v, t, i, r) => {

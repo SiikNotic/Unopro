@@ -1,8 +1,8 @@
 import type { GameModeId } from '@/game/rules/modes';
 
-export type Screen = 'home' | 'gameModes' | 'settings' | 'tutorial' | 'play' | 'blackjack' | 'roulette' | 'slots' | 'profile' | 'slotLobby' | 'slotMachine' | 'dominoSetup' | 'domino' | 'bingoSetup' | 'bingo' | 'room' | 'account' | 'staff' | 'bank' | 'cartaOnline' | 'blackjackTable' | 'rouletteTable' | 'cartaSetup' | 'blackjackSetup' | 'rouletteSetup' | 'jewels' | 'jewelsPlay' | 'pokerSetup' | 'poker' | 'legal';
+export type Screen = 'home' | 'gameModes' | 'settings' | 'tutorial' | 'play' | 'blackjack' | 'roulette' | 'slots' | 'profile' | 'slotLobby' | 'slotMachine' | 'dominoSetup' | 'domino' | 'bingoSetup' | 'bingo' | 'room' | 'account' | 'staff' | 'bank' | 'cartaOnline' | 'blackjackTable' | 'rouletteTable' | 'cartaSetup' | 'blackjackSetup' | 'rouletteSetup' | 'jewels' | 'jewelsPlay' | 'pokerSetup' | 'poker' | 'legal' | 'crash';
 
-export const SCREENS: Screen[] = ['home', 'gameModes', 'settings', 'tutorial', 'play', 'blackjack', 'roulette', 'slots', 'profile', 'slotLobby', 'slotMachine', 'dominoSetup', 'domino', 'bingoSetup', 'bingo', 'room', 'account', 'staff', 'bank', 'cartaOnline', 'blackjackTable', 'rouletteTable', 'cartaSetup', 'blackjackSetup', 'rouletteSetup', 'jewels', 'jewelsPlay', 'pokerSetup', 'poker', 'legal'];
+export const SCREENS: Screen[] = ['home', 'gameModes', 'settings', 'tutorial', 'play', 'blackjack', 'roulette', 'slots', 'profile', 'slotLobby', 'slotMachine', 'dominoSetup', 'domino', 'bingoSetup', 'bingo', 'room', 'account', 'staff', 'bank', 'cartaOnline', 'blackjackTable', 'rouletteTable', 'cartaSetup', 'blackjackSetup', 'rouletteSetup', 'jewels', 'jewelsPlay', 'pokerSetup', 'poker', 'legal', 'crash'];
 
 /** Table games with their own setup, room and match screens. */
 export type TableGame = 'domino' | 'bingo';
