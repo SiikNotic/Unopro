@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fetchAvailability, parseAvailability, screenGame } from '../availability';
+import { applyAvailabilityChange, fetchAvailability, parseAvailability, screenGame, setAvailability } from '../availability';
 
 describe('game availability (what the app shows; the servers enforce it)', () => {
   it('parses the public table, ignoring unknown games and bad rows', () => {
@@ -32,5 +32,14 @@ describe('game availability (what the app shows; the servers enforce it)', () =>
     expect(screenGame('rouletteSetup', {})).toBe('roulette');
     expect(screenGame('play', {})).toBe('carta');
     expect(screenGame('home', {})).toBeNull();
+  });
+
+  it('applies a live change row, ignoring malformed ones', () => {
+    setAvailability({ slots: true, domino: true, carta: true, bingo: true, blackjack: true, roulette: true, poker: true });
+    expect(applyAvailabilityChange({ game: 'bingo', enabled: false })).toBe(true);
+    expect(applyAvailabilityChange({ game: 'bingo', enabled: false })).toBe(false);
+    expect(applyAvailabilityChange({ game: 'lotto', enabled: false })).toBe(false);
+    expect(applyAvailabilityChange({ game: 'slots', enabled: 'no' })).toBe(false);
+    expect(applyAvailabilityChange(null)).toBe(false);
   });
 });

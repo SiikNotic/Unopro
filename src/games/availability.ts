@@ -59,6 +59,52 @@ export function refreshAvailability(): Promise<void> {
   return inflight;
 }
 
+/** Applies one changed row (from Realtime). Returns true if something changed. */
+export function applyAvailabilityChange(row: unknown): boolean {
+  const r = row as { game?: unknown; enabled?: unknown } | null;
+  if (!r || !CONTROLLED_GAMES.includes(r.game as ControlledGame) || typeof r.enabled !== 'boolean') return false;
+  const game = r.game as ControlledGame;
+  if (current[game] === r.enabled) return false;
+  current = { ...current, [game]: r.enabled };
+  loaded = true;
+  emit();
+  return true;
+}
+
+/**
+ * Live changes over Realtime, with the public key only (no session is created: the table is readable by
+ * anyone). The periodic re-read stays as the fallback when the socket is blocked or drops.
+ */
+let live: { stop: () => void } | null = null;
+function startLive(cfg: OnlineConfig) {
+  if (live) return;
+  let stopped = false;
+  let close = () => {};
+  live = {
+    stop: () => {
+      stopped = true;
+      close();
+      live = null;
+    },
+  };
+  import('@supabase/realtime-js')
+    .then(({ RealtimeClient }) => {
+      if (stopped) return;
+      const client = new RealtimeClient(`${cfg.base.replace(/^http/, 'ws')}/realtime/v1`, { params: { apikey: cfg.apiKey } });
+      const channel = client
+        .channel('game-availability')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'game_availability' }, (payload) => applyAvailabilityChange((payload as { new?: unknown }).new))
+        .subscribe();
+      close = () => {
+        void client.removeChannel(channel);
+        client.disconnect();
+      };
+    })
+    .catch(() => {
+      /* no live updates: the periodic re-read still works */
+    });
+}
+
 /** Sets the shared copy directly (after the owner changed a game, and in tests). */
 export function setAvailability(next: Availability) {
   current = next;
@@ -74,8 +120,10 @@ const onVisible = () => {
 
 function subscribe(listener: () => void) {
   listeners.add(listener);
-  if (listeners.size === 1 && typeof window !== 'undefined' && onlineConfig()) {
+  const cfg = typeof window !== 'undefined' ? onlineConfig() : null;
+  if (listeners.size === 1 && cfg) {
     void refreshAvailability();
+    startLive(cfg);
     timer = window.setInterval(onVisible, REFRESH_MS);
     document.addEventListener('visibilitychange', onVisible);
   }
@@ -85,11 +133,12 @@ function subscribe(listener: () => void) {
       window.clearInterval(timer);
       timer = null;
       document.removeEventListener('visibilitychange', onVisible);
+      live?.stop();
     }
   };
 }
 
-/** The games in service, kept current (every 30 s and whenever the app comes back to the foreground). */
+/** The games in service, kept current: live over Realtime, re-read every 30 s and when the app comes back. */
 export function useGameAvailability(): Availability {
   return useSyncExternalStore(subscribe, () => current, () => current);
 }
