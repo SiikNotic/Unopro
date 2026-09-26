@@ -4,38 +4,5 @@
 .gs-confetti:nth-child(3n) { background: #ff5f7e; }
 .gs-confetti:nth-child(3n + 1) { background: #4dd6c1; }
 .gs-bokeh { background: rgba(255, 200, 120, 0.6); box-shadow: 0 0 18px 6px rgba(255, 170, 80, 0.35); top: auto !important; bottom: calc(var(--drift) * 0.5 + 40%); }
-/* Domino: the owner's painted rooms, shown whole-screen (cover) at full quality */
+/* The owner's painted rooms, shown whole-screen (cover) at full quality */
 .gs-photo { position: absolute; inset: 0; background: var(--gs-photo) 50% 45% / cover no-repeat, #120b06; }
-
-/* Bingo hall: LED board, sweeping spots */
-.gs-ledboard {
-  border-radius: 10px;
-  background:
-    radial-gradient(circle, rgba(255, 200, 80, 0.35) 0 1.4px, transparent 1.8px) 0 0 / 10px 10px,
-    linear-gradient(180deg, #0b0d1c, #06070f);
-  box-shadow: 0 0 0 2px rgba(120, 140, 255, 0.18), 0 20px 60px -20px rgba(80, 110, 255, 0.35);
-  opacity: 0.55;
-}
-.gs-spot { position: absolute; top: -10%; width: 22vmin; height: 90vh; margin-left: -11vmin; background: linear-gradient(180deg, rgba(160, 190, 255, 0.18), transparent 75%); clip-path: polygon(40% 0, 60% 0, 100% 100%, 0 100%); transform-origin: 50% 0; animation: gs-sweep 9s ease-in-out infinite; }
-@keyframes gs-sweep { 0%, 100% { transform: rotate(-14deg); } 50% { transform: rotate(14deg); } }
-
-/* Theatre */
-.gs-curtain { position: absolute; top: 0; bottom: 0; width: 22%; background: repeating-linear-gradient(90deg, #5a0c18 0 18px, #8a1526 18px 30px, #4a0912 30px 44px); box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.6); }
-.gs-curtain.left { left: 0; border-bottom-right-radius: 60% 12%; }
-.gs-curtain.right { right: 0; border-bottom-left-radius: 60% 12%; }
-.gs-valance { background: repeating-radial-gradient(circle at 50% -40%, #7a1222 0 14px, #5a0c18 14px 28px); border-bottom: 3px solid #c9a24a; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6); }
-.gs-stagespot { position: absolute; left: 50%; top: 12%; width: 70vmin; height: 70vmin; transform: translateX(-50%); border-radius: 50%; background: radial-gradient(circle, rgba(255, 230, 190, 0.16), transparent 65%); }
-
-/* Party */
-.gs-balloon { position: absolute; top: 18%; width: 9vmin; height: 11vmin; border-radius: 50% 50% 48% 48%; background: radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.55), var(--c) 30%, rgba(0, 0, 0, 0.3) 100%); opacity: 0.55; }
-.gs-balloon::after { content: ''; position: absolute; left: 50%; top: 100%; width: 1px; height: 14vh; background: rgba(255, 255, 255, 0.25); }
-
-/* Casino marquee */
-.gs-marquee { position: absolute; left: 4%; right: 4%; top: 4%; display: flex; justify-content: space-between; }
-.gs-marquee i { width: 8px; height: 8px; border-radius: 50%; background: #ffcf6a; box-shadow: 0 0 10px 3px rgba(255, 190, 80, 0.55); animation: gs-chase 1.2s steps(1, end) infinite; }
-@keyframes gs-chase { 0%, 66% { opacity: 1; } 67%, 100% { opacity: 0.2; } }
-
-/* Future grid */
-.gs-grid { position: absolute; left: -50%; right: -50%; top: 50%; bottom: -20%; perspective: 280px; overflow: hidden; }
-.gs-grid i { position: absolute; inset: -100% 0 0; transform: rotateX(62deg); transform-origin: 50% 100%; background: linear-gradient(rgba(53, 224, 255, 0.45) 1px, transparent 1px) 0 0 / 60px 60px, linear-gradient(90deg, rgba(255, 61, 203, 0.35) 1px, transparent 1px) 0 0 / 60px 60px; animation: gs-roll 3s linear infinite; }
-@keyframes gs-roll { from { transform: rotateX(62deg) translateY(0); } to { transform: rotateX(62deg) translateY(60px); } }

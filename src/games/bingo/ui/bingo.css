@@ -24,7 +24,7 @@
 .bb-face b { display: block; font-family: 'Lilita One', 'Plus Jakarta Sans', sans-serif; font-weight: 400; font-size: calc(var(--s) * 0.28); font-variant-numeric: tabular-nums; }
 
 /* ---------- caller stage ---------- */
-.bg-stage { position: relative; display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 12px; padding: 12px; border-radius: 22px; background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.03)); border: 1px solid rgba(255, 255, 255, 0.14); box-shadow: 0 20px 40px -24px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.12); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.bg-stage { position: relative; display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 12px; padding: 12px; border-radius: 22px; background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.03)), rgba(8, 8, 18, 0.74); border: 1px solid rgba(255, 255, 255, 0.14); box-shadow: 0 20px 40px -24px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.12); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
 .bg-cage { position: relative; width: 92px; height: 104px; }
 .bg-globe { position: absolute; left: 4px; top: 0; width: 84px; height: 84px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0.06) 45%, rgba(255, 255, 255, 0.02) 70%); box-shadow: inset 0 0 0 2px rgba(255, 220, 150, 0.55), inset 0 0 18px rgba(255, 255, 255, 0.15); overflow: hidden; }
 .bg-wires { position: absolute; inset: 0; border-radius: 50%; background: repeating-conic-gradient(from 0deg, rgba(255, 220, 150, 0.45) 0 2deg, transparent 2deg 30deg); -webkit-mask: radial-gradient(circle, transparent 60%, #000 61%); mask: radial-gradient(circle, transparent 60%, #000 61%); }
@@ -49,7 +49,7 @@
 
 /* ---------- players ---------- */
 .bg-seats { display: flex; gap: 6px; }
-.bg-seat { flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 6px; padding: 5px 8px 5px 5px; border-radius: 12px; background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(255, 255, 255, 0.1); }
+.bg-seat { flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 6px; padding: 5px 8px 5px 5px; border-radius: 12px; background: rgba(6, 6, 14, 0.72); border: 1px solid rgba(255, 255, 255, 0.1); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
 .bg-seat.is-me { border-color: rgba(255, 255, 255, 0.35); }
 .bg-seat.is-won { border-color: #ffd166; box-shadow: 0 0 0 3px rgba(255, 209, 102, 0.25); }
 .bg-avatar { flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 900; color: #fff; background: var(--c, #555); }
