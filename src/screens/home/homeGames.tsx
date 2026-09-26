@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- a data module (game list and art), not a component file */
 // The games shown on the home screen: where each opens, its category and its card art. The art is drawn
 // from the project's own pieces (lobby SVG art, playing cards, slot and Olympus artwork); to use painted
 // card art instead, set `image` (see docs/home.md).
@@ -10,6 +11,20 @@ import { GEM_IMAGES } from '@/games/jewels/ui/assets';
 import crown from '@/components/slots/art/diamondRoyale/crown.webp';
 import coin from '@/components/slots/art/goldenFortune/coin.webp';
 import diamond from '@/components/slots/art/diamondRoyale/diamond.webp';
+import cardCarta from './art/card-carta.webp';
+import cardDomino from './art/card-domino.webp';
+import cardBingo from './art/card-bingo.webp';
+import cardPoker from './art/card-poker.webp';
+import cardRoulette from './art/card-roulette.webp';
+import cardBlackjack from './art/card-blackjack.webp';
+import cardSlots from './art/card-slots.webp';
+import cardJewels from './art/card-jewels.webp';
+import heroPortrait from './art/hero-portrait.webp';
+import heroLandscape from './art/hero-landscape.webp';
+import promoCoins from './art/promo-coins.webp';
+import extraOnline from './art/extra-online.webp';
+import extraDaily from './art/extra-daily.webp';
+import extraLearn from './art/extra-learn.webp';
 
 export type HomeGameId = 'carta' | 'domino' | 'bingo' | 'poker' | 'roulette' | 'blackjack' | 'slots' | 'jewels';
 export type HomeCategory = 'all' | 'cards' | 'table' | 'slots' | 'puzzle';
@@ -58,14 +73,15 @@ const cardPair = (a: { rank: 'A' | 'K' | 'J'; suit: 'S' | 'H' | 'D' | 'C' }, b: 
 );
 
 export const HOME_GAMES: Record<HomeGameId, HomeGame> = {
-  carta: { id: 'carta', screen: 'cartaSetup', category: 'cards', bg: 'radial-gradient(120% 90% at 50% 10%, #1f4f9a 0%, #0f2350 50%, #070d1f 100%)', accent: '#5b8dff', art: (s) => <GameArt game="carta" size={s * 0.52} /> },
-  domino: { id: 'domino', screen: 'dominoSetup', category: 'table', bg: 'radial-gradient(120% 90% at 50% 10%, #8a5a1c 0%, #3d230c 55%, #140b04 100%)', accent: '#e0a24a', art: (s) => <DominoArt size={s * 0.52} /> },
-  bingo: { id: 'bingo', screen: 'bingoSetup', category: 'table', bg: 'radial-gradient(120% 90% at 50% 10%, #6a2bc4 0%, #2f1266 55%, #10061f 100%)', accent: '#a974ff', art: (s) => <BingoArt size={s * 0.52} /> },
-  poker: { id: 'poker', screen: 'pokerSetup', category: 'cards', bg: 'radial-gradient(120% 90% at 50% 10%, #b3202f 0%, #560c16 55%, #1a0406 100%)', accent: '#ff5d6c', art: cardPair({ rank: 'A', suit: 'S' }, { rank: 'K', suit: 'H' }) },
-  roulette: { id: 'roulette', screen: 'rouletteSetup', category: 'table', bg: 'radial-gradient(120% 90% at 50% 10%, #7a1f2b 0%, #3a0d14 55%, #140507 100%)', accent: '#e0525f', art: (s) => wheel(s * 1.15) },
-  blackjack: { id: 'blackjack', screen: 'blackjackSetup', category: 'cards', bg: 'radial-gradient(120% 90% at 50% 10%, #16784c 0%, #0b3a25 55%, #04140c 100%)', accent: '#3fd688', art: cardPair({ rank: 'J', suit: 'H' }, { rank: 'A', suit: 'S' }) },
+  carta: { id: 'carta', image: cardCarta, screen: 'cartaSetup', category: 'cards', bg: 'radial-gradient(120% 90% at 50% 10%, #1f4f9a 0%, #0f2350 50%, #070d1f 100%)', accent: '#5b8dff', art: (s) => <GameArt game="carta" size={s * 0.52} /> },
+  domino: { id: 'domino', image: cardDomino, screen: 'dominoSetup', category: 'table', bg: 'radial-gradient(120% 90% at 50% 10%, #8a5a1c 0%, #3d230c 55%, #140b04 100%)', accent: '#e0a24a', art: (s) => <DominoArt size={s * 0.52} /> },
+  bingo: { id: 'bingo', image: cardBingo, screen: 'bingoSetup', category: 'table', bg: 'radial-gradient(120% 90% at 50% 10%, #6a2bc4 0%, #2f1266 55%, #10061f 100%)', accent: '#a974ff', art: (s) => <BingoArt size={s * 0.52} /> },
+  poker: { id: 'poker', image: cardPoker, screen: 'pokerSetup', category: 'cards', bg: 'radial-gradient(120% 90% at 50% 10%, #b3202f 0%, #560c16 55%, #1a0406 100%)', accent: '#ff5d6c', art: cardPair({ rank: 'A', suit: 'S' }, { rank: 'K', suit: 'H' }) },
+  roulette: { id: 'roulette', image: cardRoulette, screen: 'rouletteSetup', category: 'table', bg: 'radial-gradient(120% 90% at 50% 10%, #7a1f2b 0%, #3a0d14 55%, #140507 100%)', accent: '#e0525f', art: (s) => wheel(s * 1.15) },
+  blackjack: { id: 'blackjack', image: cardBlackjack, screen: 'blackjackSetup', category: 'cards', bg: 'radial-gradient(120% 90% at 50% 10%, #16784c 0%, #0b3a25 55%, #04140c 100%)', accent: '#3fd688', art: cardPair({ rank: 'J', suit: 'H' }, { rank: 'A', suit: 'S' }) },
   slots: {
     id: 'slots',
+    image: cardSlots,
     screen: 'slotLobby',
     category: 'slots',
     bg: 'radial-gradient(120% 90% at 50% 10%, #9a6a14 0%, #4a2c06 55%, #170d02 100%)',
@@ -80,6 +96,7 @@ export const HOME_GAMES: Record<HomeGameId, HomeGame> = {
   },
   jewels: {
     id: 'jewels',
+    image: cardJewels,
     screen: 'jewels',
     category: 'puzzle',
     bg: 'radial-gradient(120% 90% at 50% 10%, #2f5fb8 0%, #152a66 55%, #070d24 100%)',
@@ -99,4 +116,6 @@ export const CASINO: HomeGameId[] = ['roulette', 'blackjack', 'slots', 'jewels']
 /** "Recommended for you": a static, configurable pick (there is no play history to learn from yet). */
 export const RECOMMENDED: HomeGameId[] = ['jewels', 'slots', 'poker', 'roulette', 'bingo'];
 export const CATEGORIES: HomeCategory[] = ['all', 'cards', 'table', 'slots', 'puzzle'];
-export const HERO_ART = { crown, coin };
+export const HERO_ART = { crown, coin, portrait: heroPortrait, landscape: heroLandscape };
+export const PROMO_IMAGE = promoCoins;
+export const EXTRA_IMAGES = { online: extraOnline, daily: extraDaily, learn: extraLearn };

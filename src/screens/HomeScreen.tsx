@@ -13,9 +13,7 @@ import { formatChips } from '@/casino/chipValues';
 import { useAccount } from '@/account/useAccount';
 import { usePlayerName } from '@/account/usePlayerName';
 import { onlineConfig } from '@/games/online/client';
-import { PlayingCardView } from '@/components/casino/PlayingCardView';
-import { BACKGROUNDS, GEM_IMAGES } from '@/games/jewels/ui/assets';
-import { CASINO, CATEGORIES, HERO_ART, HOME_GAMES, POPULAR, RECOMMENDED } from './home/homeGames';
+import { CASINO, CATEGORIES, EXTRA_IMAGES, HERO_ART, HOME_GAMES, POPULAR, PROMO_IMAGE, RECOMMENDED } from './home/homeGames';
 import type { HomeCategory, HomeGame, HomeGameId } from './home/homeGames';
 import './home/home.css';
 
@@ -52,7 +50,7 @@ function GameCard({ game, size = 'big', onPlay }: { game: HomeGame; size?: 'big'
   const { t } = useI18n();
   const name = t(`home2.game.${game.id}.name`);
   return (
-    <button type="button" className={`hm-card is-${size}`} style={{ '--hm-bg': game.bg, '--hm-accent': game.accent } as CSSProperties} onClick={onPlay} aria-label={t('home2.playAria', { name })}>
+    <button type="button" className={`hm-card is-${size}${game.image ? ' has-image' : ''}`} style={{ '--hm-bg': game.bg, '--hm-accent': game.accent } as CSSProperties} onClick={onPlay} aria-label={t('home2.playAria', { name })}>
       <span className="hm-card-art" aria-hidden>
         {game.image ? <img src={game.image} alt="" loading="lazy" /> : game.art(size === 'big' ? 64 : 52)}
       </span>
@@ -69,24 +67,11 @@ function Hero({ onPlay }: { onPlay: () => void }) {
   const { t } = useI18n();
   return (
     <section className="hm-hero" aria-labelledby="hm-hero-title">
-      <div className="hm-hero-light" aria-hidden />
-      <div className="hm-hero-art" aria-hidden>
-        <span className="hm-hero-fan">
-          {(
-            [
-              ['A', 'S'],
-              ['A', 'H'],
-              ['A', 'C'],
-              ['A', 'D'],
-            ] as const
-          ).map(([rank, suit], i) => (
-            <PlayingCardView key={suit} card={{ id: suit, rank, suit }} width={58} className={`hm-fan-card hm-fan-${i}`} />
-          ))}
-        </span>
-        <img src={HERO_ART.crown} alt="" className="hm-hero-crown" width={120} height={120} />
-        <img src={HERO_ART.coin} alt="" className="hm-hero-coin hm-hero-coin-a" width={54} height={54} />
-        <img src={HERO_ART.coin} alt="" className="hm-hero-coin hm-hero-coin-b" width={40} height={40} />
-      </div>
+      <picture className="hm-hero-img" aria-hidden>
+        <source media="(min-width: 720px)" srcSet={HERO_ART.landscape} />
+        <img src={HERO_ART.portrait} alt="" />
+      </picture>
+      <div className="hm-hero-shade" aria-hidden />
       <div className="hm-hero-copy">
         <p className="hm-hero-kicker">{t('home2.welcome')}</p>
         <h1 id="hm-hero-title" className="hm-hero-title">
@@ -102,23 +87,18 @@ function Hero({ onPlay }: { onPlay: () => void }) {
   );
 }
 
-/** The promo banner: Jewellery: Olympus (a real game), in its own artwork. */
-function OlympusBanner({ onPlay }: { onPlay: () => void }) {
+/** The promo banner: the Bank's daily coins (a real feature: the daily loan and rewarded ads). */
+function CoinsBanner({ onOpen }: { onOpen: () => void }) {
   const { t } = useI18n();
   return (
-    <button type="button" className="hm-promo" style={{ '--hm-promo-bg': `url(${BACKGROUNDS.landscape})` } as CSSProperties} onClick={onPlay} aria-label={t('home2.promo.aria')}>
-      <span className="hm-promo-gems" aria-hidden>
-        {[2, 0, 3].map((k) => (
-          <img key={k} src={GEM_IMAGES[k]} alt="" width={44} height={44} loading="lazy" />
-        ))}
-      </span>
+    <button type="button" className="hm-promo" style={{ '--hm-promo-bg': `url(${PROMO_IMAGE})` } as CSSProperties} onClick={onOpen} aria-label={t('home2.promo.aria')}>
       <span className="hm-promo-copy">
         <span className="hm-promo-chip">{t('home2.promo.chip')}</span>
-        <span className="hm-promo-title">Jewellery: Olympus</span>
+        <span className="hm-promo-title">{t('home2.promo.title')}</span>
         <span className="hm-promo-sub">{t('home2.promo.sub')}</span>
       </span>
       <span className="hm-gold-btn is-sm" aria-hidden>
-        {t('lobby.play')}
+        {t('home2.promo.cta')}
       </span>
     </button>
   );
@@ -164,10 +144,9 @@ export function HomeScreen() {
   const playNow = () => navigate('gameModes');
   const filtered = category === 'all' ? [] : (Object.values(HOME_GAMES) as HomeGame[]).filter((g) => g.category === category);
 
-  const events: { key: string; icon: LucideIcon; tone: string; onClick: () => void }[] = [
-    ...(online ? [{ key: 'online', icon: Globe, tone: 'purple', onClick: () => navigate('cartaSetup', { online: true }) }] : []),
-    { key: 'daily', icon: Landmark, tone: 'gold', onClick: () => navigate('bank') },
-    { key: 'learn', icon: GraduationCap, tone: 'red', onClick: () => navigate('tutorial') },
+  const events: { key: 'online' | 'learn'; icon: LucideIcon; tone: string; onClick: () => void }[] = [
+    ...(online ? [{ key: 'online' as const, icon: Globe, tone: 'purple', onClick: () => navigate('cartaSetup', { online: true }) }] : []),
+    { key: 'learn' as const, icon: GraduationCap, tone: 'red', onClick: () => navigate('tutorial') },
   ];
 
   return (
@@ -227,7 +206,7 @@ export function HomeScreen() {
               </div>
             </section>
 
-            <OlympusBanner onPlay={() => navigate('jewels')} />
+            <CoinsBanner onOpen={() => navigate('bank')} />
 
             <section aria-labelledby="hm-casino">
               <SectionHead id="hm-casino" icon={Cherry} title={t('home2.casino')} action={{ label: t('lobby.seeAll'), onClick: () => navigate('gameModes') }} />
@@ -243,9 +222,7 @@ export function HomeScreen() {
               <div className="hm-events">
                 {events.map((e) => (
                   <button key={e.key} type="button" className={`hm-event is-${e.tone}`} onClick={e.onClick}>
-                    <span className="hm-event-icon" aria-hidden>
-                      <e.icon className="w-7 h-7" />
-                    </span>
+                    <img className="hm-event-img" src={EXTRA_IMAGES[e.key]} alt="" loading="lazy" />
                     <span className="hm-event-copy">
                       <span className="hm-event-title">{t(`home2.event.${e.key}.title`)}</span>
                       <span className="hm-event-sub">{t(`home2.event.${e.key}.sub`)}</span>

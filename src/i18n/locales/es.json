@@ -1786,9 +1786,11 @@
     "extras": "Extras",
     "recommended": "Recomendado para ti",
     "promo": {
-      "chip": "NUEVO",
-      "sub": "20 niveles de joyas en el Olimpo",
-      "aria": "Jugar a Jewellery: Olympus"
+      "chip": "GRATIS",
+      "title": "Monedas diarias",
+      "sub": "Préstamo diario y recompensas del Banco",
+      "cta": "Ir al Banco",
+      "aria": "Abrir el Banco: monedas diarias"
     },
     "event": {
       "online": {

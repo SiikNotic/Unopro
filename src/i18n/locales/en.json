@@ -1786,9 +1786,11 @@
     "extras": "Extras",
     "recommended": "Recommended for you",
     "promo": {
-      "chip": "NEW",
-      "sub": "20 jewel levels on Olympus",
-      "aria": "Play Jewellery: Olympus"
+      "chip": "FREE",
+      "title": "Daily coins",
+      "sub": "The Bank's daily loan and rewards",
+      "cta": "Go to Bank",
+      "aria": "Open the Bank: daily coins"
     },
     "event": {
       "online": {
