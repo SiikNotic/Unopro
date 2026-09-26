@@ -5,14 +5,6 @@ import { Background } from '@/components/ui/Background';
 import { I18nProvider } from '@/i18n';
 import { PreferencesProvider } from '@/settings/PreferencesProvider';
 import { HomeScreen } from '@/screens/HomeScreen';
-import { GameModesScreen } from '@/screens/GameModesScreen';
-import { SettingsScreen } from '@/screens/SettingsScreen';
-import { TutorialScreen } from '@/screens/TutorialScreen';
-import { PlayScreen } from '@/screens/PlayScreen';
-import { BlackjackScreen } from '@/screens/casino/BlackjackScreen';
-import { RouletteScreen } from '@/screens/casino/RouletteScreen';
-import { SlotsScreen } from '@/screens/casino/SlotsScreen';
-import { ProfileScreen } from '@/screens/ProfileScreen';
 import { WalletProvider } from '@/casino/WalletProvider';
 import { AccountProvider } from '@/account/AccountProvider';
 import { AccountOverlay } from '@/account/AccountOverlay';
@@ -21,6 +13,15 @@ import { SocialCasinoNotice } from '@/legal/SocialCasinoNotice';
 import { AvailabilityGate } from '@/games/OutOfService';
 import type { Screen } from '@/types/navigation';
 
+// Only the home screen is in the first download; every other screen loads when it is opened.
+const GameModesScreen = lazy(() => import('@/screens/GameModesScreen').then((m) => ({ default: m.GameModesScreen })));
+const SettingsScreen = lazy(() => import('@/screens/SettingsScreen').then((m) => ({ default: m.SettingsScreen })));
+const TutorialScreen = lazy(() => import('@/screens/TutorialScreen').then((m) => ({ default: m.TutorialScreen })));
+const PlayScreen = lazy(() => import('@/screens/PlayScreen').then((m) => ({ default: m.PlayScreen })));
+const BlackjackScreen = lazy(() => import('@/screens/casino/BlackjackScreen').then((m) => ({ default: m.BlackjackScreen })));
+const RouletteScreen = lazy(() => import('@/screens/casino/RouletteScreen').then((m) => ({ default: m.RouletteScreen })));
+const SlotsScreen = lazy(() => import('@/screens/casino/SlotsScreen').then((m) => ({ default: m.SlotsScreen })));
+const ProfileScreen = lazy(() => import('@/screens/ProfileScreen').then((m) => ({ default: m.ProfileScreen })));
 // The slot machines (engine, math, art, sounds) load only when a player opens them.
 const SlotLobbyScreen = lazy(() => import('@/screens/casino/SlotLobbyScreen').then((m) => ({ default: m.SlotLobbyScreen })));
 // Domino and Bingo (engines, tiles, balls, scenes) load when a player opens them.
