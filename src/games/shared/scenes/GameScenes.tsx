@@ -4,8 +4,12 @@
 import { memo, useMemo } from 'react';
 import type { CSSProperties } from 'react';
 import { isLiteDevice, makeParticles } from '@/components/scene/particles';
-import { LoungeScene } from '@/components/scene/Scenes';
-import type { GameScene } from '../setup';
+import type { DominoScene, GameScene } from '../setup';
+import salon from './art/salon.webp';
+import cafe from './art/cafe.webp';
+import terrace from './art/terrace.webp';
+import lounge from './art/lounge.webp';
+import woodhouse from './art/woodhouse.webp';
 import '@/components/scene/scene.css';
 import './gameScenes.css';
 
@@ -24,73 +28,19 @@ function Motes({ count, seed, className, lite, size = [2, 4], dur = [10, 18] }: 
   );
 }
 
-const Sconce = ({ x, y }: { x: string; y: string }) => <span className="gs-sconce scene-pulse" style={{ left: x, top: y }} />;
+/** Domino — the owner's painted rooms (salon, café, terrace, lounge, old wooden house), full quality, with a little
+ * floating dust on top. */
+const DOMINO_ART: Record<DominoScene, string> = { salon, cafe, terrace, lounge, woodhouse };
 
-/** Domino — classic salon: green damask, oak wainscot, two brass sconces. */
-function Salon({ lite }: { lite: boolean }) {
-  return (
-    <>
-      <div className="absolute inset-0 gs-damask" />
-      <div className="absolute inset-x-0 bottom-0 h-[34%] gs-wainscot" />
-      <Sconce x="14%" y="18%" />
-      <Sconce x="86%" y="18%" />
-      <Motes count={10} seed={101} className="scene-rise gs-dust" lite={lite} dur={[18, 30]} />
-    </>
-  );
-}
-
-/** Domino — café: brick, pendant lamps swaying, a warm haze. */
-function Cafe({ lite }: { lite: boolean }) {
-  return (
-    <>
-      <div className="absolute inset-0 gs-brick" />
-      {[22, 50, 78].map((x, i) => (
-        <span key={x} className="gs-pendant scene-sway" style={{ left: `${x}%`, animationDelay: `${-i * 3}s` }}>
-          <i />
-        </span>
-      ))}
-      <div className="absolute inset-x-0 bottom-0 h-[40%]" style={{ background: 'linear-gradient(transparent, rgba(20,10,4,0.85))' }} />
-      <Motes count={8} seed={202} className="scene-rise gs-dust" lite={lite} dur={[16, 26]} />
-    </>
-  );
-}
-
-/** Domino — tropical terrace at dusk: palms, string lights, the sea. */
-function Terrace() {
-  return (
-    <>
-      <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, #1c1640 0%, #6b3a5c 30%, #e0875a 46%, #f3b36b 50%, #0f3b4a 51%, #082431 100%)' }} />
-      <div className="gs-lights">
-        {Array.from({ length: 14 }, (_, i) => (
-          <i key={i} style={{ left: `${3 + i * 7}%`, top: `${10 + Math.sin(i / 2.2) * 3}%`, animationDelay: `${-i * 0.7}s` }} />
-        ))}
-      </div>
-      <svg className="absolute bottom-[38%] left-[-4%] w-[30%] h-[44%] scene-sway" viewBox="0 0 100 140" preserveAspectRatio="none" aria-hidden>
-        <path d="M52 140 C50 100 46 70 58 30" stroke="#0b1418" strokeWidth="6" fill="none" />
-        <path d="M58 30 C40 20 20 26 4 40 C24 30 42 30 58 32 C50 14 34 6 18 6 C38 10 50 18 60 30 C66 12 82 4 98 8 C80 12 68 20 60 32 C78 26 92 32 100 46 C84 36 70 34 60 34 Z" fill="#0b1418" />
-      </svg>
-      <svg className="absolute bottom-[40%] right-[-6%] w-[26%] h-[40%] scene-sway" style={{ animationDelay: '-4s' }} viewBox="0 0 100 140" preserveAspectRatio="none" aria-hidden>
-        <path d="M48 140 C52 100 56 70 44 30" stroke="#0b1418" strokeWidth="6" fill="none" />
-        <path d="M44 30 C60 20 80 26 96 40 C76 30 58 30 44 32 C52 14 68 6 84 6 C64 10 52 18 42 30 C36 12 20 4 4 8 C22 12 34 20 42 32 C24 26 10 32 2 46 C18 36 32 34 42 34 Z" fill="#0b1418" />
-      </svg>
-      <div className="absolute inset-x-0 top-[51%] h-[2px] scene-pulse" style={{ background: 'linear-gradient(90deg, transparent, rgba(255,220,170,0.6), transparent)' }} />
-    </>
-  );
-}
-
-/** Domino — the old wooden house: planks, a moonlit window, a lantern. */
-function Woodhouse({ lite }: { lite: boolean }) {
-  return (
-    <>
-      <div className="absolute inset-0 gs-planks" />
-      <div className="gs-window">
-        <span className="scene-pulse" />
-      </div>
-      <div className="gs-ray" />
-      <span className="gs-lantern scene-pulse" />
-      <Motes count={8} seed={303} className="scene-rise gs-dust" lite={lite} dur={[20, 32]} />
-    </>
-  );
+function dominoScene(scene: DominoScene, seed: number) {
+  return function DominoPhoto({ lite }: { lite: boolean }) {
+    return (
+      <>
+        <div className="gs-photo" style={{ '--gs-photo': `url(${DOMINO_ART[scene]})` } as CSSProperties} />
+        <Motes count={8} seed={seed} className="scene-rise gs-dust" lite={lite} dur={[18, 30]} />
+      </>
+    );
+  };
 }
 
 /** Bingo — modern hall: a huge dim LED board, sweeping ceiling spots. */
@@ -176,11 +126,11 @@ function Future({ lite }: { lite: boolean }) {
 }
 
 const SCENES: Record<GameScene, (p: { lite: boolean }) => JSX.Element> = {
-  salon: Salon,
-  cafe: Cafe,
-  terrace: Terrace,
-  lounge: LoungeScene,
-  woodhouse: Woodhouse,
+  salon: dominoScene('salon', 101),
+  cafe: dominoScene('cafe', 202),
+  terrace: dominoScene('terrace', 404),
+  lounge: dominoScene('lounge', 505),
+  woodhouse: dominoScene('woodhouse', 303),
   hall: Hall,
   theater: Theater,
   party: Party,
