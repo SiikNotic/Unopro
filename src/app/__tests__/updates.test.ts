@@ -50,6 +50,8 @@ describe('in-app updates', () => {
     expect(versionCodeOf(release.version)).not.toBeNull();
     expect(release.notes.es.length).toBeGreaterThan(0);
     expect(release.notes.en.length).toBe(release.notes.es.length);
+    // The workflow publishes the notes only for a few days after this date (then generic notes).
+    expect(Number.isNaN(Date.parse(release.notesDate))).toBe(false);
     expect(Object.keys(es.update).sort()).toEqual(Object.keys(en.update).sort());
   });
 });

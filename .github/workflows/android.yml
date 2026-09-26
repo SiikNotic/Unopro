@@ -48,7 +48,8 @@ jobs:
           RUN: ${{ github.run_number }}
         run: |
           # versionCode = major*10000 + minor*100 + patch (the formula installed apps check); written back into
-          # app-release.json so the bundled app knows its own version and notes.
+          # app-release.json so the bundled app knows its own version and notes. When a user-facing change ships,
+          # write its notes in app-release.json and set notesDate to that day.
           node -e '
             const fs = require("fs");
             const r = require("./app-release.json");
@@ -56,7 +57,13 @@ jobs:
             const code = a * 10000 + b * 100 + c + Number(process.env.RUN);
             const name = `${Math.floor(code / 10000)}.${Math.floor(code / 100) % 100}.${code % 100}`;
             if (Math.floor(code / 10000) !== a) throw new Error("minor version overflow: raise the base version");
-            fs.writeFileSync("app-release.json", JSON.stringify({ ...r, version: name }, null, 2) + "\n");
+            // Release notes describe one update: they are published only within NOTES_DAYS of their notesDate.
+            // Later builds (fixes after that) say "improvements and fixes" instead of repeating old notes.
+            const NOTES_DAYS = 10;
+            const age = (Date.now() - Date.parse(r.notesDate)) / 86400000;
+            const notes = r.notesDate && age >= 0 && age <= NOTES_DAYS ? r.notes : { es: ["Mejoras de rendimiento y correcciones."], en: ["Performance improvements and fixes."] };
+            console.log(`Notes from ${r.notesDate} (${Math.floor(age)} days old): ${notes === r.notes ? "published" : "generic"}`);
+            fs.writeFileSync("app-release.json", JSON.stringify({ ...r, version: name, notes }, null, 2) + "\n");
             fs.appendFileSync(process.env.GITHUB_OUTPUT, `name=${name}\ncode=${code}\n`);
             console.log(`Carta ${name} (versionCode ${code})`);
           '

@@ -1,25 +1,22 @@
 {
   "version": "1.2.0",
+  "notesDate": "2026-09-26",
   "notes": {
     "es": [
-      "Nuevo juego: Póker Texas Hold'em contra bots (2 a 6 jugadores, 3 dificultades) con fichas de práctica.",
-      "Nueva sección Ajustes → Legal y privacidad: Política de privacidad, Términos, Reglas de moneda virtual, Juego responsable, Eliminación de cuenta y Contacto.",
-      "Puedes eliminar tu cuenta desde Cuenta → Eliminar cuenta.",
-      "Aviso claro: Carta Casino usa solo monedas virtuales, sin dinero real ni premios.",
-      "Las fuentes ahora van incluidas en la app (sin conexiones a Google Fonts).",
-      "Nuevo juego: Jewellery, un puzzle de joyas para un jugador con 12 niveles, joyas especiales, combos y cascadas.",
-      "Nueva pantalla de configuración para Carta, Dominó, Bingo, Blackjack y Ruleta: jugadores, asientos, dificultad, reglas y escenario en un mismo diseño.",
-      "Carta contra bots: de 2 a 6 jugadores, equipos 2 vs 2 o 3 vs 3, partida a 250 o 500 puntos y reglas opcionales (acumular +2/+4, robar hasta poder jugar)."
+      "Jewellery ahora es Jewellery: Olympus: 20 niveles en 4 capítulos, sellos de mármol, nuevos objetivos y gemas especiales (Rayo, Templo del Olimpo y Tridente Divino).",
+      "Nuevos potenciadores: Martillo, Barajado Divino, Rayo y Poder del Olimpo. Se ganan jugando; no se compran.",
+      "Nuevo diseño del Olimpo en HD: gemas, efectos, marco dorado, pantallas de nivel completado y fondos nuevos.",
+      "El tablero de Jewellery se dibuja con aceleración gráfica: animaciones más fluidas y nítidas en pantallas de alta resolución.",
+      "Bingo: el confeti ya no se queda al empezar una partida nueva y vuelven las voces que cantan letras y números.",
+      "Para jugar hace falta una cuenta: al registrarte confirmas que tienes 18 años o más y aceptas los términos."
     ],
     "en": [
-      "New game: Texas Hold'em Poker vs bots (2 to 6 players, 3 difficulties) with practice chips.",
-      "New Settings → Legal & Privacy section: Privacy Policy, Terms, Virtual Currency Rules, Responsible Play, Account Deletion and Contact.",
-      "You can delete your account from Account → Delete account.",
-      "Clear notice: Carta Casino uses virtual coins only, no real money and no prizes.",
-      "Fonts are now bundled in the app (no connections to Google Fonts).",
-      "New game: Jewellery, a single-player jewel puzzle with 12 levels, special jewels, combos and cascades.",
-      "New setup screen for Carta, Domino, Bingo, Blackjack and Roulette: players, seats, difficulty, rules and scene in one design.",
-      "Carta vs bots: 2 to 6 players, 2 vs 2 or 3 vs 3 teams, games to 250 or 500 points and optional rules (stack +2/+4, draw until you can play)."
+      "Jewellery is now Jewellery: Olympus: 20 levels in 4 chapters, marble seals, new goals and special jewels (Lightning, Temple of Olympus and Divine Trident).",
+      "New power-ups: Hammer, Divine Shuffle, Lightning and Olympus Power. Earned by playing; never sold.",
+      "New HD Olympus look: jewels, effects, golden frame, level-complete screens and new backgrounds.",
+      "The Jewellery board is drawn with hardware acceleration: smoother animations, sharp on high-resolution screens.",
+      "Bingo: the confetti no longer stays when a new game starts, and the voices calling letters and numbers are back.",
+      "An account is required to play: when you sign up you confirm you are 18 or older and accept the terms."
     ]
   }
 }
