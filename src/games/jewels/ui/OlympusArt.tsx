@@ -2,7 +2,7 @@
 // icons, the laurel and the star. SVG using the gold / marble gradients from JewelDefs, with the painted
 // portrait and power-up medallions from the asset pack.
 import type { Booster } from '../engine';
-import { AVATAR_IMAGE, BOOSTER_IMAGES, ICONS } from './assets';
+import { AVATAR_IMAGE, BOOSTER_IMAGES, STAR_IMAGES } from './assets';
 
 /** The Olympian of the HUD: Zeus's painted portrait on a gold medallion. */
 export function OlympianMedallion({ size = 64 }: { size?: number }) {
@@ -33,9 +33,9 @@ export function Laurel({ className = '' }: { className?: string }) {
   );
 }
 
-/** A star: the pack's gold star when earned, a dim one when not. */
+/** A star: the owner's gold star when earned, the stone one when not. */
 export function StarIcon({ on, className = '' }: { on: boolean; className?: string }) {
-  return <img src={ICONS.star} alt="" aria-hidden className={`ol-star-img ${on ? 'is-on' : ''} ${className}`} />;
+  return <img src={on ? STAR_IMAGES.on : STAR_IMAGES.off} alt="" aria-hidden className={`ol-star-img ${className}`} />;
 }
 
 /** Power-up icons (Hammer, Divine Shuffle, Lightning, Olympus Power): painted medallions in a gold rim. */

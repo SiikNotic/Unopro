@@ -40,6 +40,8 @@ import icStar from '../assets/ic-star.webp';
 import icTrophy from '../assets/ic-trophy.webp';
 import icPlus from '../assets/ic-plus.webp';
 import icCrown from '../assets/ic-crown.webp';
+import starOn from '../assets/star-on.webp';
+import starOff from '../assets/star-off.webp';
 
 /** One image per jewel kind (index = kind): diamond, emerald, ruby, sapphire, amethyst, topaz. */
 export const GEM_IMAGES = [gem0, gem1, gem2, gem3, gem4, gem5];
@@ -52,3 +54,4 @@ export const AVATAR_IMAGE = zeus;
 export const BACKGROUNDS = { portrait: bgPortrait, landscape: bgLandscape };
 export const UI_IMAGES = { boardFrame: uiBoardFrame, panelHeader: uiPanelHeader, bar: uiBar, scoreBar: uiScoreBar, panelStars: uiPanelStars, panel: uiPanel };
 export const ICONS = { settings: icSettings, sound: icSound, music: icMusic, home: icHome, help: icHelp, star: icStar, trophy: icTrophy, plus: icPlus, crown: icCrown };
+export const STAR_IMAGES = { on: starOn, off: starOff };

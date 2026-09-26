@@ -5,7 +5,7 @@
 #    The panorama gets a second pass (it becomes the full-screen background):
 #      python3 scripts/olympus-assets.py upscale <hd dir> <hd2 dir> <model> background_olympus_panorama.png
 # 2. Build the game's WebP files from the HD images (optionally with the cleaned second backgrounds):
-#      python3 scripts/olympus-assets.py build <hd dir> <hd2 dir> [<bg2 dir>]
+#      python3 scripts/olympus-assets.py build <hd dir> <hd2 dir> [<bg2 dir> [<ui2 dir>]]
 #
 # The build crops each image to its content, squares it and sizes it for the screen (gems 320 px, which is
 # sharp up to 4K cells), cuts the topaz to a hexagon (so its outline differs from the round ruby) and the
@@ -180,7 +180,42 @@ def backgrounds_v2(src):
     save(d.resize((2560, int(d.height * 2560 / d.width)), Image.LANCZOS), 'bg-landscape', q=82)
 
 
-def build(hd, hd2, bg2=None):
+def plain_button(im):
+    """A pill button whose middle can stretch: the centre ornaments are covered by a plain slice of the pill
+    (feathered into the ends), so CSS border-image can widen it without distorting anything."""
+    w, h = im.size
+    slice_ = im.crop((int(w * 0.245), 0, int(w * 0.265), h))
+    mid0, mid1 = int(w * 0.25), int(w * 0.75)
+    fill = slice_.resize((mid1 - mid0, h), Image.LANCZOS)
+    ramp = Image.linear_gradient('L').rotate(90).resize((mid1 - mid0, h))  # 0 → 255 left to right
+    fw = int((mid1 - mid0) * 0.12)
+    mask = Image.new('L', (mid1 - mid0, h), 255)
+    for x in range(fw):
+        v = int(255 * x / fw)
+        mask.paste(v, (x, 0, x + 1, h))
+        mask.paste(v, (mid1 - mid0 - 1 - x, 0, mid1 - mid0 - x, h))
+    out = im.copy()
+    region = out.crop((mid0, 0, mid1, h))
+    out.paste(Image.composite(fill, region, mask), (mid0, 0))
+    return out
+
+
+def ui_v2(src):
+    """The owner's end-of-level UI set (ChatGPT, generated one by one, real transparency)."""
+    def load2(n):
+        im = Image.open(os.path.join(src, n + '.png')).convert('RGBA')
+        return im.crop(im.getchannel('A').point(lambda v: 255 if v > 24 else 0).getbbox())
+    for n, name, width in [('panel_level_complete', 'ui-card', 760), ('ribbon_title', 'ui-ribbon', 900), ('plaque_score', 'ui-plaque', 800)]:
+        im = load2(n)
+        save(im, name, (width, int(im.height * width / im.width)))
+    for n, name in [('button_green', 'ui-btn-green'), ('button_blue', 'ui-btn-blue')]:
+        im = plain_button(load2(n))
+        save(im, name, (720, int(im.height * 720 / im.width)))
+    save(square(load2('star_gold'), 0.02), 'star-on', 256)
+    save(square(load2('star_empty'), 0.02), 'star-off', 256)
+
+
+def build(hd, hd2, bg2=None, ui2=None):
     gems = ['gem_diamond_celestial', 'gem_emerald_divine', 'gem_ruby_fire', 'gem_sapphire_poseidon', 'gem_amethyst_alt']
     for k, n in enumerate(gems):
         save(square(load(hd, n)), f'gem{k}', 320)
@@ -211,6 +246,8 @@ def build(hd, hd2, bg2=None):
         save(im, name, (width, int(im.height * width / im.width)))
     for n in ['settings', 'sound', 'music', 'home', 'help', 'star', 'trophy', 'plus', 'crown']:
         save(disc(hd, 'icon_' + n, 0.86), 'ic-' + n, 128)
+    if ui2:
+        ui_v2(ui2)
     if bg2:
         backgrounds_v2(bg2)
     else:
@@ -222,4 +259,4 @@ if __name__ == '__main__':
         upscale(sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5:])
     else:
         os.makedirs(OUT, exist_ok=True)
-        build(sys.argv[2], sys.argv[3], sys.argv[4] if len(sys.argv) > 4 else None)
+        build(sys.argv[2], sys.argv[3], *(sys.argv[4:6]))

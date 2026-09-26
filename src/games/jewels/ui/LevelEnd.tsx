@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { Check, Map as MapIcon, Play, RotateCcw, X } from 'lucide-react';
 import { useI18n } from '@/i18n';
 import type { Booster, GoalProgress } from '../engine';
-import { BoosterIcon, Laurel, StarIcon } from './OlympusArt';
+import { BoosterIcon, StarIcon } from './OlympusArt';
 import { playJewel } from './jewelAudio';
 
 function useCountUp(target: number, ms: number, active: boolean) {
@@ -53,11 +53,10 @@ export function LevelEnd({ won, levelId, score, best, stars, reward, goals, anim
     <div className={`ol-end ${won ? 'is-won' : 'is-lost'}`} role="dialog" aria-modal="true" aria-labelledby="ol-end-title">
       {won && animate && <div className="ol-end-rays" aria-hidden />}
       <div className="ol-card">
-        <Laurel className="ol-card-laurel" />
-        <p className="ol-card-kicker">{t('jewels.levelN', { n: levelId })}</p>
         <h2 id="ol-end-title" className="ol-card-title">
           {won ? t('jewels.won') : t('jewels.lost')}
         </h2>
+        <p className="ol-card-kicker">{t('jewels.levelN', { n: levelId })}</p>
         {won ? (
           <div className="ol-stars" aria-label={t('jewels.starsAria', { n: stars })}>
             {[0, 1, 2].map((i) => (
