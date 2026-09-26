@@ -388,6 +388,10 @@ export class GemScene {
     for (const f of this.fx.values()) for (const p of f.parts) p.mat.dispose();
     this.fx.clear();
     this.kit?.dispose();
+    // THREE.Sprite draws with one geometry shared by every sprite, kept at module level by three.js. Its
+    // GPU buffers are cached per renderer, and that cache kept each closed board's WebGL context alive.
+    // Disposing it makes every renderer drop those buffers (a live one simply uploads them again).
+    new THREE.Sprite().geometry.dispose();
     this.renderer.dispose();
     this.renderer.forceContextLoss();
   }

@@ -140,3 +140,55 @@ The simulation test fails if a level breaks an invariant or is not winnable by t
 - Sparks: 160 max, 60 on slow devices (`isLiteDevice`), 0 with reduced motion.
 - WebGL board: one canvas, about 50 small textured quads, one draw each; textures are loaded once per board
   and released with it.
+- Leaving a board releases everything, including the GPU buffers of three.js's shared sprite geometry
+  (`GemScene.dispose`), which otherwise kept every closed board's WebGL context alive.
+
+## QA results (2026-09-26)
+
+Measured on the production build in Chromium (headless, software WebGL).
+
+- **Widths:** 360×740, 390×844, 768×1024, 1280×720 and 1920×1080, plus phones on their side (667×375,
+  740×360, 844×390, 915×412). No horizontal or vertical scrolling, and the board is always fully on
+  screen.
+  - On a phone on its side the board used to be a 131 px thumbnail under the stacked score bar. It now gets a
+    side layout: score and goals on the left, the board in the middle with all the height (245–288 px),
+    power-ups on the right.
+- **Frames:** the board's animation stops completely with the tab hidden (0 frames in 2 s) and after
+  leaving the game (0 frames, 0 canvases left).
+- **Memory:** entering and leaving a level 30 times stays flat (7.46 → 7.56 MB between the 10th and the 30th
+  time), with no WebGL contexts, canvases or board DOM retained.
+  - Before the fix, each closed board kept its WebGL context and about 36 KB (the shared sprite geometry,
+    above).
+  - Note for whoever measures again: Playwright's `waitForSelector` returns element handles that pin
+    detached DOM. Use `locator().waitFor()`.
+- **Levels:** a bot (best move 60% of the time, a random productive move otherwise, no power-ups) played
+  40 games per level. Every level can be won.
+
+| Level | Difficulty | Won | Moves left (wins) |
+|---|---|---|---|
+| 1 | easy | 100% | 14.0 |
+| 2 | easy | 100% | 11.7 |
+| 3 | easy | 100% | 11.1 |
+| 4 | easy | 100% | 14.3 |
+| 5 | normal | 93% | 13.3 |
+| 6 | normal | 100% | 11.5 |
+| 7 | normal | 100% | 14.3 |
+| 8 | normal | 100% | 10.6 |
+| 9 | normal | 98% | 12.3 |
+| 10 | hard | 98% | 10.7 |
+| 11 | normal | 93% | 10.0 |
+| 12 | hard | 90% | 6.8 |
+| 13 | hard | 75% | 7.6 |
+| 14 | hard | 100% | 14.3 |
+| 15 | hard | 80% | 10.0 |
+| 16 | hard | 100% | 10.4 |
+| 17 | divine | 100% | 13.4 |
+| 18 | divine | 83% | 6.9 |
+| 19 | divine | 83% | 7.6 |
+| 20 | divine | 90% | 10.6 |
+
+- **Difficulty to review (a design decision, left as is):**
+  - Level 14 ("hard") and level 17 ("divine") come out as easy as the first levels: 100% won, 13–14 moves to
+    spare.
+  - Level 13 (75%) and level 15 (80%) are harder than the "divine" levels 18–20.
+  - Taking about 4 moves off levels 14 and 17 would put them in line.

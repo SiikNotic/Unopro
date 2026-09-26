@@ -1181,6 +1181,47 @@
   }
 }
 
+/* A phone on its side: the header on top, the score and goals on the left, the board in the middle with all
+   the height, the power-ups on the right. Stacked, the board would be a thumbnail. */
+@media (orientation: landscape) and (max-height: 520px) and (min-width: 600px) {
+  .ol-play {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 48%) minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas: 'top top top' 'hud area bottom';
+    column-gap: 12px;
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
+  }
+  .ol-play > .ol-top { grid-area: top; margin-bottom: 0; }
+  .ol-play > .ol-hud {
+    grid-area: hud;
+    grid-template-columns: 1fr;
+    justify-items: center;
+    align-content: center;
+    gap: 8px;
+    max-width: 260px;
+    margin: 0 0 0 auto;
+  }
+  .ol-play > .ol-hud .ol-goals { grid-column: auto; }
+  .ol-play > .ol-hud .ol-score { width: 100%; }
+  .ol-play > .ol-area { grid-area: area; padding-top: 0; padding-bottom: 6px; }
+  .ol-play > .ol-bottom {
+    grid-area: bottom;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding-top: 0;
+  }
+  .ol-play > .ol-bottom .ol-powers {
+    display: grid;
+    grid-template-columns: repeat(2, auto);
+    justify-content: start;
+    gap: 12px;
+  }
+  .ol-play > .ol-bottom .ol-aim { display: block; text-align: left; max-width: 220px; }
+}
+
 /* ---------------------------------------------------------------- keyframes */
 @keyframes ol-spin {
   to {
