@@ -175,6 +175,23 @@ describe('staked rooms', () => {
     expect(v.status).toBe('lobby');
   });
 
+  it('each stake records its room and pot, and a refund names the stake it gives back (for refund_orphan_stakes)', async () => {
+    const s = setup({ ana: 1000, beto: 100 });
+    const details: Record<string, unknown>[] = [];
+    const { bet, pay } = s.w.wallet;
+    s.w.wallet.bet = (u, id, g, amount, detail) => (details.push({ op: 'bet', id, ...detail }), bet(u, id, g, amount, detail));
+    s.w.wallet.pay = (u, id, g, amount, detail) => (details.push({ op: 'pay', id, ...detail }), pay(u, id, g, amount, detail));
+    const code = await stakedDomino(s);
+    await s.call('ana', { op: 'start', code });
+    const room = [...s.mem.rooms.values()].find((r) => r.code === code)!;
+    const stake = details.find((d) => d.op === 'bet')!;
+    expect(stake).toMatchObject({ room: code, roomId: room.id, match: 1, kind: 'stake' });
+    expect(typeof stake.nonce).toBe('string');
+    // Beto couldn't pay: Ana's stake came back, with the id refund_orphan_stakes would use for it
+    const refund = details.find((d) => d.op === 'pay')!;
+    expect(refund).toMatchObject({ refund: true, refundOf: stake.id, id: `${stake.id}|refund` });
+  });
+
   it('a staked match needs two players', async () => {
     const s = setup();
     const a = await s.ok('ana', { op: 'create', game: 'domino', seats: 2, name: 'Ana', settings: { difficulty: 'normal', target: 100, stake: 100 } });

@@ -516,7 +516,8 @@ type Debit = { userId: string; id: string; amount: number; game: WalletGame };
 async function giveBack(debits: Debit[], deps: RoomDeps, code: string, balances: Map<string, number>) {
   if (!deps.wallet) return;
   for (const d of debits.splice(0)) {
-    const res = await deps.wallet.pay(d.userId, await idFor(deps)(`${d.id}|refund`), d.game, d.amount, { room: code, refund: true });
+    // Same id as refund_orphan_stakes uses (stake_refund_id), so a stake is never given back twice.
+    const res = await deps.wallet.pay(d.userId, await idFor(deps)(`${d.id}|refund`), d.game, d.amount, { room: code, refund: true, refundOf: d.id });
     if (res.ok) balances.set(d.userId, res.balance);
   }
 }
@@ -525,6 +526,8 @@ async function giveBack(debits: Debit[], deps: RoomDeps, code: string, balances:
  * Starts the stakes of a new match: every player at the table puts in the room's stake, taken from their
  * account wallet by the database (balance checked there, under a row lock). If anyone can't pay, the
  * stakes already taken are given back and the match doesn't start. Needs two or more players.
+ * Each stake records its room id and pot nonce: if this function dies before the room is stored, the
+ * database's refund_orphan_stakes job finds the stake without a stored pot and gives it back.
  */
 async function collectStakes(room: RoomRow, deps: RoomDeps, randomInt: (n: number) => number, balances: Map<string, number>, debits: Debit[]): Promise<{ ok: true; room: RoomRow } | { ok: false; res: RoomResponse }> {
   const stake = stakeOf(room);
@@ -537,7 +540,7 @@ async function collectStakes(room: RoomRow, deps: RoomDeps, randomInt: (n: numbe
   const taken: Debit[] = [];
   for (const m of room.members) {
     const id = await idFor(deps)(`${room.id}|pot|${match}|${nonce}|${m.seat}|stake`);
-    const res = await deps.wallet.bet(m.userId, id, game, stake, { room: room.code, match, seat: m.seat, kind: 'stake' });
+    const res = await deps.wallet.bet(m.userId, id, game, stake, { room: room.code, roomId: room.id, match, nonce, seat: m.seat, kind: 'stake' });
     if (!res.ok) {
       await giveBack(taken, deps, room.code, balances);
       return { ok: false, res: walletError(res.code, m.name) };

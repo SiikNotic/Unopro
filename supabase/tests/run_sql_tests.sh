@@ -31,6 +31,9 @@ for m in 20260930000000_account_deletion 20261001000000_guest_migration_cap 2026
   psql -q -v ON_ERROR_STOP=1 -d "$DB" -f "../migrations/$m.sql"
 done
 psql -q -v ON_ERROR_STOP=1 -d "$DB" -f game_control_test.sql
+psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20261004000000_orphan_stakes.sql
+psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20261004000000_orphan_stakes.sql
+psql -q -v ON_ERROR_STOP=1 -d "$DB" -f orphan_stakes_test.sql
 
 # Two players ask for the same username at the same instant: exactly one gets it.
 for u in 21 22 23 24 25 26; do
@@ -108,4 +111,16 @@ wait
 read -r PAYS PBAL < <(psql -At -F ' ' -d "$DB" -c "select (select count(*) from public.account_ledger where user_id = '$PU'), (select balance from public.account_wallets where user_id = '$PU')")
 echo "pot payout concurrency: payouts=$PAYS balance=$PBAL"
 [ "$PAYS" = 1 ] && [ "$PBAL" = 400 ] || { echo "POT PAYOUT CONCURRENCY TEST FAILED"; exit 1; }
+# Two refund jobs at once (e.g. cron plus a manual run): each lost stake is paid back once.
+OU=00000000-0000-0000-0006-0000000000ee
+psql -q -d "$DB" -c "insert into auth.users (id, email_confirmed_at) values ('$OU', now()); insert into public.account_wallets (user_id, balance) values ('$OU', 300); insert into public.terms_acceptances (user_id, version, adult_confirmed) values ('$OU', public.terms_version(), true)"
+psql -q -d "$DB" -c "set role service_role; select public.table_bet('$OU', gen_random_uuid(), 'bingo', 100, '{\"roomId\":\"66666666-0000-4000-8000-0000000000ff\",\"nonce\":\"race\",\"room\":\"RACE2\"}') from generate_series(1, 3)" >/dev/null
+psql -q -d "$DB" -c "update public.account_ledger set created_at = now() - interval '20 minutes' where user_id = '$OU'"
+for i in $(seq 1 8); do
+  psql -q -d "$DB" -c "set role service_role; select public.refund_orphan_stakes()" >/dev/null 2>&1 &
+done
+wait
+read -r OREF OBAL < <(psql -At -F ' ' -d "$DB" -c "select (select count(*) from public.account_ledger where user_id = '$OU' and payout > 0), (select balance from public.account_wallets where user_id = '$OU')")
+echo "orphan refund concurrency: refunds=$OREF balance=$OBAL"
+[ "$OREF" = 3 ] && [ "$OBAL" = 300 ] || { echo "ORPHAN REFUND CONCURRENCY TEST FAILED"; exit 1; }
 echo "all SQL tests passed"

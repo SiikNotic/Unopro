@@ -2589,7 +2589,7 @@ async function outOfService(game, deps) {
 async function giveBack(debits, deps, code, balances) {
   if (!deps.wallet) return;
   for (const d of debits.splice(0)) {
-    const res = await deps.wallet.pay(d.userId, await idFor(deps)(`${d.id}|refund`), d.game, d.amount, { room: code, refund: true });
+    const res = await deps.wallet.pay(d.userId, await idFor(deps)(`${d.id}|refund`), d.game, d.amount, { room: code, refund: true, refundOf: d.id });
     if (res.ok) balances.set(d.userId, res.balance);
   }
 }
@@ -2604,7 +2604,7 @@ async function collectStakes(room, deps, randomInt, balances, debits) {
   const taken = [];
   for (const m of room.members) {
     const id = await idFor(deps)(`${room.id}|pot|${match}|${nonce}|${m.seat}|stake`);
-    const res = await deps.wallet.bet(m.userId, id, game, stake, { room: room.code, match, seat: m.seat, kind: "stake" });
+    const res = await deps.wallet.bet(m.userId, id, game, stake, { room: room.code, roomId: room.id, match, nonce, seat: m.seat, kind: "stake" });
     if (!res.ok) {
       await giveBack(taken, deps, room.code, balances);
       return { ok: false, res: walletError(res.code, m.name) };

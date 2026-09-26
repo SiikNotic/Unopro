@@ -54,11 +54,19 @@ purchases.
 - **What the browser sends:** only the stake of the room it creates.
   - It never sends an amount to charge, a result, a winner or a balance.
 - **Rematch:** a new match (rematch) takes new stakes, and only after the previous pot was paid.
+- **Stakes taken without a stored match:** if the game-room function dies between taking the stakes and
+  storing the room, nothing is lost.
+  - `room_commit` records every stored pot in `room_pots`, in the same transaction as the room.
+  - `refund_orphan_stakes()` runs every 5 minutes with pg_cron. It gives back stakes older than 10 minutes
+    whose pot is not in `room_pots`.
+  - The refund id is the same one the game-room function uses for its own refunds
+    (`stake_refund_id` = SHA-256 of `<stake id>|refund`), so a stake is never given back twice. The SQL
+    tests include 8 refund jobs running at once.
 
 ## Code
 
-- `supabase/migrations/20261003000000_game_control_stakes.sql`, with tests in
-  `supabase/tests/game_control_test.sql`.
+- `supabase/migrations/20261003000000_game_control_stakes.sql` and `20261004000000_orphan_stakes.sql`,
+  with tests in `supabase/tests/game_control_test.sql` and `orphan_stakes_test.sql`.
 - `src/games/online/server/handler.ts` (`collectStakes`, `settlePot`, `matchWinners`, `outOfService`),
   with tests in `src/games/online/__tests__/stakes.test.ts`.
 - `src/casino/server/handler.ts` (`slotsEnabled`).
