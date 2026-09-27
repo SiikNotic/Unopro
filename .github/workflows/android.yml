@@ -141,6 +141,8 @@ jobs:
   play-bundle:
     # The Google Play bundle (.aab): same app, built with VITE_DISTRIBUTION=play and the "play" flavor (no
     # self-update, no REQUEST_INSTALL_PACKAGES). Only kept as a run artifact — nothing is sent to Google.
+    # Signed with the same key as the APK (Play's upload key); it has the same version as the APK of this run,
+    # so every new bundle has a higher versionCode, as Google Play requires.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -152,6 +154,22 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
+      - name: Version (the same as the APK of this run)
+        id: v
+        env:
+          RUN: ${{ github.run_number }}
+        run: |
+          node -e '
+            const fs = require("fs");
+            const r = require("./app-release.json");
+            const [a, b, c] = r.version.split(".").map(Number);
+            const code = a * 10000 + b * 100 + c + Number(process.env.RUN);
+            const name = `${Math.floor(code / 10000)}.${Math.floor(code / 100) % 100}.${code % 100}`;
+            if (Math.floor(code / 10000) !== a) throw new Error("minor version overflow: raise the base version");
+            fs.writeFileSync("app-release.json", JSON.stringify({ ...r, version: name }, null, 2) + "\n");
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, `name=${name}\ncode=${code}\n`);
+            console.log(`Carta ${name} (versionCode ${code})`);
+          '
       - run: npm ci
       - run: npm run build
         env:
@@ -166,24 +184,52 @@ jobs:
         env:
           KS: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
-          if [ -n "$KS" ]; then echo "$KS" | base64 -d > "$RUNNER_TEMP/release.jks"; echo "file=$RUNNER_TEMP/release.jks" >> "$GITHUB_OUTPUT"; fi
+          # Google Play refuses an unsigned bundle: without the key there is nothing worth building.
+          if [ -z "$KS" ]; then echo "::error::No signing key (secret ANDROID_KEYSTORE_BASE64): a Play bundle must be signed."; exit 1; fi
+          echo "$KS" | base64 -d > "$RUNNER_TEMP/release.jks"; echo "file=$RUNNER_TEMP/release.jks" >> "$GITHUB_OUTPUT"
       - name: Build the Play bundle
         working-directory: android
         run: ./gradlew bundlePlayRelease --no-daemon
         env:
           ADMOB_APP_ID: ${{ vars.ADMOB_APP_ID }}
-          APP_VERSION_NAME: '1.0'
-          APP_VERSION_CODE: '1'
+          APP_VERSION_NAME: ${{ steps.v.outputs.name }}
+          APP_VERSION_CODE: ${{ steps.v.outputs.code }}
           ANDROID_KEYSTORE_FILE: ${{ steps.key.outputs.file }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
       - name: Check the bundle has no install-packages permission
         run: |
           AAB=android/app/build/outputs/bundle/playRelease/app-play-release.aab
           unzip -p "$AAB" base/manifest/AndroidManifest.xml | strings | grep -q REQUEST_INSTALL_PACKAGES && { echo "REQUEST_INSTALL_PACKAGES found"; exit 1; } || echo "OK: no REQUEST_INSTALL_PACKAGES"
+      - name: Validate the bundle (signature, bundletool, manifest)
+        env:
+          NAME: ${{ steps.v.outputs.name }}
+        run: |
+          set -e
+          AAB=android/app/build/outputs/bundle/playRelease/app-play-release.aab
+          OUT="carta-play-$NAME.aab"
+          cp "$AAB" "$OUT"
+          echo "== $OUT: $(stat -c %s "$OUT") bytes, SHA-256 $(sha256sum "$OUT" | cut -d' ' -f1)"
+          echo "== Signature (this certificate is the upload key Google Play will ask for)"
+          jarsigner -verify "$OUT" | tail -n 1
+          jarsigner -verify "$OUT" | grep -q "jar verified" || { echo "::error::The bundle is not signed"; exit 1; }
+          keytool -printcert -jarfile "$OUT" | grep -E "Owner|SHA1:|SHA256:|Valid"
+          curl -sSfL -o bundletool.jar https://github.com/google/bundletool/releases/download/1.17.2/bundletool-all-1.17.2.jar
+          echo "== bundletool validate"
+          java -jar bundletool.jar validate --bundle="$OUT" | head -n 40
+          echo "== Manifest"
+          for x in package versionCode versionName; do echo "$x: $(java -jar bundletool.jar dump manifest --bundle="$OUT" --xpath="/manifest/@$x")"; done
+          echo "minSdk: $(java -jar bundletool.jar dump manifest --bundle="$OUT" --xpath='/manifest/uses-sdk/@android:minSdkVersion')"
+          echo "targetSdk: $(java -jar bundletool.jar dump manifest --bundle="$OUT" --xpath='/manifest/uses-sdk/@android:targetSdkVersion')"
+          echo "debuggable: $(java -jar bundletool.jar dump manifest --bundle="$OUT" --xpath='/manifest/application/@android:debuggable' || true)"
+          echo "permissions:"; java -jar bundletool.jar dump manifest --bundle="$OUT" --xpath='/manifest/uses-permission/@android:name'
+          ADMOB=$(java -jar bundletool.jar dump manifest --bundle="$OUT" --xpath="/manifest/application/meta-data[@android:name='com.google.android.gms.ads.APPLICATION_ID']/@android:value")
+          echo "AdMob App ID: $ADMOB"
+          case "$ADMOB" in *3940256099942544*) echo "::warning::The bundle uses Google's sample AdMob App ID (test ads). Set the ADMOB_APP_ID repository variable before publishing.";; esac
+          echo "== Native libraries"; unzip -l "$OUT" | grep '\.so$' || echo "none"
       - uses: actions/upload-artifact@v5
         with:
           name: carta-play-aab
-          path: android/app/build/outputs/bundle/playRelease/app-play-release.aab
+          path: carta-play-${{ steps.v.outputs.name }}.aab
           retention-days: 30
 
   ssv-smoke:
