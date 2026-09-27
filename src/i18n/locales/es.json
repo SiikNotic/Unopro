@@ -1400,12 +1400,11 @@
     "userDetails": "Detalle del usuario",
     "tabs": {
       "overview": "Resumen",
-      "users": "Usuarios",
+      "users": "Jugadores",
       "economy": "Economía",
-      "bans": "Baneos",
+      "bans": "Sanciones",
       "audit": "Registro",
-      "games": "Juegos",
-      "horse": "Hípica"
+      "games": "Juegos"
     },
     "errors": {
       "forbidden": "No tienes permiso para esta acción (o el usuario está protegido).",
@@ -1460,14 +1459,19 @@
       "admin_add": "Ajuste del equipo (+)",
       "admin_remove": "Ajuste del equipo (−)",
       "loan": "Préstamo del Banco",
-      "ad_reward": "Recompensa por anuncio"
+      "ad_reward": "Recompensa por anuncio",
+      "domino": "Dominó",
+      "bingo": "Bingo",
+      "carta": "Carta",
+      "crash": "Crash",
+      "horse": "Horse Racing"
     },
     "rounds": "Rondas jugadas",
-    "bannedPermanent": "Baneo permanente",
-    "bannedUntil": "Baneado hasta el {date}",
-    "notBanned": "Sin baneos activos.",
-    "protected": "No puedes moderar a este usuario (mismo rango o superior).",
-    "banHistory": "Historial de baneos",
+    "bannedPermanent": "Sanción permanente",
+    "bannedUntil": "Sancionado hasta el {date}",
+    "notBanned": "Sin sanciones.",
+    "protected": "No puedes moderar a este jugador (mismo rango o superior).",
+    "banHistory": "Historial de sanciones",
     "permanent": "Permanente",
     "temporary": "Temporal",
     "lifted": "Levantado el {date}",
@@ -1482,7 +1486,7 @@
     "preview": "Saldo: {before} → {after}",
     "applyAmount": "Aplicar {amount}",
     "apply": "Aplicar",
-    "banUser": "Banear usuario",
+    "banUser": "Sancionar jugador",
     "duration": "Duración",
     "hours": {
       "1": "1 hora",
@@ -1490,11 +1494,11 @@
       "168": "7 días",
       "720": "30 días"
     },
-    "banReasonPlaceholder": "Motivo del baneo (obligatorio)",
-    "confirmBan": "Banear",
-    "unbanUser": "Levantar baneo",
-    "unbanReasonPlaceholder": "Motivo del desbaneo (obligatorio)",
-    "confirmUnban": "Desbanear",
+    "banReasonPlaceholder": "Motivo de la sanción (obligatorio)",
+    "confirmBan": "Sancionar",
+    "unbanUser": "Levantar sanción",
+    "unbanReasonPlaceholder": "Motivo para levantarla (obligatorio)",
+    "confirmUnban": "Levantar sanción",
     "changeRole": "Cambiar rol",
     "roleHelp": "Solo el owner puede cambiar roles. Nadie puede asignar el rol de owner.",
     "saveRole": "Guardar rol",
@@ -1526,7 +1530,11 @@
       "adminNet24h": "Ajustes del equipo (24 h)",
       "loans24h": "Préstamos 24 h",
       "adRewards24h": "Anuncios pagados 24 h",
-      "bankPaid24h": "Pagado por el Banco 24 h"
+      "bankPaid24h": "Pagado por el Banco 24 h",
+      "bets": "Apuestas",
+      "bettors": "Jugadores que apostaron",
+      "newUsers": "Nuevos registros",
+      "activeUsers": "Jugadores activos"
     },
     "recentActions": "Últimas acciones del equipo",
     "ago": {
@@ -1541,8 +1549,8 @@
     "searchPlaceholder": "Buscar por usuario, correo o ID",
     "topBalances": "Saldos más altos",
     "adjustments": "Ajustes recientes de monedas",
-    "activeBans": "Activos",
-    "allBans": "Todos",
+    "activeBans": "Activas",
+    "allBans": "Todas",
     "bannedBy": "Baneado por {name} el {date}",
     "expires": "expira el {date}",
     "liftReason": "Levantado por {name}: {reason}",
@@ -1574,7 +1582,9 @@
       "confirmOn": "Confirmar: en servicio",
       "reasonPlaceholder": "Motivo (obligatorio, queda en el registro)",
       "noteOwner": "Un juego fuera de servicio no admite partidas nuevas (las que están en curso terminan). El servidor lo aplica y queda en el registro.",
-      "noteStaff": "Solo el propietario puede cambiar el estado de los juegos."
+      "noteStaff": "Solo el propietario puede cambiar el estado de los juegos.",
+      "noCoins": "Este juego no usa monedas de la cuenta.",
+      "openPanel": "Abrir panel"
     },
     "byGame": {
       "title": "Por juego (24 h)",
@@ -1593,7 +1603,9 @@
         "carta": "Carta",
         "crash": "Crash",
         "horse": "Horse Racing"
-      }
+      },
+      "titlePeriod": "Por juego",
+      "noPlay": "Nadie ha apostado en este periodo."
     },
     "horse": {
       "title": "Horse Racing",
@@ -1635,6 +1647,160 @@
       "limits": "límites {min}–{max}",
       "seed": "Semilla",
       "place": "Puesto"
+    },
+    "refresh": "Actualizar",
+    "seeAll": "Ver todo",
+    "online": "En línea",
+    "period": {
+      "label": "Periodo",
+      "d1": "24 h",
+      "d7": "7 días",
+      "d30": "30 días"
+    },
+    "now": {
+      "title": "Ahora mismo",
+      "online": "En línea ahora",
+      "registered": "Registrados",
+      "coins": "Monedas en circulación",
+      "banned": "Sanciones activas"
+    },
+    "attention": {
+      "title": "Necesita atención",
+      "allGood": "Todo en orden: no hay nada que revisar.",
+      "gamesOff": "{n} juego(s) fuera de servicio: {games}.",
+      "houseLoses": "La casa pierde {amount} monedas en este periodo.",
+      "bigWin": "Premio grande: {name} ganó {amount} en {game}.",
+      "adsRejected": "{n} recompensa(s) de anuncios rechazadas.",
+      "adjustments": "{n} ajuste(s) manual(es) de monedas (+{added} / −{removed}).",
+      "activeBans": "{n} jugador(es) sancionado(s) ahora.",
+      "openGames": "Ver juegos",
+      "openPlayer": "Ver jugador",
+      "openEconomy": "Ver economía",
+      "openAudit": "Ver registro",
+      "openBans": "Ver sanciones"
+    },
+    "money": {
+      "staked": "Apostado",
+      "paid": "Pagado",
+      "house": "Resultado de la casa",
+      "houseHint": "Apostado − pagado",
+      "rtp": "RTP real",
+      "rtpHint": "Pagado ÷ apostado",
+      "rtpShort": "RTP",
+      "houseShort": "Casa"
+    },
+    "chart": {
+      "title": "Monedas apostadas",
+      "aria": "Gráfico de barras: monedas apostadas en el periodo",
+      "showChart": "Ver gráfico",
+      "showTable": "Ver como tabla",
+      "hour": "Hora",
+      "day": "Día",
+      "players": "Jugadores",
+      "newUsers": "Registros"
+    },
+    "winners": {
+      "title": "Ganadores",
+      "big": "Mayores premios",
+      "net": "Más ganancia neta",
+      "detail": "{bets} apuestas · {staked} apostado"
+    },
+    "perms": {
+      "title": "Tu rol: {role}",
+      "view": "Ver todos los datos del panel",
+      "ban": "Sancionar y levantar sanciones",
+      "coins": "Ajustar monedas de jugadores",
+      "config": "Cambiar RTP y límites de Horse Racing",
+      "roles": "Cambiar roles del equipo",
+      "games": "Poner juegos en servicio o fuera",
+      "need2": "Admin",
+      "need3": "Owner"
+    },
+    "actions": {
+      "ADD_COINS": "Monedas añadidas",
+      "REMOVE_COINS": "Monedas retiradas",
+      "BAN": "Sanción",
+      "UNBAN": "Sanción levantada",
+      "ROLE_CHANGE": "Cambio de rol",
+      "USERNAME_CHANGE": "Cambio de nombre",
+      "GAME_AVAILABILITY": "Estado de un juego",
+      "HORSE_CONFIG": "Configuración de Horse Racing",
+      "GUEST_MIGRATION": "Fichas de invitado"
+    },
+    "bansHelp": "Para sancionar o levantar una sanción, abre la ficha del jugador (búscalo en Jugadores).",
+    "bansActiveTitle": "Sanciones activas ({n})",
+    "bansAllTitle": "Todas las sanciones ({n})",
+    "noActiveBans": "No hay ningún jugador sancionado.",
+    "bannedByShort": "Por {name}",
+    "filterByAction": "Tipo de acción",
+    "allActions": "Todas las acciones",
+    "auditCount": "Entradas ({n})",
+    "userFilter": {
+      "all": "Todos",
+      "online": "En línea",
+      "new": "Nuevos (7 días)",
+      "banned": "Sancionados",
+      "staff": "Equipo"
+    },
+    "sortBy": "Ordenar por",
+    "userOrder": {
+      "recent": "Actividad reciente",
+      "balance": "Más monedas",
+      "new": "Más nuevos"
+    },
+    "shown": "{n} jugadores",
+    "shownMore": "Mostrando {n} jugadores (hay más)",
+    "banShort": "Sancionar",
+    "view": {
+      "summary": "Resumen",
+      "movements": "Movimientos",
+      "actions": "Acciones",
+      "history": "Historial"
+    },
+    "selfNoActions": "No puedes sancionarte ni cambiar tu propio rol.",
+    "actionsNote": "Cada acción pide un motivo y queda en el registro. El servidor vuelve a comprobar tus permisos.",
+    "player": {
+      "result": "Resultado del jugador",
+      "byGame": "Por juego (desde siempre)",
+      "lastPlay": "Última apuesta",
+      "filterGame": "Mostrar",
+      "allMovements": "Todos los movimientos",
+      "balanceAfter": "saldo {n}"
+    },
+    "done": {
+      "coins": "Hecho: {amount} monedas."
+    },
+    "crash": {
+      "stats": "Estadísticas",
+      "rounds": "Rondas",
+      "instant": "Crash instantáneo",
+      "instantHint": "Rondas que terminan en 1,00×",
+      "median": "Crash mediano",
+      "maxCashout": "Mayor retirada",
+      "biggest": "Mayor premio: {n}",
+      "note": "El punto de crash y la semilla de una ronda solo aparecen cuando la ronda ha terminado: nadie, tampoco el equipo, puede verlos antes.",
+      "recent": "Rondas recientes",
+      "round": "Ronda",
+      "point": "Crash",
+      "live": "En juego",
+      "roundN": "Ronda #{n}",
+      "notYet": "Se verá cuando termine la ronda",
+      "bets": "Apuestas ({n})",
+      "auto": "Retiro auto.",
+      "cashout": "Retiró en"
+    },
+    "eco": {
+      "play": "Juego",
+      "circulationHint": "Saldo total de todos los jugadores",
+      "rtpValue": "RTP real {rtp}",
+      "sources": "Monedas que entran (fuera del juego)",
+      "bonus": "Bono de bienvenida",
+      "bank": "Banco",
+      "bankHint": "{loans} préstamos · {ads} anuncios · {rejected} rechazados",
+      "adjustments": "Ajustes del equipo",
+      "adjustHint": "{n} ajustes · +{added} / −{removed}",
+      "minted": "Total que entra",
+      "mintedHint": "Bono + Banco + ajustes"
     }
   },
   "bank": {

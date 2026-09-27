@@ -70,7 +70,8 @@ Usernames, roles (user / staff / admin / owner), guest → account migration, ba
 log live in the database (`supabase/migrations/20260927000000_profiles_staff.sql`); every function checks
 the caller's role there. The app reads them through `my_account()`; the Staff dashboard (`src/staff`,
 screen `staff`) calls the `staff_*` functions and listens to Realtime changes of balances, bans and the
-audit log. A player who opens the dashboard gets "access denied" from the server.
+audit log. A player who opens the dashboard gets "access denied" from the server. See
+[staff-dashboard.md](staff-dashboard.md).
 
 ## Domino rules (as implemented)
 

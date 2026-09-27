@@ -1399,13 +1399,12 @@
     "loading": "Loading…",
     "userDetails": "User details",
     "tabs": {
-      "overview": "Overview",
-      "users": "Users",
+      "overview": "Summary",
+      "users": "Players",
       "economy": "Economy",
       "bans": "Bans",
-      "audit": "Audit log",
-      "games": "Games",
-      "horse": "Racing"
+      "audit": "Log",
+      "games": "Games"
     },
     "errors": {
       "forbidden": "You're not allowed to do this (or the user is protected).",
@@ -1460,13 +1459,18 @@
       "admin_add": "Staff adjustment (+)",
       "admin_remove": "Staff adjustment (−)",
       "loan": "Bank loan",
-      "ad_reward": "Ad reward"
+      "ad_reward": "Ad reward",
+      "domino": "Domino",
+      "bingo": "Bingo",
+      "carta": "Carta",
+      "crash": "Crash",
+      "horse": "Horse Racing"
     },
     "rounds": "Rounds played",
     "bannedPermanent": "Permanent ban",
     "bannedUntil": "Banned until {date}",
     "notBanned": "No active bans.",
-    "protected": "You can't moderate this user (same rank or higher).",
+    "protected": "You can't moderate this player (same rank or higher).",
     "banHistory": "Ban history",
     "permanent": "Permanent",
     "temporary": "Temporary",
@@ -1482,7 +1486,7 @@
     "preview": "Balance: {before} → {after}",
     "applyAmount": "Apply {amount}",
     "apply": "Apply",
-    "banUser": "Ban user",
+    "banUser": "Ban player",
     "duration": "Duration",
     "hours": {
       "1": "1 hour",
@@ -1494,7 +1498,7 @@
     "confirmBan": "Ban",
     "unbanUser": "Lift ban",
     "unbanReasonPlaceholder": "Unban reason (required)",
-    "confirmUnban": "Unban",
+    "confirmUnban": "Lift ban",
     "changeRole": "Change role",
     "roleHelp": "Only the owner can change roles. Nobody can grant the owner role.",
     "saveRole": "Save role",
@@ -1526,7 +1530,11 @@
       "adminNet24h": "Staff adjustments (24 h)",
       "loans24h": "Loans 24h",
       "adRewards24h": "Paid ads 24h",
-      "bankPaid24h": "Paid by the Bank 24h"
+      "bankPaid24h": "Paid by the Bank 24h",
+      "bets": "Bets",
+      "bettors": "Players who bet",
+      "newUsers": "New sign-ups",
+      "activeUsers": "Active players"
     },
     "recentActions": "Latest staff actions",
     "ago": {
@@ -1574,7 +1582,9 @@
       "confirmOn": "Confirm: in service",
       "reasonPlaceholder": "Reason (required, kept in the log)",
       "noteOwner": "A game out of service accepts no new matches (running ones finish). The server enforces it and it is logged.",
-      "noteStaff": "Only the owner can change the state of the games."
+      "noteStaff": "Only the owner can change the state of the games.",
+      "noCoins": "This game doesn't use account coins.",
+      "openPanel": "Open panel"
     },
     "byGame": {
       "title": "By game (24 h)",
@@ -1593,7 +1603,9 @@
         "carta": "Carta",
         "crash": "Crash",
         "horse": "Horse Racing"
-      }
+      },
+      "titlePeriod": "By game",
+      "noPlay": "Nobody has bet in this period."
     },
     "horse": {
       "title": "Horse Racing",
@@ -1635,6 +1647,160 @@
       "limits": "limits {min}–{max}",
       "seed": "Seed",
       "place": "Place"
+    },
+    "refresh": "Refresh",
+    "seeAll": "See all",
+    "online": "Online",
+    "period": {
+      "label": "Period",
+      "d1": "24 h",
+      "d7": "7 days",
+      "d30": "30 days"
+    },
+    "now": {
+      "title": "Right now",
+      "online": "Online now",
+      "registered": "Registered",
+      "coins": "Coins in circulation",
+      "banned": "Active bans"
+    },
+    "attention": {
+      "title": "Needs attention",
+      "allGood": "All good: nothing to look into.",
+      "gamesOff": "{n} game(s) out of service: {games}.",
+      "houseLoses": "The house is down {amount} coins in this period.",
+      "bigWin": "Big win: {name} won {amount} at {game}.",
+      "adsRejected": "{n} ad reward(s) rejected.",
+      "adjustments": "{n} manual coin adjustment(s) (+{added} / −{removed}).",
+      "activeBans": "{n} player(s) banned right now.",
+      "openGames": "Open games",
+      "openPlayer": "Open player",
+      "openEconomy": "Open economy",
+      "openAudit": "Open log",
+      "openBans": "Open bans"
+    },
+    "money": {
+      "staked": "Staked",
+      "paid": "Paid",
+      "house": "House result",
+      "houseHint": "Staked − paid",
+      "rtp": "Actual RTP",
+      "rtpHint": "Paid ÷ staked",
+      "rtpShort": "RTP",
+      "houseShort": "House"
+    },
+    "chart": {
+      "title": "Coins staked",
+      "aria": "Bar chart: coins staked in the period",
+      "showChart": "Show chart",
+      "showTable": "Show as table",
+      "hour": "Hour",
+      "day": "Day",
+      "players": "Players",
+      "newUsers": "Sign-ups"
+    },
+    "winners": {
+      "title": "Winners",
+      "big": "Biggest wins",
+      "net": "Most net winnings",
+      "detail": "{bets} bets · {staked} staked"
+    },
+    "perms": {
+      "title": "Your role: {role}",
+      "view": "See all dashboard data",
+      "ban": "Ban and lift bans",
+      "coins": "Adjust players' coins",
+      "config": "Change Horse Racing RTP and limits",
+      "roles": "Change team roles",
+      "games": "Put games in or out of service",
+      "need2": "Admin",
+      "need3": "Owner"
+    },
+    "actions": {
+      "ADD_COINS": "Coins added",
+      "REMOVE_COINS": "Coins removed",
+      "BAN": "Ban",
+      "UNBAN": "Ban lifted",
+      "ROLE_CHANGE": "Role change",
+      "USERNAME_CHANGE": "Name change",
+      "GAME_AVAILABILITY": "Game state",
+      "HORSE_CONFIG": "Horse Racing settings",
+      "GUEST_MIGRATION": "Guest chips"
+    },
+    "bansHelp": "To ban a player or lift a ban, open their file (search for them in Players).",
+    "bansActiveTitle": "Active bans ({n})",
+    "bansAllTitle": "All bans ({n})",
+    "noActiveBans": "No player is banned.",
+    "bannedByShort": "By {name}",
+    "filterByAction": "Action type",
+    "allActions": "All actions",
+    "auditCount": "Entries ({n})",
+    "userFilter": {
+      "all": "All",
+      "online": "Online",
+      "new": "New (7 days)",
+      "banned": "Banned",
+      "staff": "Team"
+    },
+    "sortBy": "Sort by",
+    "userOrder": {
+      "recent": "Recent activity",
+      "balance": "Most coins",
+      "new": "Newest"
+    },
+    "shown": "{n} players",
+    "shownMore": "Showing {n} players (there are more)",
+    "banShort": "Ban",
+    "view": {
+      "summary": "Summary",
+      "movements": "Movements",
+      "actions": "Actions",
+      "history": "History"
+    },
+    "selfNoActions": "You can't ban yourself or change your own role.",
+    "actionsNote": "Every action asks for a reason and goes into the log. The server checks your permissions again.",
+    "player": {
+      "result": "Player result",
+      "byGame": "By game (all time)",
+      "lastPlay": "Last bet",
+      "filterGame": "Show",
+      "allMovements": "All movements",
+      "balanceAfter": "balance {n}"
+    },
+    "done": {
+      "coins": "Done: {amount} coins."
+    },
+    "crash": {
+      "stats": "Statistics",
+      "rounds": "Rounds",
+      "instant": "Instant crash",
+      "instantHint": "Rounds ending at 1.00×",
+      "median": "Median crash",
+      "maxCashout": "Highest cash-out",
+      "biggest": "Biggest win: {n}",
+      "note": "A round's crash point and seed only appear once the round is over: nobody, the team included, can see them earlier.",
+      "recent": "Recent rounds",
+      "round": "Round",
+      "point": "Crash",
+      "live": "Live",
+      "roundN": "Round #{n}",
+      "notYet": "Shown when the round is over",
+      "bets": "Bets ({n})",
+      "auto": "Auto cash-out",
+      "cashout": "Cashed at"
+    },
+    "eco": {
+      "play": "Play",
+      "circulationHint": "Total balance of every player",
+      "rtpValue": "Actual RTP {rtp}",
+      "sources": "Coins coming in (outside play)",
+      "bonus": "Welcome bonus",
+      "bank": "Bank",
+      "bankHint": "{loans} loans · {ads} ads · {rejected} rejected",
+      "adjustments": "Team adjustments",
+      "adjustHint": "{n} adjustments · +{added} / −{removed}",
+      "minted": "Total coming in",
+      "mintedHint": "Bonus + Bank + adjustments"
     }
   },
   "bank": {

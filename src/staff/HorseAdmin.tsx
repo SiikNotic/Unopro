@@ -1,7 +1,7 @@
 // Staff → Horse Racing: statistics, races (with the result and every bet), latest bets, and the configuration.
 // All staff can read; RTP and bet limits can be changed by an admin or the owner (the database checks the role and
 // writes the audit log); switching the game on and off stays in Staff → Games (owner).
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ChevronLeft, Save } from 'lucide-react';
 import { useI18n } from '@/i18n';
 import { ROLE_RANK } from '@/account/accountContext';
@@ -9,31 +9,16 @@ import type { Role } from '@/account/accountContext';
 import { staffApi } from './api';
 import type { HorseConfig, HorseRaceDetail, HorseStaffBet } from './api';
 import { fmtDate, fmtNum, signed } from './format';
-
-function useFetch<T>(fn: () => Promise<{ ok: true; data: T } | { ok: false; code: string }>, deps: unknown[]) {
-  const [data, setData] = useState<T | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const seq = useRef(0);
-  useEffect(() => {
-    const mine = ++seq.current;
-    void fn().then((r) => {
-      if (mine !== seq.current) return;
-      if (r.ok) {
-        setData(r.data);
-        setError(null);
-      } else setError(r.code);
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- callers pass the inputs explicitly
-  }, deps);
-  return { data, error };
-}
+import { Kpi, PeriodPicker, PlayerLink } from './ui';
+import { useLoader as useFetch } from './lib';
+import type { Period } from './lib';
 
 const pct = (bp: number | null | undefined) => (bp === null || bp === undefined ? '—' : `${(bp / 100).toFixed(2)}%`);
 const odds = (o: number) => `${(o / 100).toFixed(2)}×`;
 
-export function HorseAdmin({ version, role, onChanged }: { version: number; role: Role; onChanged: () => void }) {
+export function HorseAdmin({ version, role, onChanged, onOpen }: { version: number; role: Role; onChanged: () => void; onOpen: (id: string) => void }) {
   const { t, language } = useI18n();
-  const [days, setDays] = useState(7);
+  const [days, setDays] = useState<Period>(7);
   const [open, setOpen] = useState<number | null>(null);
   const stats = useFetch(() => staffApi.horseStats(days), [version, days]);
   const races = useFetch(() => staffApi.horseRaces(50), [version]);
@@ -41,11 +26,10 @@ export function HorseAdmin({ version, role, onChanged }: { version: number; role
   const n = (v: number | null | undefined) => (v === null || v === undefined ? '…' : fmtNum(Number(v), language));
   const canEdit = ROLE_RANK[role] >= 2;
 
-  if (open !== null) return <RaceDetail id={open} onBack={() => setOpen(null)} />;
+  if (open !== null) return <RaceDetail id={open} onBack={() => setOpen(null)} onOpen={onOpen} />;
   const s = stats.data;
   return (
     <>
-      <h2 className="sd-h">{t('staff.horse.title')}</h2>
       {(stats.error || races.error || bets.error) && (
         <p className="ac-error" role="alert">
           {t(`staff.errors.${stats.error ?? races.error ?? bets.error}`)}
@@ -54,15 +38,9 @@ export function HorseAdmin({ version, role, onChanged }: { version: number; role
 
       <ConfigCard config={s?.config ?? null} canEdit={canEdit} onSaved={onChanged} />
 
-      <div className="flex items-center justify-between gap-2 mt-2">
-        <h3 className="cz-label">{t('staff.horse.stats')}</h3>
-        <div className="sd-seg" role="group" aria-label={t('staff.horse.period')}>
-          {[1, 7, 30].map((d) => (
-            <button key={d} type="button" aria-pressed={days === d} onClick={() => setDays(d)}>
-              {t('staff.horse.days', { n: d })}
-            </button>
-          ))}
-        </div>
+      <div className="sd-title-row">
+        <h3 className="sd-h2">{t('staff.horse.stats')}</h3>
+        <PeriodPicker value={days} onChange={setDays} />
       </div>
       <div className="sd-kpis">
         <Kpi label={t('staff.horse.races')} value={n(s?.races)} />
@@ -74,7 +52,7 @@ export function HorseAdmin({ version, role, onChanged }: { version: number; role
         <Kpi label={t('staff.horse.rtpRealized')} value={s ? pct(s.rtpRealized) : '…'} hint={t('staff.horse.rtpTarget', { rtp: pct(s?.config.rtp) })} />
       </div>
       {s && s.byHorse.length > 0 && (
-        <section className="sd-card overflow-x-auto">
+        <section className="sd-panel overflow-x-auto">
           <table className="sd-table">
             <thead>
               <tr>
@@ -88,7 +66,7 @@ export function HorseAdmin({ version, role, onChanged }: { version: number; role
             </thead>
             <tbody>
               {s.byHorse.map((h) => (
-                <tr key={h.horse} className="!cursor-default">
+                <tr key={h.horse} className="is-static">
                   <td>
                     #{h.horse} {t(`horse.names.${h.horse}`)}
                   </td>
@@ -104,8 +82,8 @@ export function HorseAdmin({ version, role, onChanged }: { version: number; role
         </section>
       )}
 
-      <h3 className="cz-label mt-2">{t('staff.horse.raceList')}</h3>
-      <section className="sd-card overflow-x-auto">
+      <h3 className="sd-h2 mt-2">{t('staff.horse.raceList')}</h3>
+      <section className="sd-panel overflow-x-auto">
         <table className="sd-table">
           <thead>
             <tr>
@@ -129,7 +107,7 @@ export function HorseAdmin({ version, role, onChanged }: { version: number; role
               </tr>
             ))}
             {races.data && races.data.length === 0 && (
-              <tr className="!cursor-default">
+              <tr className="is-static">
                 <td colSpan={6} className="text-[var(--cz-muted)]">
                   {t('staff.none')}
                 </td>
@@ -139,26 +117,16 @@ export function HorseAdmin({ version, role, onChanged }: { version: number; role
         </table>
       </section>
 
-      <h3 className="cz-label mt-2">{t('staff.horse.latestBets')}</h3>
-      <BetsTable rows={bets.data ?? []} onRace={setOpen} />
+      <h3 className="sd-h2 mt-2">{t('staff.horse.latestBets')}</h3>
+      <BetsTable rows={bets.data ?? []} onRace={setOpen} onOpen={onOpen} />
     </>
   );
 }
 
-function Kpi({ label, value, hint }: { label: string; value: string; hint?: string }) {
-  return (
-    <div className="sd-card sd-kpi">
-      <span>{label}</span>
-      <b className="cz-num">{value}</b>
-      {hint && <span className="block mt-0.5 text-[11px]">{hint}</span>}
-    </div>
-  );
-}
-
-function BetsTable({ rows, onRace }: { rows: HorseStaffBet[]; onRace?: (id: number) => void }) {
+function BetsTable({ rows, onRace, onOpen }: { rows: HorseStaffBet[]; onRace?: (id: number) => void; onOpen: (id: string) => void }) {
   const { t, language } = useI18n();
   return (
-    <section className="sd-card overflow-x-auto">
+    <section className="sd-panel overflow-x-auto">
       <table className="sd-table">
         <thead>
           <tr>
@@ -172,8 +140,10 @@ function BetsTable({ rows, onRace }: { rows: HorseStaffBet[]; onRace?: (id: numb
         </thead>
         <tbody>
           {rows.map((b) => (
-            <tr key={b.id} onClick={onRace ? () => onRace(b.race) : undefined} className={onRace ? '' : '!cursor-default'}>
-              <td className="truncate max-w-[140px]">{b.username ?? '—'}</td>
+            <tr key={b.id} onClick={onRace ? () => onRace(b.race) : undefined} className={onRace ? '' : 'is-static'}>
+              <td className="truncate max-w-[140px]" onClick={(e) => e.stopPropagation()}>
+                <PlayerLink id={b.userId} name={b.username} onOpen={onOpen} />
+              </td>
               {onRace && <td className="tabular-nums">#{b.race}</td>}
               <td className="text-right">#{b.horse}</td>
               <td className="text-right tabular-nums">{fmtNum(Number(b.amount), language)}</td>
@@ -184,7 +154,7 @@ function BetsTable({ rows, onRace }: { rows: HorseStaffBet[]; onRace?: (id: numb
             </tr>
           ))}
           {rows.length === 0 && (
-            <tr className="!cursor-default">
+            <tr className="is-static">
               <td colSpan={6} className="text-[var(--cz-muted)]">
                 {t('staff.none')}
               </td>
@@ -196,7 +166,7 @@ function BetsTable({ rows, onRace }: { rows: HorseStaffBet[]; onRace?: (id: numb
   );
 }
 
-function RaceDetail({ id, onBack }: { id: number; onBack: () => void }) {
+function RaceDetail({ id, onBack, onOpen }: { id: number; onBack: () => void; onOpen: (id: string) => void }) {
   const { t, language } = useI18n();
   const race = useFetch<HorseRaceDetail>(() => staffApi.horseRace(id), [id]);
   const r = race.data;
@@ -206,7 +176,7 @@ function RaceDetail({ id, onBack }: { id: number; onBack: () => void }) {
         <button type="button" className="cz-btn cz-btn-quiet cz-btn-sm" onClick={onBack}>
           <ChevronLeft className="w-4 h-4" aria-hidden /> {t('staff.horse.back')}
         </button>
-        <h2 className="sd-h flex-1 min-w-0 truncate">{t('staff.horse.raceN', { n: id })}</h2>
+        <h3 className="sd-h2 flex-1 min-w-0 truncate">{t('staff.horse.raceN', { n: id })}</h3>
       </div>
       {race.error && (
         <p className="ac-error" role="alert">
@@ -215,7 +185,7 @@ function RaceDetail({ id, onBack }: { id: number; onBack: () => void }) {
       )}
       {r && (
         <>
-          <section className="sd-card p-3 flex flex-col gap-1.5 text-sm">
+          <section className="sd-panel p-3 flex flex-col gap-1.5 text-sm">
             <p>
               {t('staff.horse.when')}: {fmtDate(r.startsAt, language)} · RTP {pct(r.rtp)} · {t('staff.horse.limits', { min: fmtNum(r.minBet, language), max: fmtNum(r.maxBet, language) })}
             </p>
@@ -225,7 +195,7 @@ function RaceDetail({ id, onBack }: { id: number; onBack: () => void }) {
             <p className="sd-mono break-all text-xs">SHA-256: {r.hash}</p>
             {r.seed && <p className="sd-mono break-all text-xs">{t('staff.horse.seed')}: {r.seed}</p>}
           </section>
-          <section className="sd-card overflow-x-auto">
+          <section className="sd-panel overflow-x-auto">
             <table className="sd-table">
               <thead>
                 <tr>
@@ -236,7 +206,7 @@ function RaceDetail({ id, onBack }: { id: number; onBack: () => void }) {
               </thead>
               <tbody>
                 {r.runners.map((x) => (
-                  <tr key={x.horse} className="!cursor-default">
+                  <tr key={x.horse} className="is-static">
                     <td>
                       #{x.horse} {t(`horse.names.${x.horse}`)}
                     </td>
@@ -247,8 +217,8 @@ function RaceDetail({ id, onBack }: { id: number; onBack: () => void }) {
               </tbody>
             </table>
           </section>
-          <h3 className="cz-label mt-2">{t('staff.horse.bets')}</h3>
-          <BetsTable rows={r.bets.map((b) => ({ ...b, race: r.id }))} />
+          <h3 className="sd-h2 mt-2">{t('staff.horse.bets')}</h3>
+          <BetsTable rows={r.bets.map((b) => ({ ...b, race: r.id }))} onOpen={onOpen} />
         </>
       )}
     </>
@@ -288,7 +258,7 @@ function ConfigCard({ config, canEdit, onSaved }: { config: HorseConfig | null; 
     onSaved();
   };
   return (
-    <section className="sd-card p-4 flex flex-col gap-3">
+    <section className="sd-panel p-4 flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <h3 className="font-bold text-white">{t('staff.horse.config')}</h3>
         <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold ${config.enabled ? 'bg-emerald-400/15 text-emerald-300' : 'bg-red-400/15 text-[#ffb3b3]'}`}>

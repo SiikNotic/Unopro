@@ -94,6 +94,44 @@ export interface AuditRow {
   metadata: Record<string, unknown>;
 }
 
+/** Everything for a period (1–90 days); "right now" figures are included. */
+export interface StaffReport {
+  days: number;
+  unit: 'hour' | 'day';
+  from: string;
+  at: string;
+  registered: number;
+  guests: number;
+  online: number;
+  coins: number;
+  banned: number;
+  newUsers: number;
+  activeUsers: number;
+  play: { rounds: number; players: number; staked: number; paid: number };
+  byGame: Record<string, { rounds: number; players: number; staked: number; paid: number }>;
+  series: { t: string; staked: number; paid: number; players: number; newUsers: number }[];
+  topWinners: { userId: string; username: string | null; net: number; staked: number; rounds: number }[];
+  bigWins: { userId: string; username: string | null; game: string; payout: number; at: string }[];
+  adjustments: number;
+  adminAdded: number;
+  adminRemoved: number;
+  bonusPaid: number;
+  loans: number;
+  adRewards: number;
+  adRejected: number;
+  bankPaid: number;
+  bans: number;
+}
+
+export type UserFilter = 'all' | 'online' | 'banned' | 'staff' | 'new';
+export type UserOrder = 'recent' | 'balance' | 'new';
+
+export interface GameTotals {
+  rounds: number;
+  staked: number;
+  paid: number;
+}
+
 export interface UserDetail {
   userId: string;
   email: string | null;
@@ -109,6 +147,7 @@ export interface UserDetail {
   migration: { guest_id: string | null; reported: number; credited: number; created_at: string } | null;
   ban: BanRow | null;
   rounds: number;
+  totals?: GameTotals & { lastPlayAt: string | null; byGame: Record<string, GameTotals> };
   ledger: LedgerRow[];
   bans: BanRow[];
   audit: AuditRow[];
@@ -177,15 +216,55 @@ export interface HorseRaceDetail {
   bets: Omit<HorseStaffBet, 'race'>[];
 }
 
+/** Crash reports: a round's crash point and seed are only sent once it has crashed. */
+export interface CrashStats {
+  days: number;
+  rounds: number;
+  instant: number;
+  medianCrash: number | null;
+  maxCrash: number | null;
+  bets: number;
+  players: number;
+  staked: number;
+  paid: number;
+  cashed: number;
+  maxCashout: number | null;
+  biggestPayout: number | null;
+}
+export interface CrashRoundRow {
+  id: number;
+  starts_at: string;
+  crash_at: string;
+  crashed: boolean;
+  multiplier: number | null;
+  bets: number;
+  staked: number;
+  paid: number;
+}
+export interface CrashRoundDetail {
+  id: number;
+  hash: string;
+  crashed: boolean;
+  multiplier: number | null;
+  seed: string | null;
+  startsAt: string;
+  crashAt: string | null;
+  settledAt: string | null;
+  bets: { id: string; userId: string; username: string | null; amount: number; auto: number | null; status: 'placed' | 'cashed' | 'lost'; cashout: number | null; payout: number | null; at: string }[];
+}
+
 const num = (x: unknown) => Number(x ?? 0);
 
 export const staffApi = {
   overview: () => rpc<Overview>('staff_overview'),
-  users: (query: string, order: 'recent' | 'balance' = 'recent', limit = 100, offset = 0) =>
-    rpc<StaffUser[]>('staff_users', { p_query: query, p_limit: limit, p_offset: offset, p_order: order }).then((r) =>
+  report: (days: number) => rpc<StaffReport>('staff_report', { p_days: days }),
+  users: (query: string, order: UserOrder = 'recent', limit = 100, offset = 0, filter: UserFilter = 'all') =>
+    rpc<StaffUser[]>('staff_users', { p_query: query, p_limit: limit, p_offset: offset, p_order: order, p_filter: filter }).then((r) =>
       r.ok ? { ...r, data: r.data.map((u) => ({ ...u, balance: num(u.balance) })) } : r
     ),
   detail: (userId: string) => rpc<UserDetail>('staff_user_detail', { p_user: userId }),
+  userLedger: (userId: string, before: number | null = null, game: string | null = null, limit = 50) =>
+    rpc<LedgerRow[]>('staff_user_ledger', { p_user: userId, p_limit: limit, p_before: before, p_game: game }),
   audit: (limit = 100, before: number | null = null) => rpc<AuditRow[]>('staff_audit', { p_limit: limit, p_before: before }),
   bank: (limit = 100) => rpc<BankActivityRow[]>('staff_bank_activity', { p_limit: limit }).then((r) => (r.ok ? { ...r, data: r.data.map((b) => ({ ...b, amount: num(b.amount) })) } : r)),
   bans: (activeOnly: boolean) => rpc<BanRow[]>('staff_bans', { p_active_only: activeOnly }),
@@ -207,6 +286,9 @@ export const staffApi = {
   horseRaces: (limit = 50, before: number | null = null) => rpc<HorseRaceRow[]>('staff_horse_races', { p_limit: limit, p_before: before }),
   horseRace: (id: number) => rpc<HorseRaceDetail>('staff_horse_race', { p_id: id }),
   horseBets: (limit = 100) => rpc<HorseStaffBet[]>('staff_horse_bets', { p_limit: limit }),
+  crashStats: (days: number) => rpc<CrashStats>('staff_crash_stats', { p_days: days }),
+  crashRounds: (limit = 50, before: number | null = null) => rpc<CrashRoundRow[]>('staff_crash_rounds', { p_limit: limit, p_before: before }),
+  crashRound: (id: number) => rpc<CrashRoundDetail>('staff_crash_round', { p_id: id }),
   /** Admin or owner: the database checks the role and records the change in the audit log. */
   setHorseConfig: (rtpBp: number, minBet: number, maxBet: number, reason: string) =>
     rpc<HorseConfig>('admin_set_horse_config', { p_rtp_bp: rtpBp, p_min_bet: minBet, p_max_bet: maxBet, p_reason: reason }),

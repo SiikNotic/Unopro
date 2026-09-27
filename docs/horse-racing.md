@@ -12,7 +12,7 @@ to sign up.
   - `fair.ts`: the draw, the verification and the curve through the checkpoints.
   - `api.ts`: server calls. `useHorseRace.ts`: state. `sounds.ts`: sounds. `stable.ts`: the 8 horses.
   - `ui/`: the screen, the canvas track and `horseRig.ts` (the horses drawn by code).
-- **Staff:** `src/staff/HorseAdmin.tsx`, the **Racing** tab.
+- **Staff:** `src/staff/HorseAdmin.tsx`, in Staff → Games → Horse Racing.
 - **Art:** `src/games/horse/assets/*.webp`, picked up automatically. See `src/games/horse/assets.ts`.
 - **Entry points:** Home (casino row, recommended, the "Instant" category), Play → Casino, screen `horse`.
 
@@ -79,7 +79,7 @@ way in.
 
 ## Staff
 
-**Racing tab:** configuration, statistics for 1, 7 or 30 days (races, bets, players, staked, paid, house, actual
+**Staff → Games → Horse Racing:** configuration, statistics for 1, 7 or 30 days (races, bets, players, staked, paid, house, actual
 vs. target RTP, per horse), recent races (click one for runners, odds, result, hash, seed and every bet) and the
 latest bets.
 
