@@ -16,6 +16,8 @@
   background:
     radial-gradient(60% 40% at 50% 0%, rgba(47, 139, 255, 0.18), transparent 70%),
     radial-gradient(60% 40% at 50% 100%, rgba(255, 46, 77, 0.16), transparent 70%),
+    linear-gradient(180deg, rgba(5, 6, 11, 0.55), rgba(5, 6, 11, 0.35) 40%, rgba(5, 6, 11, 0.7)),
+    var(--ah-bg, none) center / cover no-repeat,
     radial-gradient(120% 80% at 50% 50%, #0b1024 0%, #05060b 70%);
   padding: max(8px, var(--safe-top, 0px)) 12px max(10px, var(--safe-bottom, 0px));
   touch-action: manipulation;

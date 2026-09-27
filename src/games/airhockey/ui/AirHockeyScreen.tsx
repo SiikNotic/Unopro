@@ -30,6 +30,7 @@ import { HockeyTable } from './HockeyTable';
 import type { TableFx } from './HockeyTable';
 import { PALETTE, sparks } from './draw';
 import { H, W } from '../table';
+import { HOCKEY_ART } from '../assets';
 import './airhockey.css';
 
 type Stage = 'setup' | 'starting' | 'playing' | 'settling' | 'result';
@@ -240,7 +241,7 @@ export function AirHockeyScreen() {
   const win = entry * 2;
 
   return (
-    <div className="ah-page">
+    <div className="ah-page" style={HOCKEY_ART.background ? ({ '--ah-bg': `url(${HOCKEY_ART.background})` } as React.CSSProperties) : undefined}>
       <header className="ah-head">
         <button type="button" className="ah-icon" onClick={leave} aria-label={t('casino.backToGames')}>
           <ArrowLeft className="w-5 h-5" />

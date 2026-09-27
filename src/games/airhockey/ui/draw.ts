@@ -1,17 +1,29 @@
-// AIR HOCKEY: the table, drawn on a canvas in table units (see table.ts). A black gloss surface in a gold-edged
-// metal frame, gold markings, a spade-and-crown centre emblem, red LEDs on the player's side and blue on the AI's,
-// lit goal slots, the mallets and the gold-and-black puck. The static parts are drawn once per size into an
-// offscreen layer; the moving parts every frame. Purely visual: nothing here decides anything in the match.
-import { GOAL_X0, GOAL_X1, H, MALLET_R, MID, PUCK_R, W } from '../table';
+// AIR HOCKEY: the table on a canvas, in table units (see table.ts). The owner's painted table (assets/table.webp:
+// gold-framed black surface, spade-and-crown emblem, blue LEDs on the AI's side, red on the player's, lit goal slots)
+// is fitted to the simulation's geometry: its playing surface covers exactly W × H units, its centre line lands on
+// MID and its goal openings on GOAL_X0..GOAL_X1. The mallets and the puck are the owner's sprites, pre-scaled once per
+// size. Until an image has loaded, simple drawn stand-ins are used. Purely visual: nothing here decides the match.
+import { H, MALLET_R, MID, PUCK_R, W } from '../table';
 import type { Body } from '../engine';
 
-/** The frame around the playing surface, in table units. */
-export const RIM = 54;
-export const FULL_W = W + RIM * 2;
-export const FULL_H = H + RIM * 2;
+/**
+ * Where the playing surface sits in the table image (pixels of assets/table.webp, 981 × 1602): its side walls, its
+ * end lines, and its centre line. The image's centre line isn't halfway, so the image is fitted in bands: a band
+ * around the centre (emblem included) keeps one scale, so the circle stays round; the two outer bands take the rest.
+ */
+const IMG = { left: 60, right: 918, top: 60, bottom: 1480, line: 742, band: 200, w: 981, h: 1602 };
+const SX = W / (IMG.right - IMG.left);
+const BAND_U = 240;
+const S_TOP = (MID - BAND_U) / (IMG.line - IMG.band - IMG.top);
+const S_BOT = (H - MID - BAND_U) / (IMG.bottom - IMG.line - IMG.band);
 
-const RED = '#ff2e4d';
-const BLUE = '#2f8bff';
+/** The frame around the playing surface, in table units (the painted frame is heavier at the bottom). */
+export const RIM_X = Math.ceil(Math.max(IMG.left, IMG.w - IMG.right) * SX);
+export const RIM_T = Math.ceil(IMG.top * S_TOP);
+export const RIM_B = Math.ceil((IMG.h - IMG.bottom) * S_BOT);
+export const FULL_W = W + RIM_X * 2;
+export const FULL_H = H + RIM_T + RIM_B;
+
 const GOLD = '#e8c46a';
 
 export interface Particle {
@@ -23,16 +35,6 @@ export interface Particle {
   max: number;
   color: string;
   size: number;
-}
-
-function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
-  ctx.closePath();
 }
 
 /** A spade of height ~2s centred on (cx, cy). */
@@ -49,18 +51,6 @@ export function spadePath(ctx: CanvasRenderingContext2D, cx: number, cy: number,
   ctx.closePath();
 }
 
-function crownPath(ctx: CanvasRenderingContext2D, cx: number, cy: number, s: number) {
-  ctx.beginPath();
-  ctx.moveTo(cx - s, cy + s * 0.45);
-  ctx.lineTo(cx - s * 1.05, cy - s * 0.35);
-  ctx.lineTo(cx - s * 0.5, cy + s * 0.05);
-  ctx.lineTo(cx, cy - s * 0.55);
-  ctx.lineTo(cx + s * 0.5, cy + s * 0.05);
-  ctx.lineTo(cx + s * 1.05, cy - s * 0.35);
-  ctx.lineTo(cx + s, cy + s * 0.45);
-  ctx.closePath();
-}
-
 function goldGradient(ctx: CanvasRenderingContext2D, x0: number, y0: number, x1: number, y1: number) {
   const g = ctx.createLinearGradient(x0, y0, x1, y1);
   g.addColorStop(0, '#fff3c4');
@@ -70,169 +60,72 @@ function goldGradient(ctx: CanvasRenderingContext2D, x0: number, y0: number, x1:
   return g;
 }
 
-/** Draws the static table (frame, surface, markings, emblem, LED rails, goal slots) in table units. */
-export function drawStatic(ctx: CanvasRenderingContext2D) {
-  // frame: dark gunmetal with a gold lip
+/** Draws the table image fitted to the simulation (see IMG), or a plain stand-in until it has loaded. */
+export function drawTable(ctx: CanvasRenderingContext2D, img: HTMLImageElement | null) {
+  ctx.fillStyle = '#05060b';
+  ctx.fillRect(0, 0, FULL_W, FULL_H);
   ctx.save();
-  ctx.shadowColor = 'rgba(0,0,0,0.7)';
-  ctx.shadowBlur = 40;
-  roundRect(ctx, 0, 0, FULL_W, FULL_H, 70);
-  const metal = ctx.createLinearGradient(0, 0, FULL_W, FULL_H);
-  metal.addColorStop(0, '#2a2d36');
-  metal.addColorStop(0.5, '#0d0f15');
-  metal.addColorStop(1, '#23262e');
-  ctx.fillStyle = metal;
-  ctx.fill();
-  ctx.restore();
-  roundRect(ctx, 6, 6, FULL_W - 12, FULL_H - 12, 64);
-  ctx.lineWidth = 7;
-  ctx.strokeStyle = goldGradient(ctx, 0, 0, FULL_W, FULL_H);
-  ctx.stroke();
-
-  ctx.save();
-  ctx.translate(RIM, RIM);
-
-  // LED rails along the inner edge: red on the player's half, blue on the AI's
-  const rail = (y0: number, y1: number, color: string) => {
-    ctx.save();
-    ctx.shadowColor = color;
-    ctx.shadowBlur = 26;
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 7;
-    ctx.beginPath();
-    ctx.moveTo(-14, y0);
-    ctx.lineTo(-14, y1);
-    ctx.moveTo(W + 14, y0);
-    ctx.lineTo(W + 14, y1);
-    ctx.stroke();
-    ctx.restore();
-  };
-  rail(24, MID - 30, BLUE);
-  rail(MID + 30, H - 24, RED);
-  // end rails beside the goals
-  const endRail = (y: number, color: string) => {
-    ctx.save();
-    ctx.shadowColor = color;
-    ctx.shadowBlur = 22;
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 6;
-    ctx.beginPath();
-    ctx.moveTo(30, y);
-    ctx.lineTo(GOAL_X0 - 30, y);
-    ctx.moveTo(GOAL_X1 + 30, y);
-    ctx.lineTo(W - 30, y);
-    ctx.stroke();
-    ctx.restore();
-  };
-  endRail(-14, BLUE);
-  endRail(H + 14, RED);
-
-  // surface: black gloss, a soft sheen and the air holes
-  roundRect(ctx, 0, 0, W, H, 30);
-  const surf = ctx.createLinearGradient(0, 0, 0, H);
-  surf.addColorStop(0, '#0b1020');
-  surf.addColorStop(0.5, '#05060b');
-  surf.addColorStop(1, '#140709');
-  ctx.fillStyle = surf;
-  ctx.fill();
-  ctx.save();
-  ctx.clip();
-  const sheen = ctx.createRadialGradient(W * 0.3, H * 0.25, 20, W * 0.3, H * 0.25, H * 0.7);
-  sheen.addColorStop(0, 'rgba(255,255,255,0.07)');
-  sheen.addColorStop(1, 'rgba(255,255,255,0)');
-  ctx.fillStyle = sheen;
-  ctx.fillRect(0, 0, W, H);
-  ctx.fillStyle = 'rgba(255,255,255,0.05)';
-  for (let y = 40; y < H; y += 56) for (let x = 40 + ((y / 56) % 2) * 28; x < W; x += 56) ctx.fillRect(x - 2, y - 2, 4, 4);
-  // tinted halves
-  const tintTop = ctx.createLinearGradient(0, 0, 0, MID);
-  tintTop.addColorStop(0, 'rgba(47,139,255,0.10)');
-  tintTop.addColorStop(1, 'rgba(47,139,255,0)');
-  ctx.fillStyle = tintTop;
-  ctx.fillRect(0, 0, W, MID);
-  const tintBot = ctx.createLinearGradient(0, H, 0, MID);
-  tintBot.addColorStop(0, 'rgba(255,46,77,0.10)');
-  tintBot.addColorStop(1, 'rgba(255,46,77,0)');
-  ctx.fillStyle = tintBot;
-  ctx.fillRect(0, MID, W, MID);
-  ctx.restore();
-
-  // gold markings
-  ctx.save();
-  ctx.strokeStyle = GOLD;
-  ctx.shadowColor = 'rgba(232,196,106,0.6)';
-  ctx.shadowBlur = 10;
-  ctx.lineWidth = 5;
-  ctx.beginPath();
-  ctx.moveTo(0, MID);
-  ctx.lineTo(W, MID);
-  ctx.stroke();
-  ctx.lineWidth = 4;
-  ctx.beginPath();
-  ctx.arc(W / 2, MID, 150, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.globalAlpha = 0.55;
-  ctx.beginPath();
-  ctx.arc(W / 2, MID, 172, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.globalAlpha = 1;
-  // goal creases
-  ctx.beginPath();
-  ctx.arc(W / 2, 0, 230, 0, Math.PI);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.arc(W / 2, H, 230, Math.PI, Math.PI * 2);
-  ctx.stroke();
-  // faceoff dots
-  ctx.fillStyle = GOLD;
-  for (const [x, y] of [
-    [W * 0.25, H * 0.25],
-    [W * 0.75, H * 0.25],
-    [W * 0.25, H * 0.75],
-    [W * 0.75, H * 0.75],
-  ]) {
-    ctx.beginPath();
-    ctx.arc(x, y, 9, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.restore();
-
-  // centre emblem: crown over a spade, engraved gold
-  ctx.save();
-  ctx.globalAlpha = 0.9;
-  spadePath(ctx, W / 2, MID + 8, 70);
-  ctx.fillStyle = goldGradient(ctx, W / 2 - 70, MID - 70, W / 2 + 70, MID + 70);
-  ctx.shadowColor = 'rgba(232,196,106,0.55)';
-  ctx.shadowBlur = 18;
-  ctx.fill();
-  ctx.shadowBlur = 0;
-  spadePath(ctx, W / 2, MID + 8, 44);
-  ctx.fillStyle = '#07080d';
-  ctx.fill();
-  crownPath(ctx, W / 2, MID - 96, 44);
-  ctx.fillStyle = goldGradient(ctx, W / 2 - 44, MID - 130, W / 2 + 44, MID - 70);
-  ctx.fill();
-  ctx.restore();
-
-  // goal slots
-  const slot = (y: number, color: string) => {
-    ctx.save();
-    ctx.fillStyle = '#000';
-    roundRect(ctx, GOAL_X0, y - 16, GOAL_X1 - GOAL_X0, 32, 14);
-    ctx.fill();
-    ctx.shadowColor = color;
-    ctx.shadowBlur = 24;
-    ctx.strokeStyle = color;
+  ctx.translate(RIM_X, RIM_T);
+  if (img && img.complete && img.naturalWidth) {
+    const k = img.naturalWidth / IMG.w;
+    const x0 = -IMG.left * SX;
+    const w = IMG.w * SX;
+    // [image y from, image y to] → [table y from, table y to]
+    const bands: [number, number, number, number][] = [
+      [0, IMG.line - IMG.band, -IMG.top * S_TOP, MID - BAND_U],
+      [IMG.line - IMG.band, IMG.line + IMG.band, MID - BAND_U, MID + BAND_U],
+      [IMG.line + IMG.band, IMG.h, MID + BAND_U, H + (IMG.h - IMG.bottom) * S_BOT],
+    ];
+    for (const [a, b, ya, yb] of bands) ctx.drawImage(img, 0, a * k, img.naturalWidth, (b - a) * k, x0, ya, w, yb - ya + 0.5);
+  } else {
+    ctx.fillStyle = '#0a0c14';
+    ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = GOLD;
     ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(0, MID);
+    ctx.lineTo(W, MID);
     ctx.stroke();
-    ctx.restore();
-  };
-  slot(-6, BLUE);
-  slot(H + 6, RED);
+  }
   ctx.restore();
 }
 
-function drawMallet(ctx: CanvasRenderingContext2D, m: Body, color: 'red' | 'blue') {
+/** A sprite image pre-scaled to a disc of radius r (in canvas pixels), or null until the image has loaded. */
+export function discSprite(img: HTMLImageElement | null, discRadiusInImage: number, r: number): HTMLCanvasElement | null {
+  if (!img || !img.complete || !img.naturalWidth) return null;
+  const k = r / discRadiusInImage;
+  const c = document.createElement('canvas');
+  c.width = Math.max(2, Math.round(img.naturalWidth * k));
+  c.height = Math.max(2, Math.round(img.naturalHeight * k));
+  c.getContext('2d')?.drawImage(img, 0, 0, c.width, c.height);
+  return c;
+}
+
+/** Where the disc sits inside each sprite (pixels of the 1254 × 1254 images). */
+export const SPRITE_DISC = { mallet: 563, puck: 568 };
+
+export interface Sprites {
+  red: HTMLCanvasElement | null;
+  blue: HTMLCanvasElement | null;
+  puck: HTMLCanvasElement | null;
+}
+
+function drawSprite(ctx: CanvasRenderingContext2D, sprite: HTMLCanvasElement, x: number, y: number, unitsPerPixel: number) {
+  const w = sprite.width * unitsPerPixel;
+  const h = sprite.height * unitsPerPixel;
+  ctx.drawImage(sprite, x - w / 2, y - h / 2, w, h);
+}
+
+function drawMallet(ctx: CanvasRenderingContext2D, m: Body, color: 'red' | 'blue', sprite: HTMLCanvasElement | null, upp: number) {
+  if (sprite) {
+    // a soft shadow on the table under the mallet
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.beginPath();
+    ctx.ellipse(m.x, m.y + 12, MALLET_R * 0.98, MALLET_R * 0.9, 0, 0, Math.PI * 2);
+    ctx.fill();
+    drawSprite(ctx, sprite, m.x, m.y, upp);
+    return;
+  }
   const [hi, mid, lo] = color === 'red' ? ['#ff8a95', '#e0223b', '#6d0a16'] : ['#9cc8ff', '#2170e0', '#0a2a66'];
   ctx.save();
   ctx.shadowColor = 'rgba(0,0,0,0.65)';
@@ -267,7 +160,7 @@ function drawMallet(ctx: CanvasRenderingContext2D, m: Body, color: 'red' | 'blue
   ctx.fill();
 }
 
-function drawPuck(ctx: CanvasRenderingContext2D, p: Body, trail: { x: number; y: number }[]) {
+function drawPuck(ctx: CanvasRenderingContext2D, p: Body, trail: { x: number; y: number }[], sprite: HTMLCanvasElement | null, upp: number) {
   const speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
   const glow = Math.min(1, speed / 1800);
   for (let i = 0; i < trail.length; i++) {
@@ -282,6 +175,15 @@ function drawPuck(ctx: CanvasRenderingContext2D, p: Body, trail: { x: number; y:
   ctx.shadowColor = glow > 0.05 ? `rgba(255,200,90,${0.35 + glow * 0.5})` : 'rgba(0,0,0,0.6)';
   ctx.shadowBlur = 12 + glow * 26;
   ctx.fillStyle = '#07070a';
+  if (sprite) {
+    // the glow while it moves, then the owner's puck on top
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, PUCK_R * 0.96, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    drawSprite(ctx, sprite, p.x, p.y, upp);
+    return;
+  }
   ctx.beginPath();
   ctx.arc(p.x, p.y, PUCK_R, 0, Math.PI * 2);
   ctx.fill();
@@ -310,32 +212,19 @@ export interface Frame {
   particles: Particle[];
   /** 0..1 flash of a goal slot (the side that conceded). */
   flash: { side: 'player' | 'ai'; amount: number } | null;
-  /** Seconds since start, for the LED breathing. */
-  time: number;
+  sprites: Sprites;
 }
 
-/** Draws one frame. `layer` is the pre-rendered static table at the same scale. */
+/** Draws one frame. `layer` is the pre-rendered table at the same scale. */
 export function drawFrame(ctx: CanvasRenderingContext2D, layer: CanvasImageSource, scale: number, dpr: number, f: Frame) {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
   ctx.drawImage(layer, 0, 0);
   ctx.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
-
-  // LEDs breathing
-  const breath = 0.5 + 0.5 * Math.sin(f.time * 2.2);
-  ctx.save();
-  ctx.globalCompositeOperation = 'lighter';
-  ctx.globalAlpha = 0.12 + breath * 0.12;
-  ctx.fillStyle = BLUE;
-  ctx.fillRect(RIM - 24, RIM, 12, MID);
-  ctx.fillRect(RIM + W + 12, RIM, 12, MID);
-  ctx.fillStyle = RED;
-  ctx.fillRect(RIM - 24, RIM + MID, 12, MID);
-  ctx.fillRect(RIM + W + 12, RIM + MID, 12, MID);
-  ctx.restore();
+  const upp = 1 / (scale * dpr);
 
   ctx.save();
-  ctx.translate(RIM, RIM);
+  ctx.translate(RIM_X, RIM_T);
   if (f.flash && f.flash.amount > 0) {
     const y = f.flash.side === 'ai' ? 0 : H;
     const color = f.flash.side === 'ai' ? '47,139,255' : '255,46,77';
@@ -343,11 +232,11 @@ export function drawFrame(ctx: CanvasRenderingContext2D, layer: CanvasImageSourc
     g.addColorStop(0, `rgba(${color},${0.75 * f.flash.amount})`);
     g.addColorStop(1, `rgba(${color},0)`);
     ctx.fillStyle = g;
-    ctx.fillRect(0, f.flash.side === 'ai' ? -RIM : H - 520, W, 520 + RIM);
+    ctx.fillRect(0, f.flash.side === 'ai' ? -RIM_T : H - 520, W, 520 + (f.flash.side === 'ai' ? RIM_T : RIM_B));
   }
-  drawMallet(ctx, f.ai, 'blue');
-  drawMallet(ctx, f.player, 'red');
-  if (f.puck) drawPuck(ctx, f.puck, f.trail);
+  drawMallet(ctx, f.ai, 'blue', f.sprites.blue, upp);
+  drawMallet(ctx, f.player, 'red', f.sprites.red, upp);
+  if (f.puck) drawPuck(ctx, f.puck, f.trail, f.sprites.puck, upp);
   ctx.globalCompositeOperation = 'lighter';
   for (const p of f.particles) {
     const a = Math.max(0, p.life / p.max);

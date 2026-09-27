@@ -18,12 +18,15 @@ free practice match.
   migration `supabase/migrations/20261010000000_air_hockey.sql` (tests: `supabase/tests/air_hockey_test.sql` plus a
   concurrency check in `run_sql_tests.sh`).
 - **Entry points:** Home (casino row, recommended, the "Table" category), Play → Casino, screen `airhockey`.
-- **Art:** drawn in code (no image files). A painted lobby card is picked up automatically if
-  `src/screens/home/art/card-air-hockey.webp` is added.
+- **Art (by the owner, native size, lossless WebP):** `src/games/airhockey/assets/` (table, red and blue mallets,
+  puck, screen backdrop; loaded by `assets.ts`, with drawn stand-ins if one is missing) and the lobby card
+  `src/screens/home/art/card-air-hockey.webp`. The table image is fitted to the simulation in `ui/draw.ts` (`IMG`):
+  its playing surface covers the 1000 × 1700 units, its goal openings match the 400-unit goal mouths, and its centre
+  line (not halfway in the picture) lands on the simulation's centre line, with the emblem band kept at one scale.
 
 ## The match
 
-- Table of 1000 × 1700 units; one tick is 1/60 s with 4 physics steps, so the puck (max 2,600 u/s) can never
+- Table of 1000 × 1700 units with 400-unit goal mouths and a puck of radius 46; one tick is 1/60 s with 4 physics steps, so the puck (max 2,600 u/s) can never
   jump through a wall or a mallet. Walls and mallets bounce with restitution; the air cushion slows the puck a
   little; goal posts are rounded; a puck squeezed against a wall slides out along it.
 - The player's mallet follows the finger (or mouse) at up to 3,400 u/s and **can't cross the centre line** (the

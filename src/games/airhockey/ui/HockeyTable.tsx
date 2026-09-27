@@ -2,14 +2,24 @@
 // finger or mouse (the red mallet goes where it points, within its half) and draws every frame. The match itself is
 // advanced by the controller; this component only turns real time into controller.advance() and draws the result.
 import { useEffect, useRef } from 'react';
-import { AI_HOME, H, PLAYER_HOME, W } from '../table';
+import { AI_HOME, H, MALLET_R, PLAYER_HOME, PUCK_R, W } from '../table';
 import type { HockeyController } from '../controller';
-import { drawFrame, drawStatic, FULL_H, FULL_W, RIM, stepParticles } from './draw';
-import type { Particle } from './draw';
+import { HOCKEY_ART } from '../assets';
+import { discSprite, drawFrame, drawTable, FULL_H, FULL_W, RIM_T, RIM_X, SPRITE_DISC, stepParticles } from './draw';
+import type { Particle, Sprites } from './draw';
 
 export interface TableFx {
   particles: Particle[];
   flash: { side: 'player' | 'ai'; amount: number } | null;
+}
+
+function loadImage(src: string | undefined, onLoad: () => void): HTMLImageElement | null {
+  if (!src) return null;
+  const img = new Image();
+  img.decoding = 'async';
+  img.onload = onLoad;
+  img.src = src;
+  return img;
 }
 
 const IDLE = {
@@ -33,6 +43,7 @@ export function HockeyTable({ controller, fx, label }: { controller: HockeyContr
     let layer: HTMLCanvasElement | null = null;
     let scale = 1;
     let dpr = 1;
+    const sprites: Sprites = { red: null, blue: null, puck: null };
 
     const resize = () => {
       const box = el.getBoundingClientRect();
@@ -50,8 +61,19 @@ export function HockeyTable({ controller, fx, label }: { controller: HockeyContr
       const lc = layer.getContext('2d');
       if (lc) {
         lc.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
-        drawStatic(lc);
+        drawTable(lc, images.table);
       }
+      // The sprites are scaled once per size (drawing the full-size images every frame would be slow on phones).
+      const px = scale * dpr;
+      sprites.red = discSprite(images.red, SPRITE_DISC.mallet, MALLET_R * px);
+      sprites.blue = discSprite(images.blue, SPRITE_DISC.mallet, MALLET_R * px);
+      sprites.puck = discSprite(images.puck, SPRITE_DISC.puck, PUCK_R * px);
+    };
+    const images = {
+      table: loadImage(HOCKEY_ART.table, () => resize()),
+      red: loadImage(HOCKEY_ART.malletRed, () => resize()),
+      blue: loadImage(HOCKEY_ART.malletBlue, () => resize()),
+      puck: loadImage(HOCKEY_ART.puck, () => resize()),
     };
     resize();
     const ro = new ResizeObserver(resize);
@@ -59,7 +81,6 @@ export function HockeyTable({ controller, fx, label }: { controller: HockeyContr
 
     let raf = 0;
     let last = performance.now();
-    const start = last;
     const frame = (now: number) => {
       const ms = Math.min(250, now - last);
       last = now;
@@ -80,7 +101,7 @@ export function HockeyTable({ controller, fx, label }: { controller: HockeyContr
           trail: c?.trail ?? [],
           particles: fx.particles,
           flash: fx.flash,
-          time: (now - start) / 1000,
+          sprites,
         });
       raf = requestAnimationFrame(frame);
     };
@@ -95,9 +116,9 @@ export function HockeyTable({ controller, fx, label }: { controller: HockeyContr
 
     const toTable = (e: PointerEvent) => {
       const r = cv.getBoundingClientRect();
-      const x = (e.clientX - r.left) / scale - RIM;
+      const x = (e.clientX - r.left) / scale - RIM_X;
       // On touch screens the mallet sits a little above the fingertip, so the finger doesn't hide it.
-      const y = (e.clientY - r.top) / scale - RIM - (e.pointerType === 'touch' ? 40 : 0);
+      const y = (e.clientY - r.top) / scale - RIM_T - (e.pointerType === 'touch' ? 40 : 0);
       ctrl.current?.setTarget(x, y);
     };
     const down = (e: PointerEvent) => {
