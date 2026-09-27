@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { Coins, Eye, EyeOff, Gift, LayoutDashboard, LogOut, Mail, UserRound } from 'lucide-react';
+import { Cloud, Coins, Crown, Eye, EyeOff, Gamepad2, Gift, LayoutDashboard, LogOut, Mail, MonitorSmartphone, UserRound } from 'lucide-react';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { useNavigation } from '@/components/Navigation';
 import { useI18n } from '@/i18n';
@@ -16,6 +16,10 @@ import { ConsentBox } from '@/legal/ConsentBox';
 import { consentGiven, rememberConsent } from '@/legal/consent';
 import type { Consent } from '@/legal/consent';
 import './account.css';
+import './signup.css';
+
+/** The sign-up hero art (the file is optional: without it the screen keeps its lit backdrop). */
+const HERO_ART = Object.values(import.meta.glob('./art/signup-hero.webp', { eager: true, import: 'default' }) as Record<string, string>)[0];
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
@@ -51,13 +55,27 @@ function PasswordInput({ id, value, onChange, autoComplete, invalid }: { id: str
   );
 }
 
+/** "Únete y recibe 1,000 monedas" with the amount and what follows it in gold. */
+const goldAmount = (text: string) => {
+  const m = /(\d[\d.,]*.*)$/.exec(text);
+  return m ? (
+    <>
+      {text.slice(0, m.index)}
+      <b>{m[1]}</b>
+    </>
+  ) : (
+    text
+  );
+};
+
 const codeOf = (e: unknown): AuthErrorCode => (e instanceof AuthError ? e.code : 'unknown');
 
 /**
  * Sign in or create an account (email, Google, Discord). Creating one (by email, or with Google / Discord,
  * which can create one) needs the 18+ confirmation and the acceptance of the legal texts.
+ * `page` is the full-screen welcome (hero art beside the form on wide screens); `embedded` sits in a screen.
  */
-export function SignInPanel() {
+export function SignInPanel({ variant = 'embedded' }: { variant?: 'page' | 'embedded' }) {
   const { t } = useI18n();
   const account = useAccount();
   const [tab, setTab] = useState<'signin' | 'signup'>('signup');
@@ -160,83 +178,107 @@ export function SignInPanel() {
     );
   }
 
+  const signup = tab === 'signup';
+  const switchTab = (k: 'signin' | 'signup') => {
+    setTab(k);
+    setError(null);
+  };
+
   return (
-    <section className="flex flex-col gap-4">
-      <div className="ac-hero">
-        <svg className="ac-coin-stack" width="96" height="96" viewBox="0 0 96 96" aria-hidden>
-          {[0, 1, 2].map((i) => (
-            <g key={i} transform={`translate(${14 + i * 6} ${54 - i * 14})`}>
-              <ellipse cx="30" cy="12" rx="28" ry="10" fill="#8a6320" />
-              <rect x="2" y="4" width="56" height="8" fill="#b98a35" />
-              <ellipse cx="30" cy="4" rx="28" ry="10" fill="#e8c887" />
-              <ellipse cx="30" cy="4" rx="18" ry="6" fill="none" stroke="#a8792c" strokeWidth="2" />
-            </g>
-          ))}
-        </svg>
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-[rgba(216,178,106,0.45)] bg-black/35 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--cz-gold-hover)]">
-          <Gift className="w-3.5 h-3.5" aria-hidden /> {t('account.bonusTag')}
+    <section className={`su su-${variant}`}>
+      <div className="su-hero">
+        {HERO_ART && <img className="su-hero-art" src={HERO_ART} alt="" decoding="async" />}
+        <div className="su-hero-shade" aria-hidden />
+        <span className="su-logo" aria-label="Carta Casino">
+          <Crown className="su-logo-crown" aria-hidden />
+          <span className="su-logo-word">Carta</span>
+          <span className="su-logo-sub">CASINO</span>
         </span>
-        <h2 className="mt-2 font-display font-extrabold text-2xl text-white leading-tight max-w-[18ch]">{t('account.pitch')}</h2>
-        <p className="mt-1 text-sm text-white/75 max-w-[34ch]">{t('account.pitchText')}</p>
+        <div className="su-hero-copy">
+          {signup && (
+            <span className="su-chip">
+              <Gift className="w-3.5 h-3.5" aria-hidden /> {t('account.bonusTag')}
+            </span>
+          )}
+          <h2 className="su-title">{signup ? goldAmount(t('signup.title')) : t('signup.welcomeBack')}</h2>
+        </div>
       </div>
 
-      <ConsentBox
-        value={consent}
-        onChange={(c) => {
-          setConsent(c);
-          if (consentGiven(c)) setConsentMissing(false);
-        }}
-        invalid={consentMissing}
-      />
-
-      <div className="flex flex-col gap-2.5">
-        <button type="button" className="ac-provider ac-google" onClick={() => void provider('google')} disabled={!!busy} aria-busy={busy === 'google'}>
-          <GoogleLogo /> {t('account.withGoogle')}
-        </button>
-        <button type="button" className="ac-provider ac-discord" onClick={() => void provider('discord')} disabled={!!busy} aria-busy={busy === 'discord'}>
-          <DiscordLogo /> {t('account.withDiscord')}
-        </button>
-      </div>
-
-      <div className="ac-divider">{t('account.orEmail')}</div>
-
-      <form className="cz-panel p-4 flex flex-col gap-4" onSubmit={submit} noValidate>
-        <div className="ac-tabs" role="tablist" aria-label={t('account.title')}>
-          {(['signup', 'signin'] as const).map((k) => (
-            <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => { setTab(k); setError(null); }}>
-              {t(k === 'signup' ? 'account.signUp' : 'account.signIn')}
-            </button>
+      <div className="su-body">
+        <ul className="su-perks">
+          {([
+            [Gamepad2, 'signup.perkPlay'],
+            [Cloud, 'signup.perkCloud'],
+            [MonitorSmartphone, 'signup.perkDevices'],
+          ] as const).map(([Icon, key]) => (
+            <li key={key}>
+              <span className="su-perk-icon" aria-hidden>
+                <Icon className="w-[18px] h-[18px]" />
+              </span>
+              <span>{t(key)}</span>
+            </li>
           ))}
-        </div>
-        {tab === 'signup' && (
-          <div className="ac-field">
-            <label htmlFor="ac-name">{t('account.name')}</label>
-            <input id="ac-name" className="ac-input" value={name} onChange={(e) => setName(e.target.value)} maxLength={24} autoComplete="nickname" placeholder={t('account.namePlaceholder')} />
-          </div>
-        )}
-        <div className="ac-field">
-          <label htmlFor="ac-email">{t('account.email')}</label>
-          <input id="ac-email" className="ac-input" type="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required maxLength={254} aria-invalid={error === 'bad_email' || undefined} />
-        </div>
-        <div className="ac-field">
-          <label htmlFor="ac-password">{t('account.password')}</label>
-          <PasswordInput id="ac-password" value={password} onChange={setPassword} autoComplete={tab === 'signup' ? 'new-password' : 'current-password'} invalid={error === 'short_password' || error === 'weak_password'} />
-          {tab === 'signup' && <p className="text-xs text-[var(--cz-muted)]">{t('account.passwordHint', { n: PASSWORD_MIN })}</p>}
-        </div>
-        {error && (
-          <p className="ac-error" role="alert">
-            {t(`account.errors.${error}`)}
-          </p>
-        )}
-        <button type="submit" className="cz-btn cz-btn-primary cz-btn-lg w-full" disabled={!!busy} aria-busy={busy === 'form'}>
-          {busy === 'form' ? t('account.working') : t(tab === 'signup' ? 'account.createAccount' : 'account.signIn')}
-        </button>
-        {tab === 'signin' && (
-          <button type="button" className="cz-btn cz-btn-quiet cz-btn-sm self-center" onClick={() => void forgot()} disabled={!!busy}>
-            {t('account.forgot')}
+        </ul>
+
+        <div className="su-providers">
+          <button type="button" className="ac-provider ac-google su-provider-main" onClick={() => void provider('google')} disabled={!!busy} aria-busy={busy === 'google'}>
+            <GoogleLogo /> {t('account.withGoogle')}
           </button>
-        )}
-      </form>
+          <button type="button" className="ac-provider ac-discord" onClick={() => void provider('discord')} disabled={!!busy} aria-busy={busy === 'discord'}>
+            <DiscordLogo /> {t('account.withDiscord')}
+          </button>
+        </div>
+
+        <div className="su-divider">{t(signup ? 'signup.orEmail' : 'signup.orEmailSignIn')}</div>
+
+        <form className="su-form" onSubmit={submit} noValidate>
+          {signup && (
+            <div className="ac-field">
+              <label htmlFor="ac-name">{t('account.name')}</label>
+              <input id="ac-name" className="ac-input" value={name} onChange={(e) => setName(e.target.value)} maxLength={24} autoComplete="nickname" placeholder={t('account.namePlaceholder')} />
+            </div>
+          )}
+          <div className="ac-field">
+            <label htmlFor="ac-email">{t('account.email')}</label>
+            <input id="ac-email" className="ac-input" type="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required maxLength={254} aria-invalid={error === 'bad_email' || undefined} placeholder={t('signup.emailPlaceholder')} />
+          </div>
+          <div className="ac-field">
+            <label htmlFor="ac-password">{t('account.password')}</label>
+            <PasswordInput id="ac-password" value={password} onChange={setPassword} autoComplete={signup ? 'new-password' : 'current-password'} invalid={error === 'short_password' || error === 'weak_password'} />
+            {signup && <p className="su-hint">{t('account.passwordHint', { n: PASSWORD_MIN })}</p>}
+          </div>
+          {error && (
+            <p className="ac-error" role="alert">
+              {t(`account.errors.${error}`)}
+            </p>
+          )}
+          <button type="submit" className="su-submit" disabled={!!busy} aria-busy={busy === 'form'}>
+            {!signup || busy === 'form' ? null : <Coins className="w-5 h-5" aria-hidden />}
+            {busy === 'form' ? t('account.working') : t(signup ? 'account.createAccount' : 'account.signIn')}
+          </button>
+          {!signup && (
+            <button type="button" className="su-text-btn self-center" onClick={() => void forgot()} disabled={!!busy}>
+              {t('account.forgot')}
+            </button>
+          )}
+        </form>
+
+        <ConsentBox
+          value={consent}
+          onChange={(c) => {
+            setConsent(c);
+            if (consentGiven(c)) setConsentMissing(false);
+          }}
+          invalid={consentMissing}
+        />
+
+        <p className="su-switch">
+          {t(signup ? 'signup.haveAccount' : 'signup.noAccount')}{' '}
+          <button type="button" onClick={() => switchTab(signup ? 'signin' : 'signup')}>
+            {t(signup ? 'account.signIn' : 'account.signUp')}
+          </button>
+        </p>
+      </div>
     </section>
   );
 }

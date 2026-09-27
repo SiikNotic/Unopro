@@ -2305,5 +2305,17 @@
       "7": "Brasa",
       "8": "Reina de Corazones"
     }
+  },
+  "signup": {
+    "title": "Únete y recibe 1,000 monedas",
+    "welcomeBack": "Bienvenido de nuevo a la mesa",
+    "perkPlay": "Juega tus juegos favoritos",
+    "perkCloud": "Tus monedas se guardan en la nube",
+    "perkDevices": "Disponible en todos tus dispositivos",
+    "orEmail": "o crea tu cuenta con correo",
+    "orEmailSignIn": "o inicia sesión con tu correo",
+    "emailPlaceholder": "nombre@correo.com",
+    "haveAccount": "¿Ya tienes cuenta?",
+    "noAccount": "¿Aún no tienes cuenta?"
   }
 }

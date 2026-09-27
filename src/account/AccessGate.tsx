@@ -91,9 +91,9 @@ export function AccessGate({ children }: { children: ReactNode }) {
     );
   if (account.status === 'guest')
     return (
-      <GateFrame title={t('gate.title')} subtitle={t('gate.subtitle')}>
-        <SignInPanel />
-      </GateFrame>
+      <main className="relative z-10 min-h-[100dvh] w-full animate-fade-in" aria-label={t('gate.title')}>
+        <SignInPanel variant="page" />
+      </main>
     );
   if (account.termsNeeded) return <TermsGate />;
   return <>{children}</>;

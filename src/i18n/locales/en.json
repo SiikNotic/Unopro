@@ -2305,5 +2305,17 @@
       "7": "Ember",
       "8": "Queen of Hearts"
     }
+  },
+  "signup": {
+    "title": "Join and get 1,000 coins",
+    "welcomeBack": "Welcome back to the table",
+    "perkPlay": "Play your favourite games",
+    "perkCloud": "Your coins are saved in the cloud",
+    "perkDevices": "Available on all your devices",
+    "orEmail": "or create your account with email",
+    "orEmailSignIn": "or sign in with your email",
+    "emailPlaceholder": "name@email.com",
+    "haveAccount": "Already have an account?",
+    "noAccount": "Don't have an account yet?"
   }
 }

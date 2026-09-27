@@ -1,0 +1,246 @@
+/* The welcome / sign-up screen: a lit casino hero with the hostess, three perks, the providers, the email form
+   and the legal boxes. Black–navy base, gold accents, very light glass. Mobile first; side by side on wide screens. */
+.su {
+  --su-gold: #e8c46a;
+  --su-gold-hi: #ffe39a;
+  --su-line: rgba(232, 196, 106, 0.28);
+  --su-glass: rgba(16, 19, 30, 0.62);
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  color: var(--cz-ivory);
+}
+
+/* ---------------------------------------------------------------- hero */
+.su-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  min-height: 300px;
+  height: clamp(300px, 52svh, 460px);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: max(18px, var(--safe-top, 0px)) 20px 18px;
+  background:
+    radial-gradient(70% 55% at 72% 30%, rgba(232, 196, 106, 0.28), transparent 70%),
+    radial-gradient(60% 50% at 10% 80%, rgba(38, 64, 140, 0.35), transparent 70%),
+    linear-gradient(180deg, #0b1020, #06070c);
+}
+.su-hero-art {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 68% 18%;
+}
+.su-hero-shade {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(180deg, rgba(5, 6, 10, 0.55) 0%, rgba(5, 6, 10, 0) 22%, rgba(5, 6, 10, 0) 48%, rgba(6, 7, 12, 0.82) 80%, #06070c 100%),
+    linear-gradient(90deg, rgba(5, 6, 10, 0.6) 0%, rgba(5, 6, 10, 0) 55%);
+}
+.su-hero::after {
+  /* a thin gold horizon under the art */
+  content: '';
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  bottom: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--su-gold), transparent);
+  opacity: 0.55;
+}
+
+.su-logo {
+  position: relative;
+  align-self: flex-start;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 0.9;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.75));
+}
+.su-logo-crown { position: absolute; top: -4px; left: 1px; width: 18px; height: 18px; color: var(--su-gold-hi); transform: rotate(-18deg); }
+.su-logo-word {
+  font-family: 'Cinzel', Georgia, serif;
+  font-weight: 900;
+  font-size: 28px;
+  letter-spacing: -0.01em;
+  background: linear-gradient(180deg, #fff3c4 10%, #ffd76a 45%, #b67a1c 95%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.su-logo-sub { font-size: 9px; font-weight: 800; letter-spacing: 0.46em; margin-right: -0.46em; color: var(--su-gold); }
+
+.su-hero-copy { max-width: 22ch; }
+.su-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--su-gold-hi);
+  background: rgba(6, 7, 12, 0.55);
+  border: 1px solid rgba(232, 196, 106, 0.5);
+  backdrop-filter: blur(6px);
+}
+.su-title {
+  margin-top: 10px;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: clamp(26px, 7.6vw, 34px);
+  line-height: 1.1;
+  letter-spacing: -0.005em;
+  word-spacing: 0.08em;
+  color: #fff;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.75);
+}
+.su-title b { color: var(--su-gold-hi); font-weight: 800; }
+
+/* ---------------------------------------------------------------- body */
+.su-body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 18px 20px max(28px, calc(var(--safe-bottom, 0px) + 20px));
+  background: linear-gradient(180deg, #06070c, #080a12 60%, #06070c);
+}
+
+.su-perks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.su-perks li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 6px;
+  border-radius: 14px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: rgba(255, 255, 255, 0.86);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.015));
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+.su-perk-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  color: #2a1d08;
+  background: radial-gradient(circle at 35% 30%, #fff1c9, #e8c46a 50%, #a8792c);
+  box-shadow: 0 0 0 3px rgba(232, 196, 106, 0.12), 0 6px 14px -6px rgba(232, 196, 106, 0.6);
+}
+
+.su-providers { display: flex; flex-direction: column; gap: 10px; }
+.su .ac-provider { min-height: 52px; border-radius: 14px; box-shadow: 0 10px 24px -14px rgba(0, 0, 0, 0.9); }
+.su .su-provider-main { min-height: 56px; font-size: 16px; }
+
+.su-divider { display: flex; align-items: center; gap: 12px; font-size: 12px; font-weight: 600; color: rgba(255, 255, 255, 0.55); }
+.su-divider::before, .su-divider::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--su-line)); }
+.su-divider::after { background: linear-gradient(90deg, var(--su-line), transparent); }
+
+.su-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 18px;
+  background: var(--su-glass);
+  border: 1px solid var(--su-line);
+  box-shadow: inset 0 1px 0 rgba(255, 236, 190, 0.08), 0 18px 40px -24px rgba(0, 0, 0, 0.95);
+  backdrop-filter: blur(10px);
+}
+.su .ac-field label { font-size: 12px; font-weight: 700; letter-spacing: 0.02em; color: rgba(255, 255, 255, 0.78); }
+.su .ac-input { min-height: 50px; border-radius: 12px; background: rgba(4, 6, 12, 0.6); border-color: rgba(255, 255, 255, 0.12); }
+.su .ac-input::placeholder { color: rgba(255, 255, 255, 0.35); }
+.su .ac-input:focus { outline: none; border-color: var(--su-gold); box-shadow: 0 0 0 3px rgba(232, 196, 106, 0.22); }
+.su-hint { font-size: 12px; color: rgba(255, 255, 255, 0.5); }
+
+.su-submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 56px;
+  border-radius: 14px;
+  font-weight: 800;
+  font-size: 16px;
+  color: #2a1d08;
+  background: linear-gradient(180deg, #ffe7a6, #e8c46a 45%, #b98a35);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 12px 28px -12px rgba(232, 196, 106, 0.7);
+  transition: transform 0.12s ease, filter 0.15s ease;
+}
+.su-submit:hover:not(:disabled) { filter: brightness(1.05); }
+.su-submit:active:not(:disabled) { transform: scale(0.985); }
+.su-submit:disabled { opacity: 0.65; }
+.su-text-btn { font-size: 13px; font-weight: 600; color: var(--su-gold-hi); padding: 6px 10px; }
+
+/* the 18+ and legal boxes, in the same language */
+.su .ac-consent { padding: 14px; border-radius: 16px; background: rgba(255, 255, 255, 0.025); border: 1px solid rgba(255, 255, 255, 0.08); }
+.su .ac-consent.is-invalid { border-color: rgba(239, 83, 80, 0.8); background: rgba(239, 83, 80, 0.06); }
+.su .ac-check { font-size: 13px; }
+.su .ac-legal-link { color: var(--su-gold-hi); padding: 2px 0; }
+
+.su-switch { text-align: center; font-size: 14px; color: rgba(255, 255, 255, 0.7); }
+.su-switch button { font-weight: 800; color: var(--su-gold-hi); padding: 6px 4px; }
+
+/* ---------------------------------------------------------------- embedded (inside the account screen) */
+.su-embedded { border-radius: 22px; overflow: hidden; border: 1px solid var(--su-line); }
+.su-embedded .su-hero { height: clamp(240px, 38svh, 340px); min-height: 240px; padding-top: 18px; }
+
+/* ---------------------------------------------------------------- small phones */
+@media (max-width: 359px) {
+  .su-hero { padding-left: 16px; padding-right: 16px; }
+  .su-body { padding-left: 16px; padding-right: 16px; gap: 14px; }
+  .su-perks li { font-size: 11px; padding: 10px 4px; }
+  .su-form { padding: 14px; }
+}
+@media (max-height: 640px) {
+  .su-hero { height: 280px; min-height: 260px; }
+}
+
+/* ---------------------------------------------------------------- wide screens: art beside the form */
+@media (min-width: 900px) {
+  .su-page {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(420px, 520px);
+    min-height: 100dvh;
+    background: #06070c;
+  }
+  .su-page .su-hero {
+    position: sticky;
+    top: 0;
+    height: 100dvh;
+    max-height: none;
+    padding: 36px 44px 44px;
+  }
+  .su-page .su-hero-art { object-position: 60% 20%; }
+  .su-page .su-hero-shade {
+    background:
+      linear-gradient(180deg, rgba(5, 6, 10, 0.45) 0%, rgba(5, 6, 10, 0) 25%, rgba(5, 6, 10, 0) 55%, rgba(6, 7, 12, 0.9) 100%),
+      linear-gradient(90deg, rgba(6, 7, 12, 0) 70%, #06070c 100%);
+  }
+  .su-page .su-hero::after { display: none; }
+  .su-page .su-hero-copy { max-width: 560px; }
+  .su-page .su-title { font-size: 44px; }
+  .su-page .su-logo-word { font-size: 34px; }
+  .su-page .su-body { justify-content: center; padding: 48px 44px; background: #06070c; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .su-submit, .su .ac-provider { transition: none; }
+}
