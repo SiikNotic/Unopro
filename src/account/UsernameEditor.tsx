@@ -5,6 +5,7 @@ import { useI18n } from '@/i18n';
 import { useAccount } from './useAccount';
 import { usernameProblem } from './username';
 import './account.css';
+import '@/screens/lux/lux.css';
 
 /** Profile → Username → change. The database checks format, reserved words and (case-insensitive) uniqueness. */
 export function UsernameEditor() {
@@ -36,19 +37,19 @@ export function UsernameEditor() {
   };
 
   return (
-    <form className="cz-panel p-4 flex flex-col gap-3" onSubmit={submit} noValidate>
-      <h2 className="cz-label">{t('account.username')}</h2>
-      <div>
-        <p className="text-xs text-[var(--cz-muted)]">{t('account.usernameCurrent')}</p>
-        <p className="font-display font-extrabold text-lg text-white break-all">{current || '—'}</p>
+    <form className="lx-card lx-form" onSubmit={submit} noValidate>
+      <h2 className="lx-card-label">{t('account.username')}</h2>
+      <div className="lx-current">
+        <span>{t('account.usernameCurrent')}</span>
+        <b>{current || '—'}</b>
       </div>
       <div className="ac-field">
         <label htmlFor="ac-username">{t('account.usernameNew')}</label>
-        <div className="relative">
-          <AtSign className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--cz-muted)]" aria-hidden />
+        <div className="lx-input-at">
+          <AtSign className="w-4 h-4" aria-hidden />
           <input
             id="ac-username"
-            className="ac-input !pl-9"
+            className="ac-input"
             value={draft}
             onChange={(e) => {
               setDraft(e.target.value.replace(/\s/g, ''));
@@ -61,9 +62,10 @@ export function UsernameEditor() {
             spellCheck={false}
             aria-invalid={!!error || undefined}
             aria-describedby="ac-username-hint"
+            placeholder={t('account.usernamePlaceholder')}
           />
         </div>
-        <p id="ac-username-hint" className="text-xs text-[var(--cz-muted)]">
+        <p id="ac-username-hint" className="lx-fine">
           {t('account.usernameHint')}
         </p>
       </div>
@@ -77,7 +79,7 @@ export function UsernameEditor() {
           <Check className="w-4 h-4" aria-hidden /> {t('account.notice.usernameChanged', { name: current })}
         </p>
       )}
-      <button type="submit" className="cz-btn cz-btn-primary w-full" disabled={busy || !draft.trim()} aria-busy={busy}>
+      <button type="submit" className="lx-btn lx-btn-gold" disabled={busy || !draft.trim() || draft.trim() === current} aria-busy={busy}>
         {t('account.usernameSave')}
       </button>
     </form>

@@ -78,9 +78,9 @@
     "sound": "Sonido",
     "soundDescription": "Efectos de cartas, turnos y victorias",
     "haptics": "Vibración",
-    "hapticsDescription": "Vibración al jugar una carta no válida y en los avisos de UNO",
+    "hapticsDescription": "Vibración al jugar y en avisos",
     "animations": "Animaciones",
-    "animationsDescription": "Escenarios animados, vuelos de cartas y efectos",
+    "animationsDescription": "Escenarios animados y efectos",
     "about": "Acerca de",
     "aboutDescription": "Versión y créditos",
     "version": "Versión",
@@ -106,11 +106,16 @@
       }
     },
     "music": "Música",
-    "musicDescription": "Música de fondo suave. Empieza al tocar la pantalla.",
+    "musicDescription": "Música de fondo suave",
     "musicNeedsSound": "Activa el Sonido para escuchar la música.",
     "musicVolume": "Volumen de la música",
     "musicOn": "Activar música",
-    "musicOff": "Silenciar música"
+    "musicOff": "Silenciar música",
+    "scenarioHint": "Elige el ambiente de tus partidas",
+    "scenarioPrev": "Escenario anterior",
+    "scenarioNext": "Escenario siguiente",
+    "volume": "Volumen",
+    "legalHint": "Privacidad, términos, monedas virtuales y juego responsable"
   },
   "tutorial": {
     "title": "Tutorial",
@@ -1272,7 +1277,7 @@
   "account": {
     "title": "Tu cuenta",
     "subtitle": "Regístrate y recibe 1,000 monedas",
-    "subtitleUser": "Tus monedas y tu sesión",
+    "subtitleUser": "Gestiona tu perfil y tus monedas",
     "bonusTag": "Regalo de bienvenida",
     "pitch": "Crea tu cuenta y recibe 1,000 monedas",
     "pitchText": "Tus monedas se guardan en tu cuenta, a salvo, y te siguen en cualquier dispositivo.",
@@ -1308,7 +1313,7 @@
     "retry": "Reintentar",
     "claim": "Recibir 1,000 monedas",
     "coinsNote": "Monedas virtuales sin valor real. Los resultados y el saldo los decide el servidor.",
-    "play": "Ir a jugar",
+    "play": "Continuar jugando",
     "signOut": "Cerrar sesión",
     "signOutNote": "Al cerrar sesión vuelves a las fichas de invitado de este dispositivo. Tus monedas siguen en tu cuenta.",
     "off": "Esta versión no tiene servidor de cuentas. Juegas como invitado con las fichas de este dispositivo.",
@@ -1354,7 +1359,7 @@
     "usernameCurrent": "Nombre actual",
     "usernameNew": "Nuevo nombre",
     "usernameSave": "Guardar cambios",
-    "usernameHint": "De 3 a 16 letras, números o _. Es el nombre que ven los demás; tu cuenta no cambia.",
+    "usernameHint": "De 3 a 16 letras, números o _. Este es el nombre que verán los demás jugadores.",
     "usernameErrors": {
       "format": "Usa de 3 a 16 letras, números o _ (sin espacios ni acentos).",
       "reserved": "Ese nombre está reservado. Elige otro.",
@@ -1387,7 +1392,13 @@
         "network": "No hay conexión. Inténtalo de nuevo.",
         "server": "No se pudo eliminar la cuenta. Inténtalo más tarde."
       }
-    }
+    },
+    "welcomeBonus": "+1,000 monedas de bienvenida",
+    "coinsCloud": "Tu saldo actual se guarda en la nube y te sigue en cualquier dispositivo.",
+    "coinsVirtual": "Monedas virtuales sin valor monetario real.",
+    "usernamePlaceholder": "Escribe tu nuevo nombre…",
+    "staffHint": "Administración y herramientas",
+    "editProfile": "Editar tu nombre de usuario"
   },
   "staff": {
     "title": "Panel del equipo",

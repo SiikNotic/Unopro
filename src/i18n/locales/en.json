@@ -78,9 +78,9 @@
     "sound": "Sound",
     "soundDescription": "Card, turn and victory sound effects",
     "haptics": "Haptics",
-    "hapticsDescription": "Vibrate on illegal plays and UNO alerts",
+    "hapticsDescription": "Vibration when playing and on alerts",
     "animations": "Animations",
-    "animationsDescription": "Animated scenarios, flying cards and effects",
+    "animationsDescription": "Animated scenarios and effects",
     "about": "About",
     "aboutDescription": "Version and credits",
     "version": "Version",
@@ -106,11 +106,16 @@
       }
     },
     "music": "Music",
-    "musicDescription": "Soft background music. Starts when you tap the screen.",
+    "musicDescription": "Soft background music",
     "musicNeedsSound": "Turn Sound on to hear the music.",
     "musicVolume": "Music volume",
     "musicOn": "Turn music on",
-    "musicOff": "Mute music"
+    "musicOff": "Mute music",
+    "scenarioHint": "Choose the setting for your games",
+    "scenarioPrev": "Previous scenario",
+    "scenarioNext": "Next scenario",
+    "volume": "Volume",
+    "legalHint": "Privacy, terms, virtual coins and responsible play"
   },
   "tutorial": {
     "title": "Tutorial",
@@ -1272,7 +1277,7 @@
   "account": {
     "title": "Your account",
     "subtitle": "Sign up and get 1,000 coins",
-    "subtitleUser": "Your coins and session",
+    "subtitleUser": "Manage your profile and your coins",
     "bonusTag": "Welcome gift",
     "pitch": "Create your account and get 1,000 coins",
     "pitchText": "Your coins are kept safe in your account and follow you to any device.",
@@ -1308,7 +1313,7 @@
     "retry": "Try again",
     "claim": "Get 1,000 coins",
     "coinsNote": "Virtual coins with no real value. Results and balance are decided by the server.",
-    "play": "Go play",
+    "play": "Keep playing",
     "signOut": "Sign out",
     "signOutNote": "Signing out takes you back to this device's guest chips. Your coins stay in your account.",
     "off": "This version has no account server. You play as a guest with this device's chips.",
@@ -1354,7 +1359,7 @@
     "usernameCurrent": "Current name",
     "usernameNew": "New name",
     "usernameSave": "Save changes",
-    "usernameHint": "3 to 16 letters, numbers or _. It's the name others see; your account stays the same.",
+    "usernameHint": "3 to 16 letters, numbers or _. This is the name other players see.",
     "usernameErrors": {
       "format": "Use 3 to 16 letters, numbers or _ (no spaces or accents).",
       "reserved": "That name is reserved. Pick another.",
@@ -1387,7 +1392,13 @@
         "network": "No connection. Try again.",
         "server": "The account couldn't be deleted. Try again later."
       }
-    }
+    },
+    "welcomeBonus": "+1,000 welcome coins",
+    "coinsCloud": "Your balance is saved in the cloud and follows you to any device.",
+    "coinsVirtual": "Virtual coins with no real money value.",
+    "usernamePlaceholder": "Type your new name…",
+    "staffHint": "Administration and tools",
+    "editProfile": "Edit your username"
   },
   "staff": {
     "title": "Staff dashboard",

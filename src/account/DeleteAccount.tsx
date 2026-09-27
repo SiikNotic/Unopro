@@ -14,9 +14,9 @@ export function DeleteAccount() {
   const word = t('account.delete.word');
   if (account.status !== 'user') return null;
   return (
-    <div className="mt-2 rounded-2xl border border-[rgba(255,120,130,0.3)] bg-[rgba(80,10,20,0.25)] p-3">
+    <div className={`lx-delete ${open ? 'is-open' : ''}`}>
       {!open ? (
-        <button type="button" className="cz-btn cz-btn-quiet w-full !text-[#ffb3b3]" onClick={() => setOpen(true)}>
+        <button type="button" className="lx-delete-btn" onClick={() => setOpen(true)}>
           <Trash2 className="w-4 h-4" /> {t('account.delete.title')}
         </button>
       ) : (
@@ -34,12 +34,12 @@ export function DeleteAccount() {
             </p>
           )}
           <div className="grid grid-cols-2 gap-2">
-            <button type="button" className="cz-btn cz-btn-secondary" onClick={() => (setOpen(false), setTyped(''), setError(null))} disabled={busy}>
+            <button type="button" className="lx-btn lx-btn-ghost" onClick={() => (setOpen(false), setTyped(''), setError(null))} disabled={busy}>
               {t('common.cancel')}
             </button>
             <button
               type="button"
-              className="cz-btn cz-btn-primary !bg-[#b91c3c] !text-white !border-transparent"
+              className="lx-btn lx-btn-danger"
               disabled={busy || typed.trim().toUpperCase() !== word.toUpperCase()}
               onClick={async () => {
                 setBusy(true);

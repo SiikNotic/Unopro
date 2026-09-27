@@ -24,6 +24,18 @@
         "es": "Únete con Google, Discord o correo y recibe 1,000 monedas.",
         "en": "Join with Google, Discord or email and get 1,000 coins."
       }
+    ],
+    "1.2.49": [
+      {
+        "icon": "design",
+        "es": "Ajustes rediseñados: más claros y fáciles de usar.",
+        "en": "Redesigned Settings: clearer and easier to use."
+      },
+      {
+        "icon": "star",
+        "es": "Tu cuenta con nuevo perfil y tarjeta de monedas.",
+        "en": "Your account with a new profile and coins card."
+      }
     ]
   }
 }

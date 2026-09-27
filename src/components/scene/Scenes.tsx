@@ -2,15 +2,9 @@
 // transform/opacity are animated; particle counts are small and fixed.
 import type { CSSProperties } from 'react';
 import type { ScenarioId } from '@/game/scenarios/scenarios';
-import lounge from '@/games/shared/scenes/art/lounge.webp';
 import { makeParticles } from './particles';
 import type { Particle } from './particles';
-import sky from './art/sky.webp';
-import volcano from './art/volcano.webp';
-import ocean from './art/ocean.webp';
-import space from './art/space.webp';
-import forest from './art/forest.webp';
-import city from './art/city.webp';
+import { SCENARIO_ART as ART } from './art';
 
 type MoteOpts = Parameters<typeof makeParticles>[2];
 
@@ -35,8 +29,6 @@ function Motes({ count, seed, className, lite, opts }: { count: number; seed: nu
   );
 }
 
-// The lounge is the same room as Domino's lounge.
-const ART: Record<ScenarioId, string> = { sky, volcano, ocean, space, forest, city, lounge };
 
 const MOTES: Record<ScenarioId, { count: number; seed: number; className: string; opts: MoteOpts }> = {
   sky: { count: 10, seed: 11, className: 'scene-rise bg-white/80', opts: { minSize: 2, maxSize: 4, minDur: 14, maxDur: 24 } },

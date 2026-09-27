@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { Cloud, Coins, Crown, Eye, EyeOff, Gamepad2, Gift, LayoutDashboard, LogOut, Mail, MonitorSmartphone, UserRound } from 'lucide-react';
-import { ScreenContainer } from '@/components/ui/ScreenContainer';
+import { ChevronRight, Cloud, Coins, Crown, Eye, EyeOff, Gamepad2, Gift, LogOut, Mail, MonitorSmartphone, Play, UserRound, Users } from 'lucide-react';
+import { LuxPage } from '@/screens/lux/LuxPage';
+import { LUX_ART } from '@/screens/lux/art';
 import { useNavigation } from '@/components/Navigation';
 import { useI18n } from '@/i18n';
 import { DeleteAccount } from './DeleteAccount';
@@ -283,7 +284,7 @@ export function SignInPanel({ variant = 'embedded' }: { variant?: 'page' | 'embe
   );
 }
 
-/** The signed-in player: who, their coins, sign out. */
+/** The signed-in player, as a VIP profile: who, their coins, their name, the team panel, play, sign out. */
 function AccountPanel() {
   const { t } = useI18n();
   const { navigate } = useNavigation();
@@ -291,80 +292,117 @@ function AccountPanel() {
   const u = account.user;
   const [busy, setBusy] = useState(false);
   const [avatarOk, setAvatarOk] = useState(true);
-  const shown = account.profile?.username || u?.name || u?.email || t('profile.guest');
+  const username = account.profile?.username ?? '';
+  const shown = username || u?.name || u?.email || t('profile.guest');
   const role = account.profile?.role ?? 'user';
   const providerLabel = u?.provider === 'google' ? 'Google' : u?.provider === 'discord' ? 'Discord' : t('account.email');
+  // The profile card opens the name editor (the only editable part of the profile).
+  const editName = () => {
+    const input = document.getElementById('ac-username') as HTMLInputElement | null;
+    input?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    input?.focus({ preventScroll: true });
+  };
 
   return (
-    <section className="flex flex-col gap-4">
-      <div className="cz-panel p-4 flex items-center gap-4">
-        {u?.avatar && avatarOk ? (
-          <img src={u.avatar} alt="" referrerPolicy="no-referrer" onError={() => setAvatarOk(false)} className="flex-none w-14 h-14 rounded-2xl object-cover border border-[rgba(216,178,106,0.4)]" />
-        ) : (
-          <div className="flex-none w-14 h-14 rounded-2xl bg-[rgba(216,178,106,0.14)] border border-[rgba(216,178,106,0.4)] flex items-center justify-center font-display font-extrabold text-xl text-[var(--cz-gold)]" aria-hidden>
-            {shown.slice(0, 1).toUpperCase()}
-          </div>
-        )}
-        <div className="min-w-0 flex-1">
-          <h2 className="font-display font-extrabold text-xl text-white truncate">{shown}</h2>
-          {u?.email && u.email !== shown && <p className="text-xs text-white/70 truncate">{u.email}</p>}
-          <p className="text-xs text-[var(--cz-muted)] mt-0.5">
-            {t('account.via', { provider: providerLabel })}
-            {role !== 'user' && <span className="ml-2 cz-pill !min-h-0 !py-0.5 !px-2 !text-[10px] uppercase tracking-wider text-[var(--cz-gold)]">{t(`account.roleLabel.${role}`)}</span>}
-          </p>
-        </div>
-      </div>
+    <div className="lx-stack">
+      <button type="button" className="lx-card lx-profile" onClick={editName} disabled={!account.profile} aria-label={t('account.editProfile')}>
+        <span className="lx-avatar">
+          {u?.avatar && avatarOk ? <img src={u.avatar} alt="" referrerPolicy="no-referrer" onError={() => setAvatarOk(false)} /> : <b aria-hidden>{shown.slice(0, 1).toUpperCase()}</b>}
+        </span>
+        <span className="min-w-0 flex-1 text-left">
+          <span className="lx-profile-name">{shown}</span>
+          {username && <span className="lx-profile-handle">@{username}</span>}
+          {u?.email && u.email !== shown && <span className="lx-profile-mail">{u.email}</span>}
+          <span className="lx-badges">
+            <span className="lx-badge">{providerLabel}</span>
+            {role !== 'user' && <span className="lx-badge is-gold">{t(`account.roleLabel.${role}`)}</span>}
+          </span>
+        </span>
+        {account.profile && <ChevronRight className="w-5 h-5 text-white/40 shrink-0" aria-hidden />}
+      </button>
 
       <BanNotice />
 
-      <div className="ac-hero">
-        <span className="cz-label !text-[var(--cz-gold-hover)]">{t('account.coins')}</span>
-        <div className="mt-2 flex items-center gap-2">
-          <Coins className="w-8 h-8 text-[var(--cz-gold)]" aria-hidden />
-          <span className="ac-amount cz-num" aria-live="polite">
+      <section className="lx-coins" aria-labelledby="lx-coins-title">
+        <span className={`lx-coins-art ${LUX_ART.coins ? '' : 'is-css'}`} aria-hidden>
+          {LUX_ART.coins ? <img src={LUX_ART.coins} alt="" /> : <CoinPile />}
+        </span>
+        <h2 id="lx-coins-title" className="lx-coins-label">
+          {t('account.coins')}
+        </h2>
+        <p className="lx-coins-amount">
+          <Coins className="w-8 h-8" aria-hidden />
+          <span className="cz-num" aria-live="polite">
             {account.coins ? formatChips(account.coins.balance) : '—'}
           </span>
-        </div>
-        <p className="mt-2 text-sm text-white/75">{account.coins?.bonusClaimed ? t('account.bonusDone') : account.coinsError ? t('account.coinsError') : t('account.bonusPending')}</p>
+        </p>
+        {account.coins?.bonusClaimed ? (
+          <p className="lx-coins-bonus">
+            {LUX_ART.gift ? <img src={LUX_ART.gift} alt="" /> : <Gift className="w-4 h-4" aria-hidden />} {t('account.welcomeBonus')}
+          </p>
+        ) : (
+          <p className="lx-coins-note">{account.coinsError ? t('account.coinsError') : t('account.bonusPending')}</p>
+        )}
         {account.coinsError && (
-          <button type="button" className="cz-btn cz-btn-secondary cz-btn-sm mt-3" onClick={() => void account.refreshCoins()}>
+          <button type="button" className="lx-btn lx-btn-ghost lx-btn-sm" onClick={() => void account.refreshCoins()}>
             {t('account.retry')}
           </button>
         )}
         {account.coins && !account.coins.bonusClaimed && account.coins.registered && (
-          <button type="button" className="cz-btn cz-btn-primary cz-btn-sm mt-3" onClick={() => void account.claimBonus()}>
-            <Gift className="w-4 h-4" /> {t('account.claim')}
+          <button type="button" className="lx-btn lx-btn-gold lx-btn-sm" onClick={() => void account.claimBonus()}>
+            <Gift className="w-4 h-4" aria-hidden /> {t('account.claim')}
           </button>
         )}
-        <p className="mt-3 text-xs text-white/60">{t('account.coinsNote')}</p>
-      </div>
+        <p className="lx-coins-note">{t('account.coinsCloud')}</p>
+        <p className="lx-coins-fine">{t('account.coinsVirtual')}</p>
+      </section>
 
       {account.profile && <UsernameEditor />}
 
       {ROLE_RANK[role] >= 1 && (
-        <button type="button" className="cz-btn cz-btn-secondary w-full !border-[rgba(216,178,106,0.5)]" onClick={() => navigate('staff')}>
-          <LayoutDashboard className="w-4 h-4 text-[var(--cz-gold)]" /> {t('account.staffDashboard')}
+        <button type="button" className="lx-card lx-nav-row" onClick={() => navigate('staff')}>
+          <span className="lx-icon" aria-hidden>
+            <Users className="w-[18px] h-[18px]" />
+          </span>
+          <span className="min-w-0 flex-1 text-left">
+            <span className="lx-row-title">{t('account.staffDashboard')}</span>
+            <span className="lx-row-text">{t('account.staffHint')}</span>
+          </span>
+          <ChevronRight className="w-5 h-5 text-white/40 shrink-0" aria-hidden />
         </button>
       )}
 
-      <button type="button" className="cz-btn cz-btn-primary cz-btn-lg w-full" onClick={() => navigate('home')}>
-        {t('account.play')}
-      </button>
-      <button
-        type="button"
-        className="cz-btn cz-btn-secondary w-full"
-        disabled={busy}
-        onClick={async () => {
-          setBusy(true);
-          await account.signOut();
-          setBusy(false);
-        }}
-      >
-        <LogOut className="w-4 h-4" /> {t('account.signOut')}
-      </button>
-      <p className="text-xs text-[var(--cz-muted)]">{t('account.signOutNote')}</p>
+      <div className="lx-actions">
+        <button type="button" className="lx-btn lx-btn-gold lx-btn-lg" onClick={() => navigate('home')}>
+          <Play className="w-5 h-5" fill="currentColor" aria-hidden /> {t('account.play')}
+        </button>
+        <button
+          type="button"
+          className="lx-btn lx-btn-ghost"
+          disabled={busy}
+          onClick={async () => {
+            setBusy(true);
+            await account.signOut();
+            setBusy(false);
+          }}
+        >
+          <LogOut className="w-4 h-4" aria-hidden /> {t('account.signOut')}
+        </button>
+        <p className="lx-fine">{t('account.signOutNote')}</p>
+      </div>
       <DeleteAccount />
-    </section>
+    </div>
+  );
+}
+
+/** Gold coins drawn in CSS, until the painted coins art is added. */
+function CoinPile() {
+  return (
+    <>
+      {[0, 1, 2, 3, 4].map((i) => (
+        <i key={i} style={{ '--i': i } as React.CSSProperties} />
+      ))}
+    </>
   );
 }
 
@@ -372,7 +410,7 @@ export function AccountScreen() {
   const { t } = useI18n();
   const { status } = useAccount();
   return (
-    <ScreenContainer title={t('account.title')} subtitle={t(status === 'user' ? 'account.subtitleUser' : 'account.subtitle')}>
+    <LuxPage title={t('account.title')} subtitle={t(status === 'user' ? 'account.subtitleUser' : 'account.subtitle')} art={LUX_ART.accountBg}>
       {status === 'off' ? (
         <section className="cz-panel p-5 flex gap-3 items-start" role="note">
           <UserRound className="w-5 h-5 shrink-0 text-[var(--cz-gold)]" aria-hidden />
@@ -387,6 +425,6 @@ export function AccountScreen() {
       ) : (
         <SignInPanel />
       )}
-    </ScreenContainer>
+    </LuxPage>
   );
 }
