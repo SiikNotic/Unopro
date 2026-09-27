@@ -36,6 +36,13 @@
         "es": "Tu cuenta con nuevo perfil y tarjeta de monedas.",
         "en": "Your account with a new profile and coins card."
       }
+    ],
+    "1.2.50": [
+      {
+        "icon": "design",
+        "es": "Ajustes y tu cuenta con nuevas ilustraciones de casino.",
+        "en": "Settings and your account with new casino artwork."
+      }
     ]
   }
 }
