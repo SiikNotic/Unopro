@@ -1,22 +1,3 @@
 {
-  "version": "1.2.0",
-  "notesDate": "2026-09-26",
-  "notes": {
-    "es": [
-      "Jewellery ahora es Jewellery: Olympus: 20 niveles en 4 capítulos, sellos de mármol, nuevos objetivos y gemas especiales (Rayo, Templo del Olimpo y Tridente Divino).",
-      "Nuevos potenciadores: Martillo, Barajado Divino, Rayo y Poder del Olimpo. Se ganan jugando; no se compran.",
-      "Nuevo diseño del Olimpo en HD: gemas, efectos, marco dorado, pantallas de nivel completado y fondos nuevos.",
-      "El tablero de Jewellery se dibuja con aceleración gráfica: animaciones más fluidas y nítidas en pantallas de alta resolución.",
-      "Bingo: el confeti ya no se queda al empezar una partida nueva y vuelven las voces que cantan letras y números.",
-      "Para jugar hace falta una cuenta: al registrarte confirmas que tienes 18 años o más y aceptas los términos."
-    ],
-    "en": [
-      "Jewellery is now Jewellery: Olympus: 20 levels in 4 chapters, marble seals, new goals and special jewels (Lightning, Temple of Olympus and Divine Trident).",
-      "New power-ups: Hammer, Divine Shuffle, Lightning and Olympus Power. Earned by playing; never sold.",
-      "New HD Olympus look: jewels, effects, golden frame, level-complete screens and new backgrounds.",
-      "The Jewellery board is drawn with hardware acceleration: smoother animations, sharp on high-resolution screens.",
-      "Bingo: the confetti no longer stays when a new game starts, and the voices calling letters and numbers are back.",
-      "An account is required to play: when you sign up you confirm you are 18 or older and accept the terms."
-    ]
-  }
+  "version": "1.2.0"
 }

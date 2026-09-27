@@ -12,12 +12,12 @@ name: Android app (APK)
 # With the signing key, every push to the default branch that changes the app publishes a new version as a
 # GitHub Release (carta.apk + update.json with its SHA-256), at the same time as the web deploy; installed
 # apps find it and offer to update. The version is app-release.json's base version plus this workflow's run
-# number (1.2.0 + run 37 = 1.2.37, versionCode 10237), so it always goes up. Without the key, only a debug
-# APK is built (as a run artifact).
+# number (1.2.0 + run 37 = 1.2.37, versionCode 10237), so it always goes up. The news of a version are its own
+# entry in changelog.json. Without the key, only a debug APK is built (as a run artifact).
 on:
   push:
     branches: ['**']
-    paths: ['android/**', 'src/**', 'app-release.json', 'capacitor.config.ts', 'package.json', 'package-lock.json', '.github/workflows/android.yml']
+    paths: ['android/**', 'src/**', 'app-release.json', 'changelog.json', 'capacitor.config.ts', 'package.json', 'package-lock.json', '.github/workflows/android.yml']
   workflow_dispatch:
 
 permissions:
@@ -42,14 +42,15 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
-      - name: Version (base in app-release.json + run number)
+      - name: Version (base in app-release.json + run number) and its own news (changelog.json)
         id: v
         env:
           RUN: ${{ github.run_number }}
         run: |
           # versionCode = major*10000 + minor*100 + patch (the formula installed apps check); written back into
-          # app-release.json so the bundled app knows its own version and notes. When a user-facing change ships,
-          # write its notes in app-release.json and set notesDate to that day.
+          # app-release.json so the bundled app knows its own version. The news published with this version are
+          # ONLY its entry in changelog.json (never older versions'); without an entry the app shows a short
+          # generic line.
           node -e '
             const fs = require("fs");
             const r = require("./app-release.json");
@@ -57,15 +58,14 @@ jobs:
             const code = a * 10000 + b * 100 + c + Number(process.env.RUN);
             const name = `${Math.floor(code / 10000)}.${Math.floor(code / 100) % 100}.${code % 100}`;
             if (Math.floor(code / 10000) !== a) throw new Error("minor version overflow: raise the base version");
-            // Release notes describe one update: they are published only within NOTES_DAYS of their notesDate.
-            // Later builds (fixes after that) say "improvements and fixes" instead of repeating old notes.
-            const NOTES_DAYS = 10;
-            const age = (Date.now() - Date.parse(r.notesDate)) / 86400000;
-            const notes = r.notesDate && age >= 0 && age <= NOTES_DAYS ? r.notes : { es: ["Mejoras de rendimiento y correcciones."], en: ["Performance improvements and fixes."] };
-            console.log(`Notes from ${r.notesDate} (${Math.floor(age)} days old): ${notes === r.notes ? "published" : "generic"}`);
-            fs.writeFileSync("app-release.json", JSON.stringify({ ...r, version: name, notes }, null, 2) + "\n");
+            const entry = (require("./changelog.json").versions || {})[name] || [];
+            const items = entry.slice(0, 5);
+            const notes = { es: items.map((i) => i.es || i.en || ""), en: items.map((i) => i.en || i.es || ""), icons: items.map((i) => i.icon || "new") };
+            if (!items.length) console.log(`::warning::changelog.json has no entry for ${name}: the update will show a generic line.`);
+            fs.writeFileSync("app-release.json", JSON.stringify({ ...r, version: name }, null, 2) + "\n");
+            fs.writeFileSync("release-notes.json", JSON.stringify(notes));
             fs.appendFileSync(process.env.GITHUB_OUTPUT, `name=${name}\ncode=${code}\n`);
-            console.log(`Carta ${name} (versionCode ${code})`);
+            console.log(`Carta ${name} (versionCode ${code}), ${items.length} news item(s)`);
           '
       - run: npm ci
       - run: npm run build
@@ -130,10 +130,12 @@ jobs:
           SHA=$(sha256sum carta.apk | cut -d' ' -f1)
           node -e '
             const r = require("./app-release.json");
+            const notes = require("./release-notes.json");
             const fs = require("fs");
             const url = `https://github.com/${process.env.REPO}/releases/download/v${r.version}/carta.apk`;
-            fs.writeFileSync("update.json", JSON.stringify({ versionCode: Number(process.env.CODE), versionName: r.version, notes: r.notes, apkUrl: url, sha256: process.argv[1] }, null, 2));
-            fs.writeFileSync("notes.md", r.notes.es.map((n) => `- ${n}`).join("\n") + "\n\n**English**\n\n" + r.notes.en.map((n) => `- ${n}`).join("\n") + `\n\nSHA-256: \`${process.argv[1]}\`\n`);
+            fs.writeFileSync("update.json", JSON.stringify({ versionCode: Number(process.env.CODE), versionName: r.version, notes, apkUrl: url, sha256: process.argv[1] }, null, 2));
+            const list = (xs) => (xs.length ? xs.map((n) => `- ${n}`).join("\n") : "- Mejoras de rendimiento y correcciones.");
+            fs.writeFileSync("notes.md", list(notes.es) + "\n\n**English**\n\n" + list(notes.en) + `\n\nSHA-256: \`${process.argv[1]}\`\n`);
           ' "$SHA"
           cat update.json
           gh release create "$TAG" carta.apk update.json --repo "$REPO" --title "Carta $NAME" --notes-file notes.md --target "$GITHUB_SHA"

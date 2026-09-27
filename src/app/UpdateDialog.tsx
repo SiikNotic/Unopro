@@ -1,25 +1,79 @@
 import { useEffect, useRef, useState } from 'react';
-import { Download, Loader2, Sparkles } from 'lucide-react';
+import { Coins, Download, Gamepad2, Loader2, Palette, RefreshCw, ShieldCheck, Sparkles, Star, Volume2, Wrench, Zap } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useI18n } from '@/i18n';
 import { storage } from '@/storage';
 import { isNativeApp } from '@/account/authApi';
 import { DISTRIBUTION } from './distribution';
 import release from '../../app-release.json';
-import { AppUpdater, isNewer, notesFor, parseManifest } from './updates';
+import { AppUpdater, isNewer, parseManifest } from './updates';
 import type { UpdateManifest } from './updates';
+import { itemsFor, notesOfVersion } from './changelog';
+import type { ChangeIcon, ReleaseNotes } from './changelog';
 import './updates.css';
 
 const SEEN_KEY = 'carta.app.seenVersion';
 const CHECK_EVERY_MS = 6 * 60 * 60 * 1000;
 
+const ICONS: Record<ChangeIcon, LucideIcon> = {
+  new: Sparkles,
+  update: RefreshCw,
+  game: Gamepad2,
+  design: Palette,
+  fix: Wrench,
+  speed: Zap,
+  coins: Coins,
+  security: ShieldCheck,
+  sound: Volume2,
+  star: Star,
+};
+
+/** The version's own news: 1–5 short items with an icon, or a short line when it has none. */
+function ChangeList({ notes }: { notes: ReleaseNotes }) {
+  const { t, language } = useI18n();
+  const items = itemsFor(notes, language);
+  if (!items.length) return <p className="up-empty">{t('update.noNotes')}</p>;
+  return (
+    <ul className="up-list">
+      {items.map((item, i) => {
+        const Icon = ICONS[item.icon];
+        return (
+          <li key={i}>
+            <span className="up-chip" aria-hidden>
+              <Icon className="w-4 h-4" />
+            </span>
+            <span>{item.text}</span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function Header({ icon: Icon, id, version }: { icon: LucideIcon; id: string; version: string }) {
+  const { t } = useI18n();
+  return (
+    <header className="up-head">
+      <span className="up-icon" aria-hidden>
+        <Icon className="w-7 h-7" />
+      </span>
+      <h2 id={id} className="up-title">
+        {t('update.title', { version })}
+      </h2>
+      <p className="up-sub">{t('update.subtitle')}</p>
+    </header>
+  );
+}
+
 type Phase = { kind: 'offer' } | { kind: 'downloading'; percent: number } | { kind: 'installing' } | { kind: 'error'; reason: 'permission' | 'checksum' | 'failed' };
 
 /**
- * Android app only: offers a new version in a dialog (version + what it brings) and installs it from the
- * app; after an update, shows once what the installed version brought.
+ * Android app only: offers a new version in a dialog (version + what THAT version brings, from its update.json)
+ * and installs it from the app; after an update, shows once what the installed version brought (its entry in
+ * the bundled changelog.json). Older versions' news are never shown.
  */
 export function UpdateDialog() {
-  const { t, language } = useI18n();
+  const { t } = useI18n();
   const [offer, setOffer] = useState<UpdateManifest | null>(null);
   const [phase, setPhase] = useState<Phase>({ kind: 'offer' });
   const [whatsNew, setWhatsNew] = useState<string | null>(null);
@@ -74,16 +128,8 @@ export function UpdateDialog() {
     return (
       <div className="up-backdrop" role="dialog" aria-modal="true" aria-labelledby="up-title">
         <div className="up-card">
-          <span className="up-icon" aria-hidden>
-            <Download className="w-6 h-6" />
-          </span>
-          <h2 id="up-title" className="up-title">{t('update.title', { version: offer.versionName })}</h2>
-          <p className="up-sub">{t('update.subtitle')}</p>
-          <ul className="up-notes">
-            {notesFor(offer.notes, language).map((n) => (
-              <li key={n}>{n}</li>
-            ))}
-          </ul>
+          <Header icon={Download} id="up-title" version={offer.versionName} />
+          <ChangeList notes={offer.notes} />
           {phase.kind === 'downloading' && (
             <div className="up-progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={phase.percent}>
               <span style={{ width: `${phase.percent}%` }} />
@@ -119,15 +165,8 @@ export function UpdateDialog() {
     return (
       <div className="up-backdrop" role="dialog" aria-modal="true" aria-labelledby="up-new-title">
         <div className="up-card">
-          <span className="up-icon" aria-hidden>
-            <Sparkles className="w-6 h-6" />
-          </span>
-          <h2 id="up-new-title" className="up-title">{t('update.whatsNew', { version: whatsNew })}</h2>
-          <ul className="up-notes">
-            {notesFor(release.notes, language).map((n) => (
-              <li key={n}>{n}</li>
-            ))}
-          </ul>
+          <Header icon={Sparkles} id="up-new-title" version={whatsNew} />
+          <ChangeList notes={notesOfVersion(whatsNew)} />
           <div className="up-actions">
             <button type="button" className="cz-btn cz-btn-primary w-full" onClick={() => setWhatsNew(null)}>
               {t('update.ok')}

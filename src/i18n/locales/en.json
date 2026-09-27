@@ -1866,19 +1866,19 @@
   },
   "update": {
     "title": "New version {version}",
-    "subtitle": "What the new version brings:",
+    "subtitle": "What this update brings",
     "now": "Update now",
     "later": "Later",
     "downloading": "Downloading… {percent}%",
     "installing": "Opening Android's installer… Confirm the installation.",
     "hint": "Android will ask you to confirm the installation. Your coins and account stay the same.",
-    "whatsNew": "What's new in Carta {version}",
     "ok": "Got it!",
     "error": {
       "permission": "Allow Carta to install updates (Settings opened) and tap \"Update now\" again.",
       "checksum": "The download doesn't match the published version, so it wasn't installed. Try again.",
       "failed": "The update couldn't be downloaded. Check your connection and try again."
-    }
+    },
+    "noNotes": "Performance improvements and fixes."
   },
   "jewels": {
     "tagline": "The jewels of the gods await you at the summit.",

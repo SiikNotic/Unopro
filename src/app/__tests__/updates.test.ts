@@ -1,10 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import release from '../../../app-release.json';
+import changelog from '../../../changelog.json';
 import es from '@/i18n/locales/es.json';
 import en from '@/i18n/locales/en.json';
 
 vi.mock('@capacitor/core', () => ({ registerPlugin: () => ({}) }));
-const { isNewer, notesFor, parseManifest, versionCodeOf } = await import('../updates');
+const { isNewer, parseManifest, versionCodeOf } = await import('../updates');
+const { CHANGE_ICONS, MAX_ITEMS, itemsFor, notesOfVersion } = await import('../changelog');
 
 const good = {
   versionCode: 10100,
@@ -40,18 +42,46 @@ describe('in-app updates', () => {
     expect(isNewer(null, 1)).toBe(false);
   });
 
-  it('shows notes in the player language', () => {
-    expect(notesFor(good.notes, 'es')).toEqual(['Hola']);
-    expect(notesFor(good.notes, 'en')).toEqual(['Hello']);
-    expect(notesFor({ es: ['Solo'], en: [] }, 'en')).toEqual(['Solo']);
+  it('reads the icons of a release when present, and old releases without them', () => {
+    const m = parseManifest(JSON.stringify({ ...good, notes: { es: ['A', 'B'], en: ['A', 'B'], icons: ['game', 'nope'] } }));
+    expect(m?.notes.icons).toEqual(['game', 'new']);
+    expect(parseManifest(JSON.stringify(good))?.notes.icons).toBeUndefined();
+  });
+
+  it('shows the items in the player language, at most five, each with an icon', () => {
+    expect(itemsFor(good.notes, 'es')).toEqual([{ icon: 'new', text: 'Hola' }]);
+    expect(itemsFor(good.notes, 'en')).toEqual([{ icon: 'new', text: 'Hello' }]);
+    expect(itemsFor({ es: ['Solo'], en: [] }, 'en')).toEqual([{ icon: 'new', text: 'Solo' }]);
+    const many = Array.from({ length: 8 }, (_, i) => `n${i}`);
+    expect(itemsFor({ es: many, en: many, icons: ['fix'] }, 'es')).toHaveLength(MAX_ITEMS);
+    expect(itemsFor({ es: many, en: many, icons: ['fix'] }, 'es')[0].icon).toBe('fix');
+    expect(itemsFor({ es: [], en: [] }, 'es')).toEqual([]);
+  });
+
+  it('a version shows only its own entry, and nothing for a version without one', () => {
+    const source = { versions: { '1.2.46': [{ icon: 'game', es: 'Viejo', en: 'Old' }], '1.2.47': [{ icon: 'fix', es: 'Nuevo', en: 'New' }] } };
+    expect(notesOfVersion('1.2.47', source)).toEqual({ es: ['Nuevo'], en: ['New'], icons: ['fix'] });
+    expect(notesOfVersion('1.2.48', source)).toEqual({ es: [], en: [], icons: [] });
+  });
+
+  it('the changelog is well formed: exact versions, 1–5 short translated items, known icons', () => {
+    for (const [version, items] of Object.entries(changelog.versions)) {
+      expect(versionCodeOf(version), version).not.toBeNull();
+      expect(items.length, version).toBeGreaterThan(0);
+      expect(items.length, version).toBeLessThanOrEqual(MAX_ITEMS);
+      for (const item of items) {
+        expect(CHANGE_ICONS as readonly string[]).toContain(item.icon);
+        expect(item.es.trim().length).toBeGreaterThan(0);
+        expect(item.en.trim().length).toBeGreaterThan(0);
+        // short lines, not paragraphs
+        expect(item.es.length, item.es).toBeLessThanOrEqual(90);
+        expect(item.en.length, item.en).toBeLessThanOrEqual(90);
+      }
+    }
   });
 
   it('the release file is valid and translated', () => {
     expect(versionCodeOf(release.version)).not.toBeNull();
-    expect(release.notes.es.length).toBeGreaterThan(0);
-    expect(release.notes.en.length).toBe(release.notes.es.length);
-    // The workflow publishes the notes only for a few days after this date (then generic notes).
-    expect(Number.isNaN(Date.parse(release.notesDate))).toBe(false);
     expect(Object.keys(es.update).sort()).toEqual(Object.keys(en.update).sort());
   });
 });

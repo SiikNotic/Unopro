@@ -1,0 +1,9 @@
+{
+  "_help": "One entry per version, only what THAT version brings (never repeat older news). 1 to 5 short items; icon is one of: new, update, game, design, fix, speed, coins, security, sound, star. The version is app-release.json's base plus the Android workflow run number (the next run of 'Android app (APK)'); a version without an entry shows a short generic message.",
+  "versions": {
+    "1.2.47": [
+      { "icon": "update", "es": "Nueva ventana de actualización, más clara y fácil de leer.", "en": "A new update window, clearer and easier to read." },
+      { "icon": "new", "es": "Cada versión muestra solo sus propias novedades.", "en": "Each version shows only its own news." }
+    ]
+  }
+}

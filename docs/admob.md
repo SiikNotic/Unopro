@@ -49,7 +49,14 @@ must be listed in Supabase → Authentication → URL Configuration → Redirect
 
 ## In-app updates (outside Google Play)
 
-- `app-release.json` holds the base version and the notes (ES/EN). Every push to the default branch that changes the app publishes base + the workflow run number (1.2.0 + run 37 = 1.2.37), together with the web deploy.
+- `app-release.json` holds the base version. Every push to the default branch that changes the app publishes base + the workflow run number (1.2.0 + run 37 = 1.2.37), together with the web deploy.
+- **What's new, per version:** `changelog.json` has one entry per exact version with only what THAT version brings
+  (1–5 short items, ES/EN, an icon each: new, update, game, design, fix, speed, coins, security, sound, star).
+  The workflow publishes a version's own entry in its `update.json` and release notes; the app shows the entry of the
+  version being installed (from `update.json`) and, once after updating, the entry of the installed version (from the
+  bundled file). Older versions' news are never repeated. A version without an entry shows "Mejoras de rendimiento y
+  correcciones." (the workflow warns). To add one, write e.g. `"1.2.48": [ … ]` before the push that builds 1.2.48
+  (the next run number of "Android app (APK)").
 - The workflow signs the APK with the release key (GitHub Secrets `ANDROID_KEYSTORE_BASE64`,
   `ANDROID_KEYSTORE_PASSWORD`; alias `carta`) and creates the GitHub Release `v<version>` with `carta.apk`
   and `update.json` (versionCode, notes, APK URL, SHA-256).

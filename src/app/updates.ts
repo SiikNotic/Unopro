@@ -3,11 +3,14 @@
 // Android's installer (Android also checks the signature and asks the player to confirm).
 import { registerPlugin } from '@capacitor/core';
 import type { PluginListenerHandle } from '@capacitor/core';
+import { MAX_ITEMS, toIcon } from './changelog';
+import type { ReleaseNotes } from './changelog';
 
 export interface UpdateManifest {
   versionCode: number;
   versionName: string;
-  notes: { es: string[]; en: string[] };
+  /** Only what THIS version brings (its changelog.json entry); icons are optional (older releases have none). */
+  notes: ReleaseNotes;
   apkUrl: string;
   sha256: string;
 }
@@ -51,11 +54,9 @@ export function parseManifest(text: string | undefined): UpdateManifest | null {
   const sha256 = typeof raw.sha256 === 'string' ? raw.sha256 : '';
   if (versionCodeOf(versionName) !== versionCode) return null;
   if (!apkUrl.startsWith(RELEASES) || !apkUrl.endsWith('.apk') || !/^[0-9a-f]{64}$/.test(sha256)) return null;
-  const notes = (raw.notes ?? {}) as { es?: unknown; en?: unknown };
-  return { versionCode, versionName, apkUrl, sha256, notes: { es: strings(notes.es), en: strings(notes.en) } };
+  const notes = (raw.notes ?? {}) as { es?: unknown; en?: unknown; icons?: unknown };
+  const icons = Array.isArray(notes.icons) ? notes.icons.slice(0, MAX_ITEMS).map(toIcon) : undefined;
+  return { versionCode, versionName, apkUrl, sha256, notes: { es: strings(notes.es), en: strings(notes.en), ...(icons ? { icons } : {}) } };
 }
 
 export const isNewer = (manifest: UpdateManifest | null, currentCode: number): manifest is UpdateManifest => !!manifest && manifest.versionCode > currentCode;
-
-/** Notes in the player's language, falling back to the other one. */
-export const notesFor = (notes: { es: string[]; en: string[] }, language: string): string[] => (language === 'en' ? notes.en.length ? notes.en : notes.es : notes.es.length ? notes.es : notes.en);
