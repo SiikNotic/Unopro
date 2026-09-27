@@ -928,6 +928,391 @@ function extraStake(s, action) {
   return action === "double" ? hand.bet : s.hands[0].bet;
 }
 
+// src/games/online/protocol.ts
+var STAKES = [0, 100, 500, 1e3, 5e3];
+
+// src/games/airhockey/table.ts
+var W = 1e3;
+var H = 1700;
+var MID = H / 2;
+var PUCK_R = 36;
+var MALLET_R = 60;
+var GOAL_W = 330;
+var GOAL_X0 = (W - GOAL_W) / 2;
+var GOAL_X1 = (W + GOAL_W) / 2;
+var PLAYER_HOME = { x: W / 2, y: H - 170 };
+var AI_HOME = { x: W / 2, y: 170 };
+var clamp = (v, lo, hi) => v < lo ? lo : v > hi ? hi : v;
+
+// src/games/airhockey/ai.ts
+var AI_LEVEL_IDS = ["easy", "normal", "hard"];
+var AI_LEVELS = {
+  easy: { react: 14, speed: 1250, noise: 130, miss: 0.3, guard: 200, foresight: 0.45 },
+  normal: { react: 7, speed: 1900, noise: 65, miss: 0.12, guard: 175, foresight: 0.8 },
+  hard: { react: 3, speed: 2650, noise: 24, miss: 0.04, guard: 150, foresight: 1 }
+};
+var REACH = PUCK_R + MALLET_R;
+var span = W - 2 * PUCK_R;
+function foldX(x, vx, t) {
+  let u = x - PUCK_R + vx * t;
+  const period = 2 * span;
+  u -= Math.floor(u / period) * period;
+  if (u > span) u = period - u;
+  return u + PUCK_R;
+}
+function aiThink(s, rng) {
+  const mem = s.mem;
+  if (mem.wait > 0) return { ...mem, wait: mem.wait - 1 };
+  const lv = AI_LEVELS[s.level];
+  let aim = mem.aim;
+  const next = (tx2, ty) => ({ tx: clamp(tx2, MALLET_R, W - MALLET_R), ty: clamp(ty, MALLET_R, MID - MALLET_R), wait: lv.react - 1, aim });
+  const jitter = () => (rng.next() - 0.5) * 2 * lv.noise;
+  if (s.phase !== "play") {
+    aim = null;
+    return next(AI_HOME.x, AI_HOME.y);
+  }
+  const p = s.puck;
+  const m = s.ai;
+  if (p.y < MID - 4) {
+    if (p.y < m.y - 12) {
+      const side = p.x < W / 2 ? 1 : -1;
+      return next(p.x + side * (REACH + 30), p.y - 40);
+    }
+    if (aim === null) {
+      const corner = rng.next() < 0.5 ? GOAL_X0 + 45 : GOAL_X1 - 45;
+      const kind = rng.next();
+      if (kind < 0.25 && p.x > 280) aim = 2 * PUCK_R - corner;
+      else if (kind < 0.5 && p.x < W - 280) aim = 2 * (W - PUCK_R) - corner;
+      else aim = corner;
+    }
+    const aimX = aim + jitter();
+    const aimY = H + 60;
+    let dx = aimX - p.x;
+    let dy = aimY - p.y;
+    const d = Math.sqrt(dx * dx + dy * dy);
+    dx /= d;
+    dy /= d;
+    const bx = m.x - p.x;
+    const by = m.y - p.y;
+    const along = bx * dx + by * dy;
+    const across = bx * dy - by * dx;
+    if (along < -REACH * 0.6 && across * across < 60 * 60) {
+      let tx2 = p.x + dx * 150;
+      const ty = p.y + dy * 150;
+      if (rng.next() < lv.miss) tx2 += (rng.next() - 0.5) * 520;
+      return next(tx2, ty);
+    }
+    return next(p.x - dx * (REACH + 28) + jitter() * 0.3, p.y - dy * (REACH + 28));
+  }
+  aim = null;
+  let px = p.x;
+  if (p.vy < -60) {
+    const t = (p.y - lv.guard) / -p.vy * lv.foresight;
+    px = foldX(p.x, p.vx, t);
+  }
+  const centre = W / 2;
+  const tx = clamp(centre + (px - centre) * 0.7 + jitter() * 0.5, GOAL_X0 - 50, GOAL_X1 + 50);
+  return next(tx, lv.guard);
+}
+
+// src/games/airhockey/rules.ts
+var AH_STAKES = STAKES.filter((s) => s > 0);
+var isAiLevel = (x) => AI_LEVEL_IDS.includes(x);
+
+// src/games/airhockey/engine.ts
+var TICK_HZ = 60;
+var SUB = 4;
+var DT = 1 / (TICK_HZ * SUB);
+var WIN_SCORE = 7;
+var MAX_TICKS = TICK_HZ * 60 * 8;
+var PUCK_MAX = 2600;
+var PLAYER_SPEED = 3400;
+var WALL_E = 0.88;
+var MALLET_E = 0.9;
+var FRICTION = 0.99935;
+var STALL_TICKS = TICK_HZ * 3;
+var HALF_TICKS = TICK_HZ * 9;
+var COUNTDOWN_TICKS = TICK_HZ * 3;
+var GOAL_TICKS = Math.round(TICK_HZ * 1.4);
+var SERVE_TICKS = Math.round(TICK_HZ * 0.8);
+function clampInput(x, y) {
+  return { x: Math.round(clamp(x, MALLET_R, W - MALLET_R)), y: Math.round(clamp(y, MID + MALLET_R, H - MALLET_R)) };
+}
+function servePuck(s, to) {
+  const r = createRng(s.rng);
+  const off = (r.next() - 0.5) * 240;
+  s.rng = r.state();
+  s.puck = { x: W / 2 + off, y: to === "player" ? H * 0.7 : H * 0.3, vx: 0, vy: 0 };
+  s.stall = 0;
+  s.inHalf = 0;
+}
+function createMatch(seed, level) {
+  const s = {
+    level,
+    tick: 0,
+    phase: "countdown",
+    left: COUNTDOWN_TICKS,
+    puck: { x: W / 2, y: H * 0.7, vx: 0, vy: 0 },
+    player: { ...PLAYER_HOME, vx: 0, vy: 0 },
+    ai: { ...AI_HOME, vx: 0, vy: 0 },
+    score: { player: 0, ai: 0 },
+    serveTo: "player",
+    lastScorer: null,
+    rng: seed >>> 0,
+    mem: { tx: AI_HOME.x, ty: AI_HOME.y, wait: 0, aim: null },
+    stall: 0,
+    inHalf: 0,
+    outcome: null
+  };
+  servePuck(s, "player");
+  return s;
+}
+function moveMallet(m, tx, ty, speed, top) {
+  const lo = top ? MALLET_R : MID + MALLET_R;
+  const hi = top ? MID - MALLET_R : H - MALLET_R;
+  tx = clamp(tx, MALLET_R, W - MALLET_R);
+  ty = clamp(ty, lo, hi);
+  const dx = tx - m.x;
+  const dy = ty - m.y;
+  const d = Math.sqrt(dx * dx + dy * dy);
+  const step2 = speed * DT;
+  let nx = tx;
+  let ny = ty;
+  if (d > step2) {
+    nx = m.x + dx / d * step2;
+    ny = m.y + dy / d * step2;
+  }
+  m.vx = (nx - m.x) / DT;
+  m.vy = (ny - m.y) / DT;
+  m.x = nx;
+  m.y = ny;
+}
+function capSpeed(p) {
+  const v2 = p.vx * p.vx + p.vy * p.vy;
+  if (v2 > PUCK_MAX * PUCK_MAX) {
+    const k = PUCK_MAX / Math.sqrt(v2);
+    p.vx *= k;
+    p.vy *= k;
+  }
+}
+function hitMallet(p, m, by, events) {
+  const dx = p.x - m.x;
+  const dy = p.y - m.y;
+  const reach = PUCK_R + MALLET_R;
+  const d2 = dx * dx + dy * dy;
+  if (d2 >= reach * reach) return false;
+  const d = Math.sqrt(d2);
+  const nx = d > 1e-9 ? dx / d : 0;
+  const ny = d > 1e-9 ? dy / d : by === "player" ? -1 : 1;
+  p.x = m.x + nx * reach;
+  p.y = m.y + ny * reach;
+  const rel = (p.vx - m.vx) * nx + (p.vy - m.vy) * ny;
+  if (rel < 0) {
+    p.vx -= (1 + MALLET_E) * rel * nx;
+    p.vy -= (1 + MALLET_E) * rel * ny;
+    capSpeed(p);
+    events.push({ type: "hit", by, power: Math.min(1, -rel / 2200) });
+  }
+  return true;
+}
+function hitPost(p, px, py) {
+  const dx = p.x - px;
+  const dy = p.y - py;
+  const d2 = dx * dx + dy * dy;
+  if (d2 >= PUCK_R * PUCK_R || d2 < 1e-9) return 0;
+  const d = Math.sqrt(d2);
+  const nx = dx / d;
+  const ny = dy / d;
+  p.x = px + nx * PUCK_R;
+  p.y = py + ny * PUCK_R;
+  const rel = p.vx * nx + p.vy * ny;
+  if (rel < 0) {
+    p.vx -= (1 + WALL_E) * rel * nx;
+    p.vy -= (1 + WALL_E) * rel * ny;
+    return -rel;
+  }
+  return 0;
+}
+function walls(p) {
+  let impact = 0;
+  if (p.x < PUCK_R) {
+    p.x = PUCK_R;
+    if (p.vx < 0) {
+      impact = Math.max(impact, -p.vx);
+      p.vx = -p.vx * WALL_E;
+    }
+  } else if (p.x > W - PUCK_R) {
+    p.x = W - PUCK_R;
+    if (p.vx > 0) {
+      impact = Math.max(impact, p.vx);
+      p.vx = -p.vx * WALL_E;
+    }
+  }
+  const inMouth = p.x > GOAL_X0 && p.x < GOAL_X1;
+  if (inMouth) {
+    if (p.y < 0) return { impact, goal: "player" };
+    if (p.y > H) return { impact, goal: "ai" };
+    impact = Math.max(impact, hitPost(p, GOAL_X0, 0), hitPost(p, GOAL_X1, 0), hitPost(p, GOAL_X0, H), hitPost(p, GOAL_X1, H));
+  } else {
+    if (p.y < PUCK_R) {
+      p.y = PUCK_R;
+      if (p.vy < 0) {
+        impact = Math.max(impact, -p.vy);
+        p.vy = -p.vy * WALL_E;
+      }
+    } else if (p.y > H - PUCK_R) {
+      p.y = H - PUCK_R;
+      if (p.vy > 0) {
+        impact = Math.max(impact, p.vy);
+        p.vy = -p.vy * WALL_E;
+      }
+    }
+  }
+  return { impact, goal: null };
+}
+function scoreGoal(s, scorer, events) {
+  s.score = { ...s.score, [scorer]: s.score[scorer] + 1 };
+  s.lastScorer = scorer;
+  s.serveTo = scorer === "player" ? "ai" : "player";
+  s.phase = "goal";
+  s.left = GOAL_TICKS;
+  s.puck = { x: s.puck.x, y: scorer === "player" ? -PUCK_R * 2 : H + PUCK_R * 2, vx: 0, vy: 0 };
+  events.push({ type: "goal", scorer });
+}
+function finish(s, events) {
+  const { player, ai } = s.score;
+  s.outcome = player > ai ? "won" : player < ai ? "lost" : "draw";
+  s.phase = "over";
+  s.left = 0;
+  events.push({ type: "over", outcome: s.outcome });
+}
+function step(s, input, events = []) {
+  if (s.phase === "over") return s;
+  s.tick++;
+  const target = clampInput(input.x, input.y);
+  const r = createRng(s.rng);
+  s.mem = aiThink(s, r);
+  s.rng = r.state();
+  const aiSpeed = AI_LEVELS[s.level].speed;
+  const live = s.phase === "play";
+  for (let k = 0; k < SUB; k++) {
+    moveMallet(s.player, target.x, target.y, PLAYER_SPEED, false);
+    moveMallet(s.ai, s.mem.tx, s.mem.ty, aiSpeed, true);
+    if (!live) {
+      s.player.vx = s.player.vy = s.ai.vx = s.ai.vy = 0;
+      continue;
+    }
+    const p = s.puck;
+    p.x += p.vx * DT;
+    p.y += p.vy * DT;
+    p.vx *= FRICTION;
+    p.vy *= FRICTION;
+    const hitP = hitMallet(p, s.player, "player", events);
+    const hitA = hitMallet(p, s.ai, "ai", events);
+    if (hitP || hitA) s.stall = 0;
+    const w = walls(p);
+    if (w.goal) {
+      scoreGoal(s, w.goal, events);
+      break;
+    }
+    if (hitMallet(p, s.player, "player", events) || hitMallet(p, s.ai, "ai", events)) walls(p);
+    if (w.impact > 120) events.push({ type: "wall", power: Math.min(1, w.impact / 2200) });
+  }
+  if (s.phase === "play") {
+    const p = s.puck;
+    const slow = p.vx * p.vx + p.vy * p.vy < 45 * 45;
+    s.stall = slow ? s.stall + 1 : 0;
+    if (p.y > MID) s.inHalf = s.inHalf > 0 ? s.inHalf + 1 : 1;
+    else s.inHalf = s.inHalf < 0 ? s.inHalf - 1 : -1;
+    if (s.stall > STALL_TICKS) {
+      p.vx = (W / 2 - p.x) * 0.9;
+      p.vy = p.y > MID ? -420 : 420;
+      s.stall = 0;
+    } else if (Math.abs(s.inHalf) > HALF_TICKS) {
+      s.phase = "serve";
+      s.left = SERVE_TICKS;
+      servePuck(s, s.inHalf > 0 ? "ai" : "player");
+    }
+  } else if (s.phase === "countdown") {
+    if (s.left % TICK_HZ === 0 && s.left > 0) events.push({ type: "count", n: s.left / TICK_HZ });
+    if (--s.left <= 0) {
+      s.phase = "play";
+      events.push({ type: "go" });
+    }
+  } else if (s.phase === "goal") {
+    if (--s.left <= 0) {
+      if (s.score.player >= WIN_SCORE || s.score.ai >= WIN_SCORE) finish(s, events);
+      else {
+        s.phase = "serve";
+        s.left = SERVE_TICKS;
+        servePuck(s, s.serveTo);
+      }
+    }
+  } else if (s.phase === "serve") {
+    if (--s.left <= 0) s.phase = "play";
+  }
+  if (s.outcome === null && s.tick >= MAX_TICKS) finish(s, events);
+  return s;
+}
+
+// src/games/airhockey/replay.ts
+var PREFIX = "a1:";
+var MAX_LOG_CHARS = 2e5;
+var unzig = (n) => n >>> 1 ^ -(n & 1);
+function decodeLog(log, maxTicks = MAX_TICKS) {
+  if (typeof log !== "string" || !log.startsWith(PREFIX) || log.length > MAX_LOG_CHARS) return null;
+  let bin;
+  try {
+    bin = atob(log.slice(PREFIX.length));
+  } catch {
+    return null;
+  }
+  let at = 0;
+  const read = () => {
+    let v = 0;
+    let shift = 0;
+    for (; ; ) {
+      if (at >= bin.length || shift > 28) return null;
+      const b = bin.charCodeAt(at++);
+      v |= (b & 127) << shift;
+      if (b < 128) return v >>> 0;
+      shift += 7;
+    }
+  };
+  const x0 = read();
+  const y0 = read();
+  if (x0 === null || y0 === null) return null;
+  const out = [{ x: x0, y: y0 }];
+  let x = x0;
+  let y = y0;
+  while (at < bin.length) {
+    const a = read();
+    const b = read();
+    const r = read();
+    if (a === null || b === null || r === null) return null;
+    const dx = unzig(a);
+    const dy = unzig(b);
+    if (out.length + r + 1 > maxTicks) return null;
+    for (let k = 0; k <= r; k++) {
+      x += dx;
+      y += dy;
+      if (x < 0 || y < 0 || x > 5e3 || y > 5e3) return null;
+      out.push({ x, y });
+    }
+  }
+  return out;
+}
+function replayMatch(seed, level, log) {
+  const inputs = decodeLog(log);
+  if (!inputs) return null;
+  const s = createMatch(seed, level);
+  for (let i = 0; i < inputs.length; i++) {
+    if (s.phase === "over") return null;
+    step(s, inputs[i]);
+  }
+  return s.phase === "over" ? { state: s, ticks: inputs.length } : null;
+}
+
 // src/casino/server/handler.ts
 var CasinoStoreError = class extends Error {
   constructor(code) {
@@ -1101,6 +1486,33 @@ async function handleCasinoRequest(req, deps) {
         const balance = await store2.bjStep(user.id, requestId, row.version, extra, next, settled ? totalPayout2(next) : null, settled ? finalDetail(next) : null);
         return ok(bjView({ requestId, stake: row.stake + extra, state: next }, balance));
       }
+      case "ah_start": {
+        const { stake, level } = b;
+        if (!requestId || !AH_STAKES.includes(stake) || !isAiLevel(level)) return fail("invalid_bet");
+        const found = await store2.ahGet(user.id, requestId);
+        if (!found && deps.gameEnabled && !await deps.gameEnabled("airhockey")) return fail("game_disabled");
+        const opened = await store2.ahOpen(user.id, requestId, stake, level, seed() >>> 0);
+        return ok({ requestId, seed: opened.seed, level: opened.level, stake, balance: opened.balance });
+      }
+      case "ah_finish": {
+        if (!requestId || typeof b.log !== "string" || b.log.length > MAX_LOG_CHARS) return fail("bad_request");
+        const match = await store2.ahGet(user.id, requestId);
+        if (!match) return fail("conflict");
+        const answer = (m, balance) => ({
+          requestId,
+          outcome: m.status === "open" ? "lost" : m.status,
+          score: m.scorePlayer === null || m.scoreAi === null ? null : { player: m.scorePlayer, ai: m.scoreAi },
+          stake: match.stake,
+          payout: m.payout,
+          balance
+        });
+        if (match.status !== "open") return ok(answer(match, (await store2.account(user.id)).balance));
+        const replay = replayMatch(match.seed, match.level, b.log);
+        if (!replay || !replay.state.outcome) return fail("bad_request");
+        const { score, outcome } = replay.state;
+        const closed = await store2.ahClose(user.id, requestId, outcome, score.player, score.ai, replay.ticks);
+        return ok(answer(closed, closed.balance));
+      }
       default:
         return fail("bad_request");
     }
@@ -1172,6 +1584,30 @@ function postgrestCasinoStore(supabaseUrl, serviceKey, fetchImpl = fetch) {
       return Number(
         await rpc("bj_step", { p_user: userId, p_request: requestId, p_version: version, p_extra: extra, p_state: state, p_payout: payout, p_detail: detail })
       );
+    },
+    async ahOpen(userId, requestId, stake, level, seed) {
+      const rows = await rpc("ah_open", { p_user: userId, p_request: requestId, p_stake: stake, p_level: level, p_seed: seed });
+      const r = rows[0];
+      return { balance: Number(r.balance), seed: Number(r.seed), level: r.level, replayed: false };
+    },
+    async ahGet(userId, requestId) {
+      const m = await rpc("ah_get", {
+        p_user: userId,
+        p_request: requestId
+      });
+      return m ? { stake: Number(m.stake), level: m.level, seed: Number(m.seed), status: m.status, scorePlayer: m.score_player, scoreAi: m.score_ai, payout: Number(m.payout) } : null;
+    },
+    async ahClose(userId, requestId, outcome, player, ai, ticks) {
+      const rows = await rpc("ah_close", {
+        p_user: userId,
+        p_request: requestId,
+        p_outcome: outcome,
+        p_player: player,
+        p_ai: ai,
+        p_ticks: ticks
+      });
+      const r = rows[0];
+      return { balance: Number(r.balance), status: r.status, payout: Number(r.payout), scorePlayer: r.score_player, scoreAi: r.score_ai };
     }
   };
 }
@@ -1224,7 +1660,8 @@ Deno.serve(async (req) => {
   let body = null;
   if (req.method === "POST") {
     const text = await req.text();
-    if (text.length > 4096) return Response.json({ code: "bad_request" }, { status: 413, headers: cors });
+    const limit = text.startsWith('{"op":"ah_finish"') ? 204800 : 4096;
+    if (text.length > limit) return Response.json({ code: "bad_request" }, { status: 413, headers: cors });
     try {
       body = JSON.parse(text);
     } catch {

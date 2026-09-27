@@ -16,7 +16,7 @@ export { RoleBadge } from './ui';
 
 const PRESETS = [500, 1000, 5000];
 const BAN_HOURS: (number | null)[] = [1, 24, 24 * 7, 24 * 30, null];
-const LEDGER_GAMES = ['', 'premium', 'slots', 'roulette', 'blackjack', 'domino', 'bingo', 'carta', 'crash', 'horse', 'bonus', 'loan', 'ad_reward', 'admin_add', 'admin_remove', 'guest_migration'];
+const LEDGER_GAMES = ['', 'premium', 'slots', 'roulette', 'blackjack', 'domino', 'bingo', 'carta', 'crash', 'horse', 'airhockey', 'bonus', 'loan', 'ad_reward', 'admin_add', 'admin_remove', 'guest_migration'];
 
 type View = 'summary' | 'movements' | 'actions' | 'history';
 

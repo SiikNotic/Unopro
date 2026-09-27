@@ -1,7 +1,7 @@
 // CasinoStore over Supabase's REST gateway: the security-definer functions of the accounts migration,
 // called with the service role key (server side only; never shipped to the browser).
 import { CasinoStoreError } from '../../../src/casino/server/handler.ts';
-import type { Booking, CasinoStore, InstantGame } from '../../../src/casino/server/handler.ts';
+import type { AhMatch, Booking, CasinoStore, InstantGame } from '../../../src/casino/server/handler.ts';
 import type { BlackjackState } from '../../../src/casino/blackjack.ts';
 
 interface LedgerRow {
@@ -74,6 +74,30 @@ export function postgrestCasinoStore(supabaseUrl: string, serviceKey: string, fe
       return Number(
         await rpc<number | string>('bj_step', { p_user: userId, p_request: requestId, p_version: version, p_extra: extra, p_state: state, p_payout: payout, p_detail: detail })
       );
+    },
+    async ahOpen(userId, requestId, stake, level, seed) {
+      const rows = await rpc<{ balance: number | string; seed: number | string; level: AhMatch['level'] }[]>('ah_open', { p_user: userId, p_request: requestId, p_stake: stake, p_level: level, p_seed: seed });
+      const r = rows[0];
+      return { balance: Number(r.balance), seed: Number(r.seed), level: r.level, replayed: false };
+    },
+    async ahGet(userId, requestId) {
+      const m = await rpc<{ stake: number | string; level: AhMatch['level']; seed: number | string; status: AhMatch['status']; score_player: number | null; score_ai: number | null; payout: number | string } | null>('ah_get', {
+        p_user: userId,
+        p_request: requestId,
+      });
+      return m ? { stake: Number(m.stake), level: m.level, seed: Number(m.seed), status: m.status, scorePlayer: m.score_player, scoreAi: m.score_ai, payout: Number(m.payout) } : null;
+    },
+    async ahClose(userId, requestId, outcome, player, ai, ticks) {
+      const rows = await rpc<{ balance: number | string; status: AhMatch['status']; payout: number | string; score_player: number | null; score_ai: number | null }[]>('ah_close', {
+        p_user: userId,
+        p_request: requestId,
+        p_outcome: outcome,
+        p_player: player,
+        p_ai: ai,
+        p_ticks: ticks,
+      });
+      const r = rows[0];
+      return { balance: Number(r.balance), status: r.status, payout: Number(r.payout), scorePlayer: r.score_player, scoreAi: r.score_ai };
     },
   };
 }

@@ -598,6 +598,10 @@
     "horse": {
       "name": "Carta Horse Racing",
       "description": "Bet on the winner and watch the race."
+    },
+    "airhockey": {
+      "name": "Air Hockey Casino",
+      "description": "First to 7 goals against the AI."
     }
   },
   "profile": {
@@ -1475,7 +1479,8 @@
       "bingo": "Bingo",
       "carta": "Carta",
       "crash": "Crash",
-      "horse": "Horse Racing"
+      "horse": "Horse Racing",
+      "airhockey": "Air Hockey"
     },
     "rounds": "Rounds played",
     "bannedPermanent": "Permanent ban",
@@ -1613,7 +1618,8 @@
         "bingo": "Bingo",
         "carta": "Carta",
         "crash": "Crash",
-        "horse": "Horse Racing"
+        "horse": "Horse Racing",
+        "airhockey": "Air Hockey"
       },
       "titlePeriod": "By game",
       "noPlay": "Nobody has bet in this period."
@@ -2125,6 +2131,10 @@
       "horse": {
         "name": "Horse Racing",
         "desc": "Luxury racecourse: bet on the winner."
+      },
+      "airhockey": {
+        "name": "Air Hockey",
+        "desc": "A luxury 1 vs 1 table against the AI."
       }
     },
     "nav": {
@@ -2149,7 +2159,8 @@
       "roulette": "Roulette",
       "poker": "Poker",
       "crash": "Crash",
-      "horse": "Horse Racing"
+      "horse": "Horse Racing",
+      "airhockey": "Air Hockey"
     }
   },
   "apk": {
@@ -2328,5 +2339,84 @@
     "emailPlaceholder": "name@email.com",
     "haveAccount": "Already have an account?",
     "noAccount": "Don't have an account yet?"
+  },
+  "airhockey": {
+    "title": "Air Hockey Casino",
+    "balance": "Your coins",
+    "settings": "Air Hockey settings",
+    "score": "Score",
+    "you": "YOU",
+    "ai": "AI · {level}",
+    "player": "Player",
+    "aiShort": "AI",
+    "tableLabel": "Air hockey table. Drag your finger in your half to move the red mallet.",
+    "go": "GO!",
+    "goal": "GOAL!",
+    "goalYou": "Point for you",
+    "goalAi": "Point for the AI",
+    "entry": "Entry",
+    "less": "Less",
+    "more": "More",
+    "practice": "Practice",
+    "practiceHint": "Free match, no coins.",
+    "winHint": "Win and take 🪙 {coins}",
+    "levelLine": "Difficulty: {level} · change",
+    "play": "PLAY",
+    "signUpToPlay": "Create your account to play for coins",
+    "legal": "First to {n} goals wins. Virtual coins only: no real money, no cash-out and no real prizes.",
+    "settling": "Checking the result…",
+    "settleFailed": "The result couldn't be confirmed. Your match is saved: try again.",
+    "retry": "Retry",
+    "again": "PLAY AGAIN",
+    "backToCasino": "BACK TO THE CASINO",
+    "practiceDone": "Practice match · no coins",
+    "leaveTitle": "Leave the match?",
+    "leaveText": "If you leave now you lose your 🪙 {coins} entry.",
+    "leavePractice": "The practice match will be lost.",
+    "keepPlaying": "Keep playing",
+    "leave": "Leave",
+    "difficulty": "AI difficulty",
+    "levels": {
+      "easy": "Easy",
+      "normal": "Normal",
+      "hard": "Hard"
+    },
+    "levelHints": {
+      "easy": "Slow to react, makes mistakes",
+      "normal": "Balanced",
+      "hard": "Fast and precise"
+    },
+    "howTitle": "How to play",
+    "how1": "A 1 vs 1 match against the AI: the first to score {n} goals wins.",
+    "how2": "Drag your finger (or the mouse) in your half to move the red mallet. You can't cross the centre line.",
+    "how3": "With an entry, a win takes the pot: your entry and the AI's (double). A loss loses the entry.",
+    "how4": "The server checks the result by replaying the match. Leaving mid-match counts as a loss.",
+    "result": {
+      "won": {
+        "title": "VICTORY",
+        "text": "You won the match"
+      },
+      "lost": {
+        "title": "DEFEAT",
+        "text": "Try again"
+      },
+      "draw": {
+        "title": "DRAW",
+        "text": "Time's up: you get your entry back"
+      },
+      "forfeit": {
+        "title": "MATCH LOST",
+        "text": "You left the match before it ended"
+      },
+      "expired": {
+        "title": "MATCH EXPIRED",
+        "text": "The match wasn't confirmed in time"
+      }
+    },
+    "errors": {
+      "funds": "You don't have enough coins for this entry.",
+      "account": "Sign in with your account to play for coins.",
+      "server": "Couldn't reach the server. Try again."
+    }
   }
 }

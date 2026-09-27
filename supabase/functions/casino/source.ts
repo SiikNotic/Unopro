@@ -15,7 +15,7 @@ const ALLOWED = new Set(['https://siiknotic.github.io', 'http://localhost:5173',
 const store = postgrestCasinoStore(SUPABASE_URL, SERVICE_KEY);
 
 /** Owner's game control: is this game in service? If the database can't be read, no new round. */
-async function gameEnabled(game: 'slots' | 'roulette' | 'blackjack'): Promise<boolean> {
+async function gameEnabled(game: 'slots' | 'roulette' | 'blackjack' | 'airhockey'): Promise<boolean> {
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/game_enabled`, {
       method: 'POST',
@@ -62,7 +62,10 @@ Deno.serve(async (req) => {
   let body: unknown = null;
   if (req.method === 'POST') {
     const text = await req.text();
-    if (text.length > 4096) return Response.json({ code: 'bad_request' }, { status: 413, headers: cors });
+    // Only the end of an Air Hockey match carries more than a few bytes (the player's input log, which the
+    // server replays): up to MAX_LOG_CHARS.
+    const limit = text.startsWith('{"op":"ah_finish"') ? 204800 : 4096;
+    if (text.length > limit) return Response.json({ code: 'bad_request' }, { status: 413, headers: cors });
     try {
       body = JSON.parse(text);
     } catch {

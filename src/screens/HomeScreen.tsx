@@ -22,7 +22,7 @@ import './home/home.css';
 
 const CATEGORY_ICON: Record<HomeCategory, LucideIcon> = { all: LayoutGrid, cards: Spade, table: CircleDot, slots: Cherry, puzzle: Gem, instant: Rocket };
 /** Home games the owner can take out of service. */
-const CONTROLLED: Partial<Record<HomeGameId, ControlledGame>> = { carta: 'carta', domino: 'domino', bingo: 'bingo', slots: 'slots', blackjack: 'blackjack', roulette: 'roulette', poker: 'poker', crash: 'crash', horse: 'horse' };
+const CONTROLLED: Partial<Record<HomeGameId, ControlledGame>> = { carta: 'carta', domino: 'domino', bingo: 'bingo', slots: 'slots', blackjack: 'blackjack', roulette: 'roulette', poker: 'poker', crash: 'crash', horse: 'horse', airhockey: 'airhockey' };
 
 function Logo() {
   return (

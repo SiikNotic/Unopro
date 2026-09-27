@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { bjView, CasinoStoreError, handleCasinoRequest, parseBets } from '../handler';
-import type { BjRow, Booking, CasinoDeps, CasinoStore, CasinoUser, HttpIn } from '../handler';
-import type { BlackjackView, RouletteResult, SlotsResult } from '../protocol';
+import type { AhMatch, BjRow, Booking, CasinoDeps, CasinoStore, CasinoUser, HttpIn } from '../handler';
+import type { AirHockeyResult, AirHockeyStart, BlackjackView, RouletteResult, SlotsResult } from '../protocol';
+import { createMatch, step } from '@/games/airhockey/engine';
+import { InputLog } from '@/games/airhockey/replay';
+import { makeBot } from '@/games/airhockey/__tests__/sim';
 import { createRng } from '@/game/engine';
 import { totalPayout } from '../../roulette';
 import { evaluateSpin } from '../../slots';
@@ -14,6 +17,7 @@ function memoryStore(registered: Set<string>) {
   const wallets = new Map<string, { balance: number; bonus: boolean }>();
   const ledger = new Map<string, Booking>();
   const hands = new Map<string, BjRow>();
+  const matches = new Map<string, AhMatch & { userId: string }>();
   const key = (u: string, r: string) => `${u}:${r}`;
   const need = (u: string) => {
     if (!registered.has(u)) throw new CasinoStoreError('not_registered');
@@ -78,8 +82,37 @@ function memoryStore(registered: Set<string>) {
       }
       return w.balance;
     },
+    async ahOpen(u, r, stake, level, seed) {
+      const m = matches.get(r);
+      if (m) {
+        if (m.userId !== u || m.stake !== stake || m.level !== level) throw new CasinoStoreError('conflict');
+        return { balance: wallets.get(u)?.balance ?? 0, seed: m.seed, level: m.level, replayed: true };
+      }
+      need(u);
+      const w = wallets.get(u);
+      if (!w || w.balance < stake) throw new CasinoStoreError('insufficient_funds');
+      for (const x of matches.values()) if (x.userId === u && x.status === 'open') x.status = 'forfeit';
+      w.balance -= stake;
+      matches.set(r, { userId: u, stake, level, seed, status: 'open', scorePlayer: null, scoreAi: null, payout: 0 });
+      return { balance: w.balance, seed, level, replayed: false };
+    },
+    async ahGet(u, r) {
+      const m = matches.get(r);
+      return m && m.userId === u ? { ...m } : null;
+    },
+    async ahClose(u, r, outcome, player, ai) {
+      const m = matches.get(r);
+      if (!m || m.userId !== u) throw new CasinoStoreError('conflict');
+      const w = wallets.get(u)!;
+      if (m.status === 'open') {
+        m.payout = outcome === 'won' ? m.stake * 2 : outcome === 'draw' ? m.stake : 0;
+        Object.assign(m, { status: outcome, scorePlayer: player, scoreAi: ai });
+        w.balance += m.payout;
+      }
+      return { balance: w.balance, status: m.status, payout: m.payout, scorePlayer: m.scorePlayer, scoreAi: m.scoreAi };
+    },
   };
-  return { store, wallets, ledger, hands };
+  return { store, wallets, ledger, hands, matches };
 }
 
 const ANA: CasinoUser = { id: 'ana', registered: true };
@@ -275,5 +308,66 @@ describe('casino server: games out of service', () => {
     const done = await s.post(ANA, { op: 'bj_act', requestId: hand!.requestId, action: 'stand' });
     expect(done.status).toBe(200);
     expect((await s.post(ANA, { op: 'bj_deal', requestId: rid(), bet: 10 })).status).toBe(423);
+  });
+});
+
+/** Plays a whole match the way the browser does (bot input), and returns its log and result. */
+function playLog(seed: number, level: 'easy' | 'normal' | 'hard') {
+  const m = createMatch(seed, level);
+  const bot = makeBot(10);
+  const log = new InputLog();
+  while (m.phase !== 'over') {
+    const i = bot(m);
+    log.push(i);
+    step(m, i);
+  }
+  return { log: log.encode(), outcome: m.outcome, score: m.score };
+}
+
+describe('casino server: air hockey', () => {
+  it('takes the entry, replays the match from its own seed and pays by the replay', async () => {
+    const s = setup();
+    await s.post(ANA, { op: 'claim', requestId: rid() });
+    expect((await s.post(GUEST, { op: 'ah_start', requestId: rid(), stake: 500, level: 'easy' })).status).toBe(403);
+    expect((await s.post(ANA, { op: 'ah_start', requestId: rid(), stake: 250, level: 'easy' })).status).toBe(400);
+    expect((await s.post(ANA, { op: 'ah_start', requestId: rid(), stake: 500, level: 'insane' })).status).toBe(400);
+    expect((await s.post(ANA, { op: 'ah_start', requestId: rid(), stake: 5000, level: 'easy' })).status).toBe(402);
+
+    const id = rid();
+    const start = (await s.post(ANA, { op: 'ah_start', requestId: id, stake: 500, level: 'easy', seed: 1 })).body as AirHockeyStart;
+    expect(start.balance).toBe(500);
+    expect(start.seed).toBe(s.matches.get(id)!.seed);
+    // A retried start is the same match (no second entry).
+    expect(((await s.post(ANA, { op: 'ah_start', requestId: id, stake: 500, level: 'easy' })).body as AirHockeyStart).seed).toBe(start.seed);
+    expect(s.wallets.get('ana')!.balance).toBe(500);
+
+    const played = playLog(start.seed, 'easy');
+    // A log that isn't this match (cut short) is refused and settles nothing.
+    expect((await s.post(ANA, { op: 'ah_finish', requestId: id, log: 'a1:AAAA' })).status).toBe(400);
+    const res = (await s.post(ANA, { op: 'ah_finish', requestId: id, log: played.log, outcome: 'won', payout: 99999 })).body as AirHockeyResult;
+    expect(res.outcome).toBe(played.outcome);
+    expect(res.score).toEqual(played.score);
+    expect(res.payout).toBe(played.outcome === 'won' ? 1000 : played.outcome === 'draw' ? 500 : 0);
+    expect(res.balance).toBe(500 + res.payout);
+    // Settled once: a repeat returns the same answer.
+    expect((await s.post(ANA, { op: 'ah_finish', requestId: id, log: played.log })).body).toEqual(res);
+    // Someone else's match isn't theirs to settle.
+    expect((await s.post({ id: 'beto', registered: true }, { op: 'ah_finish', requestId: id, log: played.log })).status).toBe(409);
+  });
+
+  it('a lost match pays nothing, and no new match opens while the game is out of service', async () => {
+    const s = setup();
+    await s.post(ANA, { op: 'claim', requestId: rid() });
+    const id = rid();
+    const start = (await s.post(ANA, { op: 'ah_start', requestId: id, stake: 100, level: 'hard' })).body as AirHockeyStart;
+    const played = playLog(start.seed, 'hard');
+    const res = (await s.post(ANA, { op: 'ah_finish', requestId: id, log: played.log })).body as AirHockeyResult;
+    expect(res.outcome).toBe(played.outcome);
+    if (played.outcome === 'lost') expect(res.balance).toBe(900);
+
+    const off = setup();
+    off.deps.gameEnabled = async (g) => g !== 'airhockey';
+    await off.post(ANA, { op: 'claim', requestId: rid() });
+    expect((await off.post(ANA, { op: 'ah_start', requestId: rid(), stake: 100, level: 'easy' })).status).toBe(423);
   });
 });

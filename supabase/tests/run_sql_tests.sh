@@ -49,6 +49,9 @@ psql -q -v ON_ERROR_STOP=1 -d "$DB" -f horse_racing_test.sql
 psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20261009000000_staff_dashboard.sql
 psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20261009000000_staff_dashboard.sql
 psql -q -v ON_ERROR_STOP=1 -d "$DB" -f staff_dashboard_test.sql
+psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20261010000000_air_hockey.sql
+psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20261010000000_air_hockey.sql
+psql -q -v ON_ERROR_STOP=1 -d "$DB" -f air_hockey_test.sql
 
 # Two players ask for the same username at the same instant: exactly one gets it.
 for u in 21 22 23 24 25 26; do
@@ -174,4 +177,17 @@ wait
 read -r HBETS HPAYS HBAL HEXP < <(psql -At -F ' ' -d "$DB" -c "select (select count(*) from public.horse_bets where user_id = '$HU'), (select count(*) from public.account_ledger where user_id = '$HU' and payout > 0), (select balance from public.account_wallets where user_id = '$HU'), (select 900 + floor(100 * odds / 100.0)::bigint from public.horse_bets where user_id = '$HU')")
 echo "horse concurrency: bets=$HBETS payouts=$HPAYS balance=$HBAL expected=$HEXP"
 [ "$HBETS" = 1 ] && [ "$HPAYS" = 1 ] && [ "$HBAL" = "$HEXP" ] || { echo "HORSE CONCURRENCY TEST FAILED"; exit 1; }
+# Air hockey: 20 parallel settlements of the same won match pay the pot exactly once.
+AH=00000000-0000-0000-000b-0000000000ee
+AHM=bbbbbbbb-0000-4000-8000-0000000000ee
+psql -q -d "$DB" -c "insert into auth.users (id, email_confirmed_at) values ('$AH', now()); insert into public.terms_acceptances (user_id, version, adult_confirmed) values ('$AH', public.terms_version(), true); insert into public.account_wallets (user_id, balance) values ('$AH', 500)"
+psql -q -d "$DB" -c "set role service_role; select * from public.ah_open('$AH', '$AHM', 500, 'normal', 1)" >/dev/null
+psql -q -d "$DB" -c "update public.airhockey_matches set started_at = now() - interval '5 minutes' where id = '$AHM'"
+for i in $(seq 1 20); do
+  psql -q -d "$DB" -c "set role service_role; select * from public.ah_close('$AH', '$AHM', 'won', 7, 2, 9000)" >/dev/null 2>&1 &
+done
+wait
+read -r AHPAY AHBAL < <(psql -At -F ' ' -d "$DB" -c "select (select count(*) from public.account_ledger where user_id = '$AH' and game = 'airhockey' and payout > 0), (select balance from public.account_wallets where user_id = '$AH')")
+echo "air hockey concurrency: payouts=$AHPAY balance=$AHBAL"
+[ "$AHPAY" = 1 ] && [ "$AHBAL" = 1000 ] || { echo "AIR HOCKEY CONCURRENCY TEST FAILED"; exit 1; }
 echo "all SQL tests passed"

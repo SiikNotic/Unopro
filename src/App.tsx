@@ -52,6 +52,7 @@ const LegalScreen = lazy(() => import('@/legal/LegalScreen').then((m) => ({ defa
 const CrashScreen = lazy(() => import('@/games/crash/ui/CrashScreen').then((m) => ({ default: m.CrashScreen })));
 // Horse Racing (race drawing, sounds, art) loads only when opened.
 const HorseScreen = lazy(() => import('@/games/horse/ui/HorseScreen').then((m) => ({ default: m.HorseScreen })));
+const AirHockeyScreen = lazy(() => import('@/games/airhockey/ui/AirHockeyScreen').then((m) => ({ default: m.AirHockeyScreen })));
 const PremiumSlotScreen = lazy(() => import('@/screens/casino/PremiumSlotScreen').then((m) => ({ default: m.PremiumSlotScreen })));
 
 function ScreenRouter() {
@@ -90,6 +91,7 @@ function ScreenRouter() {
     legal: <LegalScreen />,
     crash: <CrashScreen />,
     horse: <HorseScreen />,
+    airhockey: <AirHockeyScreen />,
   };
 
   return (

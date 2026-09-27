@@ -17,7 +17,10 @@ import type { Bet, BetType } from '../roulette';
 import * as bj from '../blackjack';
 import type { BlackjackState } from '../blackjack';
 import type { Rng } from '@/game/engine';
-import type { AccountInfo, BlackjackView, CasinoErrorCode, RouletteResult, SlotsResult } from './protocol';
+import type { AccountInfo, AirHockeyResult, AirHockeyStart, BlackjackView, CasinoErrorCode, RouletteResult, SlotsResult } from './protocol';
+import { AH_STAKES, isAiLevel } from '@/games/airhockey/rules';
+import type { AiLevel } from '@/games/airhockey/ai';
+import { MAX_LOG_CHARS, replayMatch } from '@/games/airhockey/replay';
 
 export type InstantGame = 'premium' | 'roulette' | 'slots';
 
@@ -54,6 +57,22 @@ export interface CasinoStore {
   bjLoad(userId: string): Promise<BjRow | null>;
   bjOpen(userId: string, requestId: string, stake: number, state: BlackjackState): Promise<number>;
   bjStep(userId: string, requestId: string, version: number, extra: number, state: BlackjackState, payout: number | null, detail: Record<string, unknown> | null): Promise<number>;
+  /** Takes the entry and stores the match; a retry returns the stored match. */
+  ahOpen(userId: string, requestId: string, stake: number, level: AiLevel, seed: number): Promise<{ balance: number; seed: number; level: AiLevel; replayed: boolean }>;
+  ahGet(userId: string, requestId: string): Promise<AhMatch | null>;
+  /** Settles the match with the replay's result (the database computes the payout). */
+  ahClose(userId: string, requestId: string, outcome: 'won' | 'lost' | 'draw', player: number, ai: number, ticks: number): Promise<{ balance: number; status: AhMatch['status']; payout: number; scorePlayer: number | null; scoreAi: number | null }>;
+}
+
+/** An Air Hockey match as stored (see the air_hockey migration). */
+export interface AhMatch {
+  stake: number;
+  level: AiLevel;
+  seed: number;
+  status: AirHockeyResult['outcome'] | 'open';
+  scorePlayer: number | null;
+  scoreAi: number | null;
+  payout: number;
 }
 
 export interface CasinoUser {
@@ -71,7 +90,7 @@ export interface CasinoDeps {
   seed?: () => number;
   allow?: (userId: string) => boolean;
   /** Owner's game control (game_enabled): is this game in service? Absent = always. */
-  gameEnabled?: (game: 'slots' | 'roulette' | 'blackjack') => Promise<boolean>;
+  gameEnabled?: (game: 'slots' | 'roulette' | 'blackjack' | 'airhockey') => Promise<boolean>;
 }
 
 export interface HttpIn {
@@ -274,6 +293,37 @@ export async function handleCasinoRequest(req: HttpIn, deps: CasinoDeps): Promis
         const settled = next.phase === 'SETTLED';
         const balance = await store.bjStep(user.id, requestId, row.version, extra, next, settled ? bj.totalPayout(next) : null, settled ? finalDetail(next) : null);
         return ok(bjView({ requestId, stake: row.stake + extra, state: next }, balance));
+      }
+
+      case 'ah_start': {
+        const { stake, level } = b;
+        if (!requestId || !(AH_STAKES as readonly unknown[]).includes(stake) || !isAiLevel(level)) return fail('invalid_bet');
+        // Out of service: no new match (ah_open refuses it too; a retry of an opened match still answers).
+        const found = await store.ahGet(user.id, requestId);
+        if (!found && deps.gameEnabled && !(await deps.gameEnabled('airhockey'))) return fail('game_disabled');
+        const opened = await store.ahOpen(user.id, requestId, stake as number, level, seed() >>> 0);
+        return ok({ requestId, seed: opened.seed, level: opened.level, stake: stake as number, balance: opened.balance } satisfies AirHockeyStart);
+      }
+
+      case 'ah_finish': {
+        if (!requestId || typeof b.log !== 'string' || b.log.length > MAX_LOG_CHARS) return fail('bad_request');
+        const match = await store.ahGet(user.id, requestId);
+        if (!match) return fail('conflict');
+        const answer = (m: { status: AhMatch['status']; scorePlayer: number | null; scoreAi: number | null; payout: number }, balance: number): AirHockeyResult => ({
+          requestId,
+          outcome: m.status === 'open' ? 'lost' : m.status,
+          score: m.scorePlayer === null || m.scoreAi === null ? null : { player: m.scorePlayer, ai: m.scoreAi },
+          stake: match.stake,
+          payout: m.payout,
+          balance,
+        });
+        if (match.status !== 'open') return ok(answer(match, (await store.account(user.id)).balance));
+        // The result is the server's replay of the match from its own seed, never anything the browser says.
+        const replay = replayMatch(match.seed, match.level, b.log);
+        if (!replay || !replay.state.outcome) return fail('bad_request');
+        const { score, outcome } = replay.state;
+        const closed = await store.ahClose(user.id, requestId, outcome, score.player, score.ai, replay.ticks);
+        return ok(answer(closed, closed.balance));
       }
 
       default:

@@ -49,6 +49,7 @@ export const GAME_LEDGER: Record<ControlledGame, string[]> = {
   poker: [],
   crash: ['crash'],
   horse: ['horse'],
+  airhockey: ['airhockey'],
 };
 
 /** The game a ledger code belongs to ("premium" → "slots"). */

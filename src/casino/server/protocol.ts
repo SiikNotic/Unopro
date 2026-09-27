@@ -57,6 +57,25 @@ export interface BlackjackView {
   balance: number;
 }
 
+/** An Air Hockey match opened for coins: the seed its simulation (and the server's replay) starts from. */
+export interface AirHockeyStart {
+  requestId: string;
+  seed: number;
+  level: 'easy' | 'normal' | 'hard';
+  stake: number;
+  balance: number;
+}
+
+/** A settled Air Hockey match, as decided by the server's replay of the player's input log. */
+export interface AirHockeyResult {
+  requestId: string;
+  outcome: 'won' | 'lost' | 'draw' | 'forfeit' | 'expired';
+  score: { player: number; ai: number } | null;
+  stake: number;
+  payout: number;
+  balance: number;
+}
+
 export type CasinoRequest =
   | { op: 'account' }
   | { op: 'claim'; requestId: string }
@@ -64,4 +83,6 @@ export type CasinoRequest =
   | { op: 'slots'; requestId: string; lines: number; betPerLine: number }
   | { op: 'bj' }
   | { op: 'bj_deal'; requestId: string; bet: number }
-  | { op: 'bj_act'; requestId: string; action: 'hit' | 'stand' | 'double' | 'split' };
+  | { op: 'bj_act'; requestId: string; action: 'hit' | 'stand' | 'double' | 'split' }
+  | { op: 'ah_start'; requestId: string; stake: number; level: 'easy' | 'normal' | 'hard' }
+  | { op: 'ah_finish'; requestId: string; log: string };

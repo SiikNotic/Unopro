@@ -598,6 +598,10 @@
     "horse": {
       "name": "Carta Horse Racing",
       "description": "Apuesta al ganador y vive la carrera."
+    },
+    "airhockey": {
+      "name": "Air Hockey Casino",
+      "description": "Primero a 7 goles contra la IA."
     }
   },
   "profile": {
@@ -1475,7 +1479,8 @@
       "bingo": "Bingo",
       "carta": "Carta",
       "crash": "Crash",
-      "horse": "Horse Racing"
+      "horse": "Horse Racing",
+      "airhockey": "Air Hockey"
     },
     "rounds": "Rondas jugadas",
     "bannedPermanent": "Sanción permanente",
@@ -1613,7 +1618,8 @@
         "bingo": "Bingo",
         "carta": "Carta",
         "crash": "Crash",
-        "horse": "Horse Racing"
+        "horse": "Horse Racing",
+        "airhockey": "Air Hockey"
       },
       "titlePeriod": "Por juego",
       "noPlay": "Nadie ha apostado en este periodo."
@@ -2125,6 +2131,10 @@
       "horse": {
         "name": "Horse Racing",
         "desc": "Hipódromo de lujo: apuesta al ganador."
+      },
+      "airhockey": {
+        "name": "Air Hockey",
+        "desc": "Mesa de lujo 1 vs 1 contra la IA."
       }
     },
     "nav": {
@@ -2149,7 +2159,8 @@
       "roulette": "Ruleta",
       "poker": "Póker",
       "crash": "Crash",
-      "horse": "Horse Racing"
+      "horse": "Horse Racing",
+      "airhockey": "Air Hockey"
     }
   },
   "apk": {
@@ -2328,5 +2339,84 @@
     "emailPlaceholder": "nombre@correo.com",
     "haveAccount": "¿Ya tienes cuenta?",
     "noAccount": "¿Aún no tienes cuenta?"
+  },
+  "airhockey": {
+    "title": "Air Hockey Casino",
+    "balance": "Tus monedas",
+    "settings": "Ajustes de Air Hockey",
+    "score": "Marcador",
+    "you": "TÚ",
+    "ai": "IA · {level}",
+    "player": "Jugador",
+    "aiShort": "IA",
+    "tableLabel": "Mesa de Air Hockey. Arrastra el dedo en tu mitad para mover el mazo rojo.",
+    "go": "¡YA!",
+    "goal": "¡GOL!",
+    "goalYou": "Punto para ti",
+    "goalAi": "Punto para la IA",
+    "entry": "Entrada",
+    "less": "Menos",
+    "more": "Más",
+    "practice": "Práctica",
+    "practiceHint": "Partida gratis, sin monedas.",
+    "winHint": "Si ganas te llevas 🪙 {coins}",
+    "levelLine": "Dificultad: {level} · cambiar",
+    "play": "JUGAR",
+    "signUpToPlay": "Crea tu cuenta para jugar con monedas",
+    "legal": "Primero en llegar a {n} goles gana. Solo monedas virtuales: sin dinero real, sin retiros y sin premios reales.",
+    "settling": "Verificando el resultado…",
+    "settleFailed": "No se pudo confirmar el resultado. Tu partida está guardada: vuelve a intentarlo.",
+    "retry": "Reintentar",
+    "again": "JUGAR OTRA VEZ",
+    "backToCasino": "VOLVER AL CASINO",
+    "practiceDone": "Partida de práctica · sin monedas",
+    "leaveTitle": "¿Salir de la partida?",
+    "leaveText": "Si sales ahora pierdes la entrada de 🪙 {coins}.",
+    "leavePractice": "La partida de práctica se perderá.",
+    "keepPlaying": "Seguir jugando",
+    "leave": "Salir",
+    "difficulty": "Dificultad de la IA",
+    "levels": {
+      "easy": "Fácil",
+      "normal": "Normal",
+      "hard": "Difícil"
+    },
+    "levelHints": {
+      "easy": "Reacciona lento y falla a menudo",
+      "normal": "Equilibrada",
+      "hard": "Rápida y precisa"
+    },
+    "howTitle": "Cómo se juega",
+    "how1": "Partida 1 contra 1 contra la IA: el primero en marcar {n} goles gana.",
+    "how2": "Arrastra el dedo (o el ratón) en tu mitad para mover el mazo rojo. No puedes cruzar la línea central.",
+    "how3": "Con entrada, si ganas te llevas el bote: tu entrada y la de la IA (el doble). Si pierdes, pierdes la entrada.",
+    "how4": "El resultado lo verifica el servidor repitiendo la partida. Salir a mitad de partida cuenta como derrota.",
+    "result": {
+      "won": {
+        "title": "VICTORIA",
+        "text": "Has ganado la partida"
+      },
+      "lost": {
+        "title": "DERROTA",
+        "text": "Inténtalo de nuevo"
+      },
+      "draw": {
+        "title": "EMPATE",
+        "text": "Se acabó el tiempo: recuperas tu entrada"
+      },
+      "forfeit": {
+        "title": "PARTIDA PERDIDA",
+        "text": "Saliste de la partida antes de terminar"
+      },
+      "expired": {
+        "title": "PARTIDA CADUCADA",
+        "text": "La partida no se confirmó a tiempo"
+      }
+    },
+    "errors": {
+      "funds": "No tienes monedas suficientes para esta entrada.",
+      "account": "Inicia sesión con tu cuenta para jugar con monedas.",
+      "server": "No se pudo conectar con el servidor. Inténtalo de nuevo."
+    }
   }
 }
