@@ -208,24 +208,31 @@ jobs:
           AAB=android/app/build/outputs/bundle/playRelease/app-play-release.aab
           OUT="carta-play-$NAME.aab"
           cp "$AAB" "$OUT"
-          echo "== $OUT: $(stat -c %s "$OUT") bytes, SHA-256 $(sha256sum "$OUT" | cut -d' ' -f1)"
-          echo "== Signature (this certificate is the upload key Google Play will ask for)"
-          jarsigner -verify "$OUT" | tail -n 1
-          jarsigner -verify "$OUT" | grep -q "jar verified" || { echo "::error::The bundle is not signed"; exit 1; }
-          keytool -printcert -jarfile "$OUT" | grep -E "Owner|SHA1:|SHA256:|Valid"
           curl -sSfL -o bundletool.jar https://github.com/google/bundletool/releases/download/1.17.2/bundletool-all-1.17.2.jar
-          echo "== bundletool validate"
-          java -jar bundletool.jar validate --bundle="$OUT" | head -n 40
-          echo "== Manifest"
-          for x in package versionCode versionName; do echo "$x: $(java -jar bundletool.jar dump manifest --bundle="$OUT" --xpath="/manifest/@$x")"; done
-          echo "minSdk: $(java -jar bundletool.jar dump manifest --bundle="$OUT" --xpath='/manifest/uses-sdk/@android:minSdkVersion')"
-          echo "targetSdk: $(java -jar bundletool.jar dump manifest --bundle="$OUT" --xpath='/manifest/uses-sdk/@android:targetSdkVersion')"
-          echo "debuggable: $(java -jar bundletool.jar dump manifest --bundle="$OUT" --xpath='/manifest/application/@android:debuggable' || true)"
-          echo "permissions:"; java -jar bundletool.jar dump manifest --bundle="$OUT" --xpath='/manifest/uses-permission/@android:name'
-          ADMOB=$(java -jar bundletool.jar dump manifest --bundle="$OUT" --xpath="/manifest/application/meta-data[@android:name='com.google.android.gms.ads.APPLICATION_ID']/@android:value")
-          echo "AdMob App ID: $ADMOB"
+          bt() { java -jar bundletool.jar dump manifest --bundle="$OUT" --xpath="$1"; }
+          java -jar bundletool.jar validate --bundle="$OUT" > validate.txt
+          jarsigner -verify "$OUT" > verify.txt || true
+          grep -q "jar verified" verify.txt || { cat verify.txt; echo "::error::The bundle is not signed"; exit 1; }
+          ADMOB=$(bt "/manifest/application/meta-data[@android:name='com.google.android.gms.ads.APPLICATION_ID']/@android:value")
+          {
+            echo "== Bundle: $OUT"
+            echo "size: $(stat -c %s "$OUT") bytes"
+            echo "sha256: $(sha256sum "$OUT" | cut -d' ' -f1)"
+            echo "bundletool validate: OK ($(grep -c 'File:' validate.txt) files)"
+            echo "signature: $(tail -n 1 verify.txt)"
+            keytool -printcert -jarfile "$OUT" | grep -E "Owner|SHA1:|SHA256:|Valid" | sed 's/^/  /'
+            echo "package: $(bt '/manifest/@package')"
+            echo "versionCode: $(bt '/manifest/@android:versionCode')"
+            echo "versionName: $(bt '/manifest/@android:versionName')"
+            echo "minSdk: $(bt '/manifest/uses-sdk/@android:minSdkVersion')"
+            echo "targetSdk: $(bt '/manifest/uses-sdk/@android:targetSdkVersion')"
+            echo "debuggable: $(bt '/manifest/application/@android:debuggable' || true)"
+            echo "AdMob App ID: $ADMOB"
+            echo "native libraries: $(unzip -l "$OUT" | grep -c '\.so$' || true)"
+            echo "permissions:"; bt '/manifest/uses-permission/@android:name' | sed 's/^/  /'
+          } | tee summary.txt
           case "$ADMOB" in *3940256099942544*) echo "::warning::The bundle uses Google's sample AdMob App ID (test ads). Set the ADMOB_APP_ID repository variable before publishing.";; esac
-          echo "== Native libraries"; unzip -l "$OUT" | grep '\.so$' || echo "none"
+          echo "## Google Play bundle" >> "$GITHUB_STEP_SUMMARY"; echo '```' >> "$GITHUB_STEP_SUMMARY"; cat summary.txt >> "$GITHUB_STEP_SUMMARY"; echo '```' >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v5
         with:
           name: carta-play-aab
