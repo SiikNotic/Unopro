@@ -28,7 +28,7 @@ export interface AiParams {
 
 export const AI_LEVELS: Record<AiLevel, AiParams> = {
   easy: { react: 14, speed: 1250, noise: 130, miss: 0.3, guard: 200, foresight: 0.45 },
-  normal: { react: 7, speed: 1900, noise: 65, miss: 0.12, guard: 175, foresight: 0.8 },
+  normal: { react: 8, speed: 1750, noise: 75, miss: 0.17, guard: 175, foresight: 0.75 },
   hard: { react: 3, speed: 2650, noise: 24, miss: 0.04, guard: 150, foresight: 1 },
 };
 

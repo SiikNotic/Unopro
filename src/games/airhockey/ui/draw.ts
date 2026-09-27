@@ -287,11 +287,17 @@ function drawPuck(ctx: CanvasRenderingContext2D, p: Body, trail: { x: number; y:
   ctx.fill();
   ctx.restore();
   ctx.strokeStyle = goldGradient(ctx, p.x - PUCK_R, p.y - PUCK_R, p.x + PUCK_R, p.y + PUCK_R);
-  ctx.lineWidth = 7;
+  ctx.lineWidth = 9;
   ctx.beginPath();
-  ctx.arc(p.x, p.y, PUCK_R - 4, 0, Math.PI * 2);
+  ctx.arc(p.x, p.y, PUCK_R - 5, 0, Math.PI * 2);
   ctx.stroke();
-  spadePath(ctx, p.x, p.y + 2, 13);
+  // a thin bright edge so the puck stands out on the dark surface
+  ctx.strokeStyle = 'rgba(255,240,200,0.85)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, PUCK_R - 0.5, 0, Math.PI * 2);
+  ctx.stroke();
+  spadePath(ctx, p.x, p.y + 2, 18);
   ctx.fillStyle = GOLD;
   ctx.fill();
 }

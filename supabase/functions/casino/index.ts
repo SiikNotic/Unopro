@@ -935,7 +935,7 @@ var STAKES = [0, 100, 500, 1e3, 5e3];
 var W = 1e3;
 var H = 1700;
 var MID = H / 2;
-var PUCK_R = 36;
+var PUCK_R = 46;
 var MALLET_R = 60;
 var GOAL_W = 330;
 var GOAL_X0 = (W - GOAL_W) / 2;
@@ -948,7 +948,7 @@ var clamp = (v, lo, hi) => v < lo ? lo : v > hi ? hi : v;
 var AI_LEVEL_IDS = ["easy", "normal", "hard"];
 var AI_LEVELS = {
   easy: { react: 14, speed: 1250, noise: 130, miss: 0.3, guard: 200, foresight: 0.45 },
-  normal: { react: 7, speed: 1900, noise: 65, miss: 0.12, guard: 175, foresight: 0.8 },
+  normal: { react: 8, speed: 1750, noise: 75, miss: 0.17, guard: 175, foresight: 0.75 },
   hard: { react: 3, speed: 2650, noise: 24, miss: 0.04, guard: 150, foresight: 1 }
 };
 var REACH = PUCK_R + MALLET_R;

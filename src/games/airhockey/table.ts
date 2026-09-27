@@ -2,7 +2,7 @@
 export const W = 1000;
 export const H = 1700;
 export const MID = H / 2;
-export const PUCK_R = 36;
+export const PUCK_R = 46;
 export const MALLET_R = 60;
 /** The goal mouth, centred on each short side. */
 export const GOAL_W = 330;

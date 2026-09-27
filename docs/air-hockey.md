@@ -40,7 +40,7 @@ The AI looks at the table only every *reaction* ticks and moves no faster than i
 | | reaction | speed | aim error | clear mistakes |
 |---|---|---|---|---|
 | Easy | 14 ticks (~0.23 s) | 1,250 u/s | ±130 | 30 % of strikes |
-| Normal | 7 ticks | 1,900 u/s | ±65 | 12 % |
+| Normal | 8 ticks | 1,750 u/s | ±75 | 17 % |
 | Hard | 3 ticks | 2,650 u/s | ±24 | 4 % |
 
 With the puck in its half it plans a shot (a corner of the goal, or a bank shot off a side wall), lines up behind
