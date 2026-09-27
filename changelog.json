@@ -43,6 +43,13 @@
         "es": "Ajustes y tu cuenta con nuevas ilustraciones de casino.",
         "en": "Settings and your account with new casino artwork."
       }
+    ],
+    "1.2.51": [
+      {
+        "icon": "star",
+        "es": "Nuevo logo de Carta Casino en el icono de la app y la pantalla de inicio.",
+        "en": "New Carta Casino logo on the app icon and the start screen."
+      }
     ]
   }
 }
