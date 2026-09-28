@@ -111,6 +111,13 @@
         "es": "El servidor decide y registra cada pago del Banco.",
         "en": "The server decides and records every Bank payment."
       }
+    ],
+    "1.2.58": [
+      {
+        "icon": "design",
+        "es": "Nuevo logo e icono de Carta Casino.",
+        "en": "A new Carta Casino logo and app icon."
+      }
     ]
   }
 }

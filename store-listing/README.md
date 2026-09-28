@@ -4,8 +4,8 @@ Ready to upload in Play Console → Grow → Store presence → Main store listi
 
 | File | Play Console field | Size |
 | --- | --- | --- |
-| `icon-512.png` | App icon | 512 × 512 PNG (the app logo) |
-| `feature-graphic-1024x500.png` | Feature graphic | 1024 × 500 PNG |
+| `icon-512.png` | App icon | 512 × 512 PNG (the app logo, `branding/carta-logo.webp`) |
+| `feature-graphic-1024x500.png` | Feature graphic | 1024 × 500 PNG (the owner's banner, `branding/carta-banner.webp`, scaled to Play's exact size) |
 | `phone/phone-0*.png` | Phone screenshots (upload 2–8) | 1080 × 2160 PNG |
 | `tablet/tablet-0*.png` | 7-inch and 10-inch tablet screenshots | 1600 × 2560 PNG |
 
