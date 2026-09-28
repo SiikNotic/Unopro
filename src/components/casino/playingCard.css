@@ -1,0 +1,57 @@
+/* French-suited playing card (reuses the cream .pc-card stock). Imported by PlayingCardView itself, so a card
+   renders correctly wherever it appears (lists, tutorials), not only after a casino screen has loaded. */
+.fc-face {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: calc(var(--cw) * 0.07);
+  overflow: hidden;
+}
+.fc-red { color: #c8202f; }
+.fc-black { color: #16161f; }
+.fc-index {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 0.9;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: calc(var(--cw) * 0.24);
+  letter-spacing: -0.04em;
+}
+.fc-index svg { width: calc(var(--cw) * 0.18); height: calc(var(--cw) * 0.18); margin-top: calc(var(--cw) * 0.02); }
+.fc-index-tl { top: calc(var(--cw) * 0.03); left: calc(var(--cw) * 0.04); }
+.fc-index-br { bottom: calc(var(--cw) * 0.03); right: calc(var(--cw) * 0.04); transform: rotate(180deg); }
+.fc-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.fc-pip { width: calc(var(--cw) * 0.46); height: calc(var(--cw) * 0.46); filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.6)); }
+.fc-court {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 58%;
+  height: 56%;
+  border-radius: calc(var(--cw) * 0.06);
+  border: max(1px, calc(var(--cw) * 0.018)) solid currentColor;
+  background:
+    repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.05) 0 2px, transparent 2px 6px),
+    linear-gradient(160deg, rgba(245, 196, 81, 0.35), rgba(245, 196, 81, 0.08));
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: calc(var(--cw) * 0.4);
+}
+.fc-court svg {
+  position: absolute;
+  width: calc(var(--cw) * 0.16);
+  height: calc(var(--cw) * 0.16);
+  opacity: 0.8;
+}
+.fc-court svg:first-of-type { top: 6%; left: 8%; }
+.fc-court svg:last-of-type { bottom: 6%; right: 8%; transform: rotate(180deg); }

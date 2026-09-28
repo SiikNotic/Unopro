@@ -11,7 +11,7 @@
 - [ ] `ADMOB_APP_ID` y `VITE_ADMOB_REWARDED_ID` de producción configurados como Variables del repositorio (sin ellos se usan los IDs de prueba de Google).
 
 ## 1. Antes de enviar (bloqueantes)
-- [ ] `src/legal/config.ts`: responsable (`owner`), email de contacto (`contactEmail`) y edad mínima (`minimumAge`), y después `npm run legal:build`.
+- [x] `src/legal/config.ts`: responsable (`owner` = LiveNest), email de contacto (`contactEmail` = livenestapp@gmail.com) y edad mínima (`minimumAge`); `npm run legal:build` hecho.
 - [ ] Revisión legal de Términos, Privacidad y Reglas de moneda virtual (**LEGAL REVIEW REQUIRED**).
 - [ ] AdMob: mensajes UMP (GDPR y estados de EE. UU.) y bloqueos de categorías (ver `ADMOB.md`).
 - [ ] Verificar en vivo el borrado de cuenta (crear una cuenta de prueba → Eliminar → ya no puede iniciar sesión).

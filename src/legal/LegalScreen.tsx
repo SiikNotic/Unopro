@@ -8,6 +8,20 @@ import { DOC_IDS, legalDoc, legalDocs } from './content';
 import type { DocId, LegalLang } from './content';
 import { LEGAL_CONFIG } from './config';
 
+/** Makes the contact email in a paragraph a mailto link. */
+function withMailLinks(text: string) {
+  const parts = text.split(/([\w.+-]+@[\w-]+\.[\w.]*\w)/);
+  return parts.map((part, i) =>
+    i % 2 === 1 ? (
+      <a key={i} href={`mailto:${part}`} className="text-[var(--cz-gold)] underline underline-offset-2">
+        {part}
+      </a>
+    ) : (
+      part
+    ),
+  );
+}
+
 const ICONS: Record<DocId, LucideIcon> = { notice: Info, virtual: Coins, responsible: HeartHandshake, privacy: ShieldCheck, terms: Scale, deletion: Trash2, contact: Mail };
 
 export function LegalScreen() {
@@ -26,7 +40,7 @@ export function LegalScreen() {
               <h2 className="font-display font-bold text-white text-base mb-2">{s.h}</h2>
               {s.p.map((p, i) => (
                 <p key={i} className="text-sm leading-relaxed text-white/80 mb-2 last:mb-0 break-words">
-                  {p}
+                  {withMailLinks(p)}
                 </p>
               ))}
             </section>

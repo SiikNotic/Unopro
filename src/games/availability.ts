@@ -43,13 +43,19 @@ export async function fetchAvailability(cfg: OnlineConfig, fetchImpl: typeof fet
 }
 
 let inflight: Promise<void> | null = null;
-/** Refreshes the shared copy (one request at a time). */
-export function refreshAvailability(): Promise<void> {
+let fetchedAt = 0;
+/**
+ * Refreshes the shared copy (one request at a time). With maxAgeMs, a copy read more recently than that is
+ * kept as is: opening several game screens in a row doesn't read the table again each time.
+ */
+export function refreshAvailability(maxAgeMs = 0): Promise<void> {
   const cfg = onlineConfig();
   if (!cfg) return Promise.resolve();
+  if (!inflight && maxAgeMs > 0 && loaded && Date.now() - fetchedAt < maxAgeMs) return Promise.resolve();
   inflight ??= fetchAvailability(cfg)
     .then((next) => {
       if (!next) return;
+      fetchedAt = Date.now();
       const changed = CONTROLLED_GAMES.some((g) => next[g] !== current[g]);
       current = next;
       loaded = true;
@@ -76,6 +82,8 @@ export function applyAvailabilityChange(row: unknown): boolean {
  * anyone). The periodic re-read stays as the fallback when the socket is blocked or drops.
  */
 let live: { stop: () => void } | null = null;
+/** True while the Realtime channel is subscribed (changes arrive live, so the re-read can be rarer). */
+let liveUp = false;
 function startLive(cfg: OnlineConfig) {
   if (live) return;
   let stopped = false;
@@ -83,6 +91,7 @@ function startLive(cfg: OnlineConfig) {
   live = {
     stop: () => {
       stopped = true;
+      liveUp = false;
       close();
       live = null;
     },
@@ -90,11 +99,18 @@ function startLive(cfg: OnlineConfig) {
   import('@supabase/realtime-js')
     .then(({ RealtimeClient }) => {
       if (stopped) return;
+      let everUp = false;
       const client = new RealtimeClient(`${cfg.base.replace(/^http/, 'ws')}/realtime/v1`, { params: { apikey: cfg.apiKey } });
       const channel = client
         .channel('game-availability')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'game_availability' }, (payload) => applyAvailabilityChange((payload as { new?: unknown }).new))
-        .subscribe();
+        .subscribe((status) => {
+          const up = status === 'SUBSCRIBED';
+          // Back from a drop: read the table once, in case a change was missed while the socket was down.
+          if (up && !liveUp && everUp) void refreshAvailability();
+          if (up) everUp = true;
+          liveUp = up;
+        });
       close = () => {
         void client.removeChannel(channel);
         client.disconnect();
@@ -112,10 +128,17 @@ export function setAvailability(next: Availability) {
   emit();
 }
 
+/** How often the table is re-read: every 30 s without Realtime, every 5 min as a safety net with it. */
 const REFRESH_MS = 30000;
+const REFRESH_LIVE_MS = 300000;
+/** A screen that opens reuses a copy read in the last few seconds. */
+const FRESH_MS = 5000;
 let timer: number | null = null;
+const onTick = () => {
+  if (!document.hidden) void refreshAvailability(liveUp ? REFRESH_LIVE_MS - 1000 : REFRESH_MS - 1000);
+};
 const onVisible = () => {
-  if (!document.hidden) void refreshAvailability();
+  if (!document.hidden) void refreshAvailability(FRESH_MS);
 };
 
 function subscribe(listener: () => void) {
@@ -124,7 +147,7 @@ function subscribe(listener: () => void) {
   if (listeners.size === 1 && cfg) {
     void refreshAvailability();
     startLive(cfg);
-    timer = window.setInterval(onVisible, REFRESH_MS);
+    timer = window.setInterval(onTick, REFRESH_MS);
     document.addEventListener('visibilitychange', onVisible);
   }
   return () => {
@@ -138,7 +161,7 @@ function subscribe(listener: () => void) {
   };
 }
 
-/** The games in service, kept current: live over Realtime, re-read every 30 s and when the app comes back. */
+/** The games in service, kept current: live over Realtime, re-read periodically and when the app comes back. */
 export function useGameAvailability(): Availability {
   return useSyncExternalStore(subscribe, () => current, () => current);
 }
@@ -147,7 +170,7 @@ export function useGameAvailability(): Availability {
 export function useFreshAvailability(game: ControlledGame | null): boolean {
   const all = useGameAvailability();
   useEffect(() => {
-    if (game) void refreshAvailability();
+    if (game) void refreshAvailability(FRESH_MS);
   }, [game]);
   return game ? all[game] : true;
 }

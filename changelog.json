@@ -67,6 +67,28 @@
         "es": "Tres niveles de IA y mesa de lujo con luces LED.",
         "en": "Three AI levels and a luxury LED-lit table."
       }
+    ],
+    "1.2.55": [
+      {
+        "icon": "new",
+        "es": "Tutoriales nuevos para todos los juegos, en español e inglés.",
+        "en": "New tutorials for every game, in Spanish and English."
+      },
+      {
+        "icon": "fix",
+        "es": "Los iconos de la lista de juegos del casino ya se ven bien.",
+        "en": "The casino game list icons now display correctly."
+      },
+      {
+        "icon": "speed",
+        "es": "La app consulta menos al servidor y va más fluida.",
+        "en": "The app asks the server less often and runs smoother."
+      },
+      {
+        "icon": "update",
+        "es": "Información de contacto de LiveNest en Ajustes y en Legal.",
+        "en": "LiveNest contact details in Settings and Legal."
+      }
     ]
   }
 }

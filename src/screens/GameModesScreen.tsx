@@ -1,70 +1,48 @@
-import { ChevronRight, Globe, LayoutGrid, Rocket, ShieldCheck, Users } from 'lucide-react';
+import { ChevronRight, Globe, ShieldCheck, Users } from 'lucide-react';
 import { onlineConfig } from '@/games/online/client';
-import type { OnlineGame } from '@/types/navigation';
+import type { OnlineGame, Screen } from '@/types/navigation';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { useNavigation } from '@/components/Navigation';
 import { ChipBalance } from '@/components/casino/chips';
-import { PlayingCardView } from '@/components/casino/PlayingCardView';
-import { SlotSymbolIcon } from '@/components/casino/slotSymbols';
 import { useI18n } from '@/i18n';
 import { useWallet } from '@/casino/useWallet';
-import { BingoArt, DominoArt } from '@/games/shared/ui/GameArt';
-import { GemMark } from '@/games/jewels/JewelsEntry';
-import type { Screen } from '@/types/navigation';
-import { HockeyArt } from '@/games/airhockey/ui/HockeyArt';
+import { useGameAvailability } from '@/games/availability';
+import { GAMES, gamesIn } from '@/games/catalog';
+import type { GameInfo } from '@/games/catalog';
+import { GameIcon } from '@/games/GameIcon';
 
 /** Every multiplayer game opens its setup (GameSetupScreen); the slot machines are single-player. */
 const SETUP: Record<OnlineGame, Screen> = { carta: 'cartaSetup', domino: 'dominoSetup', bingo: 'bingoSetup', blackjack: 'blackjackSetup', roulette: 'rouletteSetup' };
 
-const TABLE_GAMES: { key: 'carta' | 'domino' | 'bingo'; screen: Screen; art: React.ReactNode }[] = [
-  { key: 'carta', screen: 'cartaSetup', art: <LayoutGrid className="w-5 h-5" aria-hidden /> },
-  { key: 'domino', screen: 'dominoSetup', art: <DominoArt size={14} /> },
-  { key: 'bingo', screen: 'bingoSetup', art: <BingoArt size={14} /> },
-];
+const ONLINE_ICON: Record<'carta' | 'blackjack' | 'roulette', React.ReactNode> = {
+  carta: <Users className="w-5 h-5 text-[var(--cz-gold)]" aria-hidden />,
+  blackjack: <GameIcon id="blackjack" />,
+  roulette: <GameIcon id="roulette" />,
+};
 
-const MiniWheel = () => (
-  <svg viewBox="0 0 48 48" className="w-9 h-9" aria-hidden>
-    <circle cx="24" cy="24" r="23" fill="#3b2416" stroke="#d8b26a" strokeWidth="1.5" />
-    {Array.from({ length: 12 }, (_, i) => (
-      <path key={i} d="M24 24 L24 4 A20 20 0 0 1 34 6.7 Z" transform={`rotate(${i * 30} 24 24)`} fill={i === 0 ? '#126642' : i % 2 ? '#a3222f' : '#1a1c1e'} />
-    ))}
-    <circle cx="24" cy="24" r="8" fill="#d8b26a" />
-  </svg>
-);
-
-const CASINO_GAMES: { screen: Screen; key: 'blackjack' | 'roulette' | 'slots' | 'poker' | 'crash' | 'horse' | 'airhockey'; art: React.ReactNode }[] = [
-  { screen: 'crash', key: 'crash', art: <Rocket className="w-5 h-5 text-[var(--cz-gold)]" aria-hidden /> },
-  { screen: 'horse', key: 'horse', art: <span className="text-lg" aria-hidden>🏇</span> },
-  { screen: 'airhockey', key: 'airhockey', art: <HockeyArt size={40} /> },
-  {
-    screen: 'blackjackSetup',
-    key: 'blackjack',
-    art: (
-      <span className="relative w-10 h-10 flex items-center justify-center">
-        <PlayingCardView card={{ id: 'a', rank: 'A', suit: 'S' }} width={22} className="absolute -rotate-12 -translate-x-1.5" />
-        <PlayingCardView card={{ id: 'k', rank: 'K', suit: 'H' }} width={22} className="absolute rotate-12 translate-x-1.5" />
+/** One game in a list: its picture, name and line, and a clear badge when the owner has it out of service. */
+function GameRow({ game, iconClass = '', extra }: { game: GameInfo; iconClass?: string; extra?: string }) {
+  const { navigate } = useNavigation();
+  const { t } = useI18n();
+  const availability = useGameAvailability();
+  const off = game.controlled !== null && !availability[game.controlled];
+  return (
+    <button type="button" className={`cz-row ${off ? 'opacity-70' : ''}`} onClick={() => navigate(game.screen)}>
+      <span className={`cz-row-icon overflow-hidden ${iconClass}`}>
+        <GameIcon id={game.id} />
       </span>
-    ),
-  },
-  { screen: 'rouletteSetup', key: 'roulette', art: <MiniWheel /> },
-  {
-    screen: 'pokerSetup',
-    key: 'poker',
-    art: (
-      <span className="relative w-10 h-10 flex items-center justify-center">
-        <PlayingCardView card={{ id: 'as', rank: 'A', suit: 'S' }} width={22} className="absolute -rotate-12 -translate-x-1.5" />
-        <PlayingCardView card={{ id: 'ah', rank: 'A', suit: 'H' }} width={22} className="absolute rotate-12 translate-x-1.5" />
+      <span className="min-w-0 flex-1">
+        <span className="flex items-center gap-2 min-w-0">
+          <span className="block font-display font-bold text-white text-[15px] truncate">{t(game.nameKey)}</span>
+          {off && <span className="shrink-0 rounded-full border border-[#ff8a8a]/40 bg-[#ff5d5d]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#ffb3b3]">{t('availability.badge')}</span>}
+        </span>
+        <span className="block text-xs text-[var(--cz-muted)] mt-0.5 leading-snug">{t(game.descKey)}</span>
+        {extra && <span className="block text-[11px] text-[var(--cz-muted)]/80 mt-1">{extra}</span>}
       </span>
-    ),
-  },
-  { screen: 'slotLobby', key: 'slots', art: <SlotSymbolIcon symbol="seven" className="w-8 h-8" /> },
-];
-
-const ONLINE: { game: OnlineGame; art: React.ReactNode }[] = [
-  { game: 'carta', art: <Users className="w-5 h-5 text-[var(--cz-gold)]" aria-hidden /> },
-  { game: 'blackjack', art: CASINO_GAMES[0].art },
-  { game: 'roulette', art: <MiniWheel /> },
-];
+      <ChevronRight className="w-5 h-5 text-[var(--cz-muted)] shrink-0" aria-hidden />
+    </button>
+  );
+}
 
 /** "Play": the one place to pick what to play. Each game then opens its setup screen. */
 export function GameModesScreen() {
@@ -84,16 +62,8 @@ export function GameModesScreen() {
             </div>
           </div>
           <div className="flex flex-col gap-2">
-            {TABLE_GAMES.map((g) => (
-              <button key={g.key} type="button" className="cz-row" onClick={() => navigate(g.screen)}>
-                <span className="cz-row-icon">{g.art}</span>
-                <span className="min-w-0 flex-1">
-                  <span className="block font-display font-bold text-white text-[15px]">{t(`hub.${g.key}.name`)}</span>
-                  <span className="block text-xs text-[var(--cz-muted)] mt-0.5 leading-snug">{t(`hub.${g.key}.desc`)}</span>
-                  <span className="block text-[11px] text-[var(--cz-muted)]/80 mt-1">{t(`hub.${g.key}.players`)}</span>
-                </span>
-                <ChevronRight className="w-5 h-5 text-[var(--cz-muted)] shrink-0" aria-hidden />
-              </button>
+            {gamesIn('table').map((g) => (
+              <GameRow key={g.id} game={g} extra={t(`hub.${g.id}.players`)} />
             ))}
           </div>
         </section>
@@ -103,16 +73,9 @@ export function GameModesScreen() {
             <h2 className="font-display font-bold text-white text-base">{t('gameModes.puzzleTitle')}</h2>
             <p className="text-xs text-[var(--cz-muted)]">{t('gameModes.puzzleSubtitle')}</p>
           </div>
-          <button type="button" className="cz-row" onClick={() => navigate('jewels')}>
-            <span className="cz-row-icon bg-[rgba(120,70,190,0.3)] border-[rgba(216,178,106,0.4)]">
-              <GemMark size={30} />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block font-display font-bold text-white text-[15px]">{t('jewels.entry')}</span>
-              <span className="block text-xs text-[var(--cz-muted)] mt-0.5 leading-snug">{t('jewels.entryHint')}</span>
-            </span>
-            <ChevronRight className="w-5 h-5 text-[var(--cz-muted)] shrink-0" aria-hidden />
-          </button>
+          {gamesIn('puzzle').map((g) => (
+            <GameRow key={g.id} game={g} iconClass="bg-[rgba(120,70,190,0.3)] border-[rgba(216,178,106,0.4)]" />
+          ))}
         </section>
 
         {online && (
@@ -124,12 +87,12 @@ export function GameModesScreen() {
               <p className="text-xs text-[var(--cz-muted)]">{t('gameModes.onlineSubtitle')}</p>
             </div>
             <div className="flex flex-col gap-2">
-              {ONLINE.map((g) => (
-                <button key={g.game} type="button" className="cz-row" onClick={() => navigate(SETUP[g.game], { online: true })}>
-                  <span className="cz-row-icon bg-[rgba(216,178,106,0.14)] border-[rgba(216,178,106,0.4)]">{g.art}</span>
+              {GAMES.flatMap((g) => (g.online ? [g.online] : [])).map((game) => (
+                <button key={game} type="button" className="cz-row" onClick={() => navigate(SETUP[game], { online: true })}>
+                  <span className="cz-row-icon overflow-hidden bg-[rgba(216,178,106,0.14)] border-[rgba(216,178,106,0.4)]">{ONLINE_ICON[game]}</span>
                   <span className="min-w-0 flex-1">
-                    <span className="block font-display font-bold text-white text-[15px]">{t(`gameModes.online.${g.game}.name`)}</span>
-                    <span className="block text-xs text-[var(--cz-muted)] mt-0.5 leading-snug">{t(`gameModes.online.${g.game}.description`)}</span>
+                    <span className="block font-display font-bold text-white text-[15px]">{t(`gameModes.online.${game}.name`)}</span>
+                    <span className="block text-xs text-[var(--cz-muted)] mt-0.5 leading-snug">{t(`gameModes.online.${game}.description`)}</span>
                   </span>
                   <ChevronRight className="w-5 h-5 text-[var(--cz-muted)] shrink-0" aria-hidden />
                 </button>
@@ -147,15 +110,8 @@ export function GameModesScreen() {
             <ChipBalance balance={balance} />
           </div>
           <div className="flex flex-col gap-2">
-            {CASINO_GAMES.map((g) => (
-              <button key={g.key} type="button" className="cz-row" onClick={() => navigate(g.screen)}>
-                <span className="cz-row-icon bg-[rgba(17,86,59,0.45)] border-[rgba(216,178,106,0.3)]">{g.art}</span>
-                <span className="min-w-0 flex-1">
-                  <span className="block font-display font-bold text-white text-[15px]">{t(`casino.${g.key}.name`)}</span>
-                  <span className="block text-xs text-[var(--cz-muted)] mt-0.5 leading-snug">{t(`casino.${g.key}.description`)}</span>
-                </span>
-                <ChevronRight className="w-5 h-5 text-[var(--cz-muted)] shrink-0" aria-hidden />
-              </button>
+            {gamesIn('casino').map((g) => (
+              <GameRow key={g.id} game={g} iconClass="bg-[rgba(17,86,59,0.45)] border-[rgba(216,178,106,0.3)]" />
             ))}
           </div>
           <p className="mt-3 flex items-center gap-1.5 px-1 text-[11px] text-[var(--cz-muted)]">

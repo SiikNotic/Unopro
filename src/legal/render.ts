@@ -4,7 +4,10 @@ import type { LegalLang } from './content';
 import { LEGAL_CONFIG } from './config';
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-const linkify = (s: string) => esc(s).replace(/https:\/\/[^\s)<]+/g, (u) => `<a href="${u}">${u}</a>`);
+const linkify = (s: string) =>
+  esc(s)
+    .replace(/https:\/\/[^\s)<]+/g, (u) => `<a href="${u}">${u}</a>`)
+    .replace(/[\w.+-]+@[\w-]+\.[\w.]+\w/g, (m) => `<a href="mailto:${m}">${m}</a>`);
 
 const STYLE = `body{margin:0;background:#0b0b10;color:#e9e6de;font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}main{max-width:760px;margin:0 auto;padding:28px 18px 60px}h1{font-size:28px;margin:0 0 4px;color:#f1d58f}h2{font-size:19px;margin:28px 0 8px;color:#fff}p{margin:0 0 10px}small,nav{color:#a8a39a}a{color:#f1d58f}nav a{margin-right:12px}`;
 

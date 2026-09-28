@@ -22,9 +22,12 @@ purchases.
     `disabled`.
   - Matches already running finish normally.
 - **What the app shows:**
-  - The app re-reads the table every 30 s and whenever a controlled game's screen opens.
+  - Changes arrive live over Realtime (one shared channel, public key only). The table is also re-read
+    as a safety net: every 30 s while Realtime is down, every 5 min while it's up, once after the socket
+    reconnects, and when a controlled game's screen opens or the app comes back (a copy read in the last
+    5 s is reused, so opening several screens in a row costs one request).
   - It then shows an "out of service" notice instead of the game (`src/games/OutOfService.tsx`).
-  - Home cards get a badge.
+  - Home cards and the Play list get a badge.
   - Local games against bots have no coins, so the notice is all they need.
 
 ## Coin stakes in online Domino, Bingo and Carta

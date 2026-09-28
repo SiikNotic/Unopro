@@ -3,6 +3,16 @@
 Three table games in one app. They share the design system, navigation, settings, sound, scenes and
 multiplayer contracts, but each has its own isolated engine, bots and look.
 
+## The game list (one source)
+
+`src/games/catalog.ts` lists every game once: id, the screen that starts it, its Play section and Home
+category, its owner switch (`game_availability`), its name/description keys, its online table and its
+tutorial lessons. Home (`src/screens/home/homeGames.tsx` adds only the pictures), Play
+(`GameModesScreen`), the Tutorial screen and the out-of-service badges all read it, so a game is added,
+renamed or removed in one place. `src/games/GameIcon.tsx` draws the list icons;
+`src/games/__tests__/catalog.test.ts` checks ids, screens, owner switches and that every name, description
+and lesson exists in Spanish and English.
+
 ## Architecture
 
 ```

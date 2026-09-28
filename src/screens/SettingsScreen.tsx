@@ -17,6 +17,7 @@ import { playSfx } from '@/audio/sfx';
 import { WALLET_RESET_EVENT } from '@/casino/walletContext';
 import { LuxIcon, LuxPage, LuxSection } from './lux/LuxPage';
 import { LUX_ART } from './lux/art';
+import { LEGAL_CONFIG } from '@/legal/config';
 
 const LEVEL_ICON: LucideIcon[] = [Feather, Target, Flame];
 
@@ -215,6 +216,19 @@ export function SettingsScreen() {
         <p className="lx-version">
           {t('settings.version')} <span>0.2.0</span>
         </p>
+        {LEGAL_CONFIG.owner && (
+          <p className="lx-version">
+            {t('settings.madeBy', { company: LEGAL_CONFIG.owner })}
+            {LEGAL_CONFIG.contactEmail && (
+              <>
+                {' · '}
+                <a href={`mailto:${LEGAL_CONFIG.contactEmail}`} className="underline underline-offset-2">
+                  {LEGAL_CONFIG.contactEmail}
+                </a>
+              </>
+            )}
+          </p>
+        )}
         {confirmReset ? (
           <div className="lx-danger-box" role="alertdialog" aria-label={t('settings.resetData')}>
             <p>{t('settings.resetDataConfirm')}</p>

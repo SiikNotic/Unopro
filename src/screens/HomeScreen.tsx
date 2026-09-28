@@ -14,7 +14,7 @@ import { useAccount } from '@/account/useAccount';
 import { usePlayerName } from '@/account/usePlayerName';
 import { onlineConfig } from '@/games/online/client';
 import { useGameAvailability } from '@/games/availability';
-import type { ControlledGame } from '@/games/availability';
+import { gameInfo } from '@/games/catalog';
 import { CASINO, CATEGORIES, EXTRA_IMAGES, HERO_ART, HOME_GAMES, POPULAR, PROMO_IMAGE, RECOMMENDED } from './home/homeGames';
 import type { HomeCategory, HomeGame, HomeGameId } from './home/homeGames';
 import { ApkBanner } from '@/app/ApkBanner';
@@ -22,7 +22,6 @@ import './home/home.css';
 
 const CATEGORY_ICON: Record<HomeCategory, LucideIcon> = { all: LayoutGrid, cards: Spade, table: CircleDot, slots: Cherry, puzzle: Gem, instant: Rocket };
 /** Home games the owner can take out of service. */
-const CONTROLLED: Partial<Record<HomeGameId, ControlledGame>> = { carta: 'carta', domino: 'domino', bingo: 'bingo', slots: 'slots', blackjack: 'blackjack', roulette: 'roulette', poker: 'poker', crash: 'crash', horse: 'horse', airhockey: 'airhockey' };
 
 function Logo() {
   return (
@@ -54,14 +53,14 @@ function SectionHead({ id, icon: Icon, title, action }: { id: string; icon: Luci
 function GameCard({ game, size = 'big', onPlay }: { game: HomeGame; size?: 'big' | 'small'; onPlay: () => void }) {
   const { t } = useI18n();
   const availability = useGameAvailability();
-  const controlled = CONTROLLED[game.id];
+  const controlled = gameInfo(game.id).controlled;
   const off = !!controlled && !availability[controlled];
   const name = t(`home2.game.${game.id}.name`);
   return (
     <button type="button" className={`hm-card is-${size}${game.image ? ' has-image' : ''}${off ? ' is-off' : ''}`} style={{ '--hm-bg': game.bg, '--hm-accent': game.accent } as CSSProperties} onClick={onPlay} aria-label={t('home2.playAria', { name })}>
       {off && <span className="hm-card-off">{t('availability.badge')}</span>}
       <span className="hm-card-art" aria-hidden>
-        {game.image ? <img src={game.image} alt="" loading="lazy" /> : game.art(size === 'big' ? 64 : 52)}
+        {game.image ? <img src={game.image} alt="" loading="lazy" decoding="async" /> : game.art(size === 'big' ? 64 : 52)}
       </span>
       <span className="hm-card-body">
         <span className="hm-card-name">{name}</span>
@@ -232,7 +231,7 @@ export function HomeScreen() {
               <div className="hm-events">
                 {events.map((e) => (
                   <button key={e.key} type="button" className={`hm-event is-${e.tone}`} onClick={e.onClick}>
-                    <img className="hm-event-img" src={EXTRA_IMAGES[e.key]} alt="" loading="lazy" />
+                    <img className="hm-event-img" src={EXTRA_IMAGES[e.key]} alt="" loading="lazy" decoding="async" />
                     <span className="hm-event-copy">
                       <span className="hm-event-title">{t(`home2.event.${e.key}.title`)}</span>
                       <span className="hm-event-sub">{t(`home2.event.${e.key}.sub`)}</span>

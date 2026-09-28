@@ -26,19 +26,22 @@ const cardHorse = (import.meta.glob('./art/card-horse-racing.webp', { eager: tru
 const cardAirHockey = (import.meta.glob('./art/card-air-hockey.webp', { eager: true, import: 'default' }) as Record<string, string>)['./art/card-air-hockey.webp'];
 import { HockeyCardArt } from '@/games/airhockey/ui/HockeyArt';
 import heroPortrait from './art/hero-portrait.webp';
+import { GAMES } from '@/games/catalog';
+import type { GameCategory, GameId } from '@/games/catalog';
 import heroLandscape from './art/hero-landscape.webp';
 import promoCoins from './art/promo-coins.webp';
 import extraOnline from './art/extra-online.webp';
 import extraDaily from './art/extra-daily.webp';
 import extraLearn from './art/extra-learn.webp';
 
-export type HomeGameId = 'carta' | 'domino' | 'bingo' | 'poker' | 'roulette' | 'blackjack' | 'slots' | 'jewels' | 'crash' | 'horse' | 'airhockey';
-export type HomeCategory = 'all' | 'cards' | 'table' | 'slots' | 'puzzle' | 'instant';
+export type HomeGameId = GameId;
+export type HomeCategory = 'all' | GameCategory;
 
+/** A game as Home shows it: its catalog entry (screen, category) plus Home's card look. */
 export interface HomeGame {
   id: HomeGameId;
   screen: Screen;
-  category: Exclude<HomeCategory, 'all'>;
+  category: GameCategory;
   /** Card backdrop (a dark, rich gradient in the game's colour). */
   bg: string;
   /** Rim / glow colour of the card. */
@@ -78,18 +81,15 @@ const cardPair = (a: { rank: 'A' | 'K' | 'J'; suit: 'S' | 'H' | 'D' | 'C' }, b: 
   </span>
 );
 
-export const HOME_GAMES: Record<HomeGameId, HomeGame> = {
-  carta: { id: 'carta', image: cardCarta, screen: 'cartaSetup', category: 'cards', bg: 'radial-gradient(120% 90% at 50% 10%, #1f4f9a 0%, #0f2350 50%, #070d1f 100%)', accent: '#5b8dff', art: (s) => <GameArt game="carta" size={s * 0.52} /> },
-  domino: { id: 'domino', image: cardDomino, screen: 'dominoSetup', category: 'table', bg: 'radial-gradient(120% 90% at 50% 10%, #8a5a1c 0%, #3d230c 55%, #140b04 100%)', accent: '#e0a24a', art: (s) => <DominoArt size={s * 0.52} /> },
-  bingo: { id: 'bingo', image: cardBingo, screen: 'bingoSetup', category: 'table', bg: 'radial-gradient(120% 90% at 50% 10%, #6a2bc4 0%, #2f1266 55%, #10061f 100%)', accent: '#a974ff', art: (s) => <BingoArt size={s * 0.52} /> },
-  poker: { id: 'poker', image: cardPoker, screen: 'pokerSetup', category: 'cards', bg: 'radial-gradient(120% 90% at 50% 10%, #b3202f 0%, #560c16 55%, #1a0406 100%)', accent: '#ff5d6c', art: cardPair({ rank: 'A', suit: 'S' }, { rank: 'K', suit: 'H' }) },
-  roulette: { id: 'roulette', image: cardRoulette, screen: 'rouletteSetup', category: 'table', bg: 'radial-gradient(120% 90% at 50% 10%, #7a1f2b 0%, #3a0d14 55%, #140507 100%)', accent: '#e0525f', art: (s) => wheel(s * 1.15) },
-  blackjack: { id: 'blackjack', image: cardBlackjack, screen: 'blackjackSetup', category: 'cards', bg: 'radial-gradient(120% 90% at 50% 10%, #16784c 0%, #0b3a25 55%, #04140c 100%)', accent: '#3fd688', art: cardPair({ rank: 'J', suit: 'H' }, { rank: 'A', suit: 'S' }) },
+const HOME_LOOK: Record<HomeGameId, Omit<HomeGame, 'id' | 'screen' | 'category'>> = {
+  carta: { image: cardCarta, bg: 'radial-gradient(120% 90% at 50% 10%, #1f4f9a 0%, #0f2350 50%, #070d1f 100%)', accent: '#5b8dff', art: (s) => <GameArt game="carta" size={s * 0.52} /> },
+  domino: { image: cardDomino, bg: 'radial-gradient(120% 90% at 50% 10%, #8a5a1c 0%, #3d230c 55%, #140b04 100%)', accent: '#e0a24a', art: (s) => <DominoArt size={s * 0.52} /> },
+  bingo: { image: cardBingo, bg: 'radial-gradient(120% 90% at 50% 10%, #6a2bc4 0%, #2f1266 55%, #10061f 100%)', accent: '#a974ff', art: (s) => <BingoArt size={s * 0.52} /> },
+  poker: { image: cardPoker, bg: 'radial-gradient(120% 90% at 50% 10%, #b3202f 0%, #560c16 55%, #1a0406 100%)', accent: '#ff5d6c', art: cardPair({ rank: 'A', suit: 'S' }, { rank: 'K', suit: 'H' }) },
+  roulette: { image: cardRoulette, bg: 'radial-gradient(120% 90% at 50% 10%, #7a1f2b 0%, #3a0d14 55%, #140507 100%)', accent: '#e0525f', art: (s) => wheel(s * 1.15) },
+  blackjack: { image: cardBlackjack, bg: 'radial-gradient(120% 90% at 50% 10%, #16784c 0%, #0b3a25 55%, #04140c 100%)', accent: '#3fd688', art: cardPair({ rank: 'J', suit: 'H' }, { rank: 'A', suit: 'S' }) },
   slots: {
-    id: 'slots',
     image: cardSlots,
-    screen: 'slotLobby',
-    category: 'slots',
     bg: 'radial-gradient(120% 90% at 50% 10%, #9a6a14 0%, #4a2c06 55%, #170d02 100%)',
     accent: '#ffd76a',
     art: (s) => (
@@ -101,37 +101,25 @@ export const HOME_GAMES: Record<HomeGameId, HomeGame> = {
     ),
   },
   crash: {
-    id: 'crash',
     image: cardCrash,
-    screen: 'crash',
-    category: 'instant',
     bg: 'radial-gradient(120% 90% at 50% 10%, #8a1a24 0%, #3a0a10 55%, #0d0305 100%)',
     accent: '#ff6b5a',
     art: (s) => <span style={{ fontSize: s * 0.7 }} aria-hidden>🚀</span>,
   },
   horse: {
-    id: 'horse',
     image: cardHorse,
-    screen: 'horse',
-    category: 'instant',
     bg: 'radial-gradient(120% 90% at 50% 10%, #1f6a3c 0%, #0e3a20 55%, #04140a 100%)',
     accent: '#e8c46a',
     art: (s) => <span style={{ fontSize: s * 0.7 }} aria-hidden>🏇</span>,
   },
   airhockey: {
-    id: 'airhockey',
     image: cardAirHockey,
-    screen: 'airhockey',
-    category: 'table',
     bg: 'radial-gradient(120% 90% at 50% 10%, #1b2f6e 0%, #0b1433 45%, #3a0a14 100%)',
     accent: '#e8c46a',
     art: (s) => <HockeyCardArt size={s} />,
   },
   jewels: {
-    id: 'jewels',
     image: cardJewels,
-    screen: 'jewels',
-    category: 'puzzle',
     bg: 'radial-gradient(120% 90% at 50% 10%, #2f5fb8 0%, #152a66 55%, #070d24 100%)',
     accent: '#7fb4ff',
     art: (s) => (
@@ -143,6 +131,9 @@ export const HOME_GAMES: Record<HomeGameId, HomeGame> = {
     ),
   },
 };
+
+/** Every game of the catalog with Home's look (the catalog decides which games exist and where they open). */
+export const HOME_GAMES = Object.fromEntries(GAMES.map((g) => [g.id, { ...HOME_LOOK[g.id], id: g.id, screen: g.screen, category: g.category }])) as Record<HomeGameId, HomeGame>;
 
 export const POPULAR: HomeGameId[] = ['carta', 'domino', 'bingo', 'poker'];
 export const CASINO: HomeGameId[] = ['airhockey', 'crash', 'horse', 'roulette', 'blackjack', 'slots', 'jewels'];

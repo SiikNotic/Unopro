@@ -1,42 +1,72 @@
-import { AlertCircle, ArrowLeft, ArrowRight, ChevronRight, CircleDot, Club, Layers, Lightbulb, Play, Repeat, Sparkles, Zap } from 'lucide-react';
+// Tutorials: every lesson of every game in the catalog (src/games/catalog.ts), so the list always matches the
+// games the app really has. Each lesson: an intro, a picture and its steps (objective, how to start, how to play,
+// rules, coins, how to win), in Spanish and English.
+import { AlertCircle, ArrowLeft, ArrowRight, ChevronRight, Coins, Globe, Layers, Lightbulb, Play, Repeat, Users, Zap } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { useNavigation } from '@/components/Navigation';
 import { GameCard } from '@/components/table/GameCard';
 import { PlayingCardView } from '@/components/casino/PlayingCardView';
 import { SlotSymbolIcon } from '@/components/casino/slotSymbols';
+import '@/components/casino/casino.css';
 import { useI18n } from '@/i18n';
 import type { Card } from '@/game/engine';
 import type { Screen } from '@/types/navigation';
+import { gameInfo, gamesIn, GENERAL_TOPICS, TOPIC_ORDER } from '@/games/catalog';
+import type { GameId, GameSection, TopicId } from '@/games/catalog';
+import { GameIcon } from '@/games/GameIcon';
 
-type TopicId = 'cards' | 'turns' | 'specials' | 'uno' | 'strategy' | 'blackjack' | 'roulette' | 'slots';
+/** How many steps each lesson has (s1…sN in the translations). */
+const STEPS: Record<TopicId, number> = {
+  coins: 4, online: 4, cards: 3, turns: 3, specials: 3, uno: 3, strategy: 3, cartaModes: 4, domino: 5, bingo: 5, jewels: 5,
+  crash: 4, horse: 4, airhockey: 4, blackjack: 4, roulette: 4, poker: 4, slots: 3, premiumSlots: 5,
+};
+
+/** Carta's lessons get their own icons (the game has several); the rest use the game's picture. */
+const TOPIC_ICON: Partial<Record<TopicId, LucideIcon>> = { coins: Coins, online: Globe, cards: Layers, turns: Repeat, specials: Zap, uno: AlertCircle, strategy: Lightbulb, cartaModes: Users };
 
 interface Topic {
   id: TopicId;
-  icon: LucideIcon;
-  group: 'carta' | 'casino';
+  game: GameId | null;
   /** Where "Try it" takes you. */
   target: Screen;
 }
 
-const TOPICS: Topic[] = [
-  { id: 'cards', icon: Layers, group: 'carta', target: 'cartaSetup' },
-  { id: 'turns', icon: Repeat, group: 'carta', target: 'cartaSetup' },
-  { id: 'specials', icon: Zap, group: 'carta', target: 'cartaSetup' },
-  { id: 'uno', icon: AlertCircle, group: 'carta', target: 'cartaSetup' },
-  { id: 'strategy', icon: Lightbulb, group: 'carta', target: 'cartaSetup' },
-  { id: 'blackjack', icon: Club, group: 'casino', target: 'blackjackSetup' },
-  { id: 'roulette', icon: CircleDot, group: 'casino', target: 'rouletteSetup' },
-  { id: 'slots', icon: Sparkles, group: 'casino', target: 'slotLobby' },
-];
+const TOPICS: Topic[] = TOPIC_ORDER.map(({ id, game }) => ({ id, game, target: game ? gameInfo(game).screen : id === 'coins' ? 'bank' : 'gameModes' }));
+
+function TopicIcon({ topic }: { topic: Topic }) {
+  const Icon = TOPIC_ICON[topic.id];
+  if (Icon) return <Icon className="w-5 h-5" aria-hidden />;
+  return topic.game ? <GameIcon id={topic.game} /> : null;
+}
+
+/** For the lessons without a drawn illustration: the game's picture and three key facts. */
+function Facts({ topic }: { topic: Topic }) {
+  const { t } = useI18n();
+  const facts = (t(`tutorial.topics.${topic.id}.facts`) as string).split('|');
+  return (
+    <div className="flex flex-col items-center gap-3">
+      <span className="grid h-16 w-16 place-items-center overflow-hidden rounded-2xl border border-[rgba(216,178,106,0.4)] bg-[rgba(216,178,106,0.1)] text-[var(--cz-gold)] [&_svg]:max-h-12">
+        <TopicIcon topic={topic} />
+      </span>
+      <div className="grid w-full grid-cols-3 gap-2 text-center">
+        {facts.map((f) => (
+          <div key={f} className="rounded-xl border border-white/10 bg-white/5 px-1.5 py-2.5 text-[12px] font-semibold leading-tight text-white/90">
+            {f}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 const card = (id: string, color: Card['color'], type: Card['type'], value: Card['value'] = null): Card => ({ id, color, type, value });
 
 /** Small illustration for each lesson, built from the game's real components. */
-function Visual({ id }: { id: TopicId }) {
+function Visual({ topic }: { topic: Topic }) {
   const { t } = useI18n();
   const w = { '--cw': '58px' } as React.CSSProperties;
-  switch (id) {
+  switch (topic.id) {
     case 'cards':
       return (
         <div className="flex flex-wrap justify-center gap-2">
@@ -135,6 +165,8 @@ function Visual({ id }: { id: TopicId }) {
           ))}
         </div>
       );
+    default:
+      return <Facts topic={topic} />;
   }
 }
 
@@ -151,10 +183,10 @@ function Lesson({ topic, onBack, onGo }: { topic: Topic; onBack: () => void; onG
       <article key={topic.id} className="flex flex-col gap-4 cz-fade-in">
         <p className="text-[15px] leading-relaxed text-white/85">{t(k('intro'))}</p>
         <div className="cz-panel p-4">
-          <Visual id={topic.id} />
+          <Visual topic={topic} />
         </div>
         <ol className="flex flex-col gap-3">
-          {[1, 2, 3].map((n) => (
+          {Array.from({ length: STEPS[topic.id] }, (_, i) => i + 1).map((n) => (
             <li key={n} className="cz-panel p-4 flex gap-3">
               <span className="flex-none w-7 h-7 rounded-full bg-[rgba(216,178,106,0.14)] border border-[rgba(216,178,106,0.35)] text-[var(--cz-gold)] text-xs font-bold flex items-center justify-center">{n}</span>
               <div className="min-w-0">
@@ -166,7 +198,7 @@ function Lesson({ topic, onBack, onGo }: { topic: Topic; onBack: () => void; onG
         </ol>
 
         <button type="button" className="cz-btn cz-btn-primary cz-btn-lg w-full mt-1" onClick={() => navigate(topic.target)}>
-          <Play className="w-5 h-5" /> {t(topic.group === 'casino' ? 'tutorial.tryGame' : 'tutorial.tryCarta')}
+          <Play className="w-5 h-5" /> {t(!topic.game ? 'tutorial.tryPlace' : topic.game === 'carta' ? 'tutorial.tryCarta' : 'tutorial.tryGame')}
         </button>
 
         <nav className="grid grid-cols-2 gap-2" aria-label={t('tutorial.lessonNav')}>
@@ -201,25 +233,43 @@ export function TutorialScreen() {
       />
     );
 
+  const row = (x: Topic) => (
+    <button key={x.id} type="button" className="cz-row" onClick={() => navigate('tutorial', { topic: x.id })}>
+      <span className="cz-row-icon overflow-hidden">
+        <TopicIcon topic={x} />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block font-display font-bold text-white text-[15px]">{t(`tutorial.topics.${x.id}.title`)}</span>
+        <span className="block text-xs text-[var(--cz-muted)] mt-0.5 leading-snug">{t(`tutorial.topics.${x.id}.summary`)}</span>
+      </span>
+      <ChevronRight className="w-5 h-5 text-[var(--cz-muted)] shrink-0" aria-hidden />
+    </button>
+  );
+  const byId = (id: TopicId) => TOPICS.find((x) => x.id === id)!;
+
   return (
     <ScreenContainer title={t('tutorial.title')} subtitle={t('tutorial.subtitle')}>
       <div className="flex flex-col gap-6">
-        {(['carta', 'casino'] as const).map((group) => (
-          <section key={group} className="animate-slide-up">
-            <h2 className="cz-label mb-2 px-1">{t(`tutorial.groups.${group}`)}</h2>
+        <section className="animate-slide-up">
+          <h2 className="cz-label mb-2 px-1">{t('tutorial.groups.general')}</h2>
+          <div className="flex flex-col gap-2">{GENERAL_TOPICS.map((id) => row(byId(id)))}</div>
+        </section>
+        {(['table', 'puzzle', 'casino'] as GameSection[]).map((section) => (
+          <section key={section} className="animate-slide-up">
+            <h2 className="cz-label mb-2 px-1">{t(`tutorial.groups.${section}`)}</h2>
             <div className="flex flex-col gap-2">
-              {TOPICS.filter((x) => x.group === group).map((x) => (
-                <button key={x.id} type="button" className="cz-row" onClick={() => navigate('tutorial', { topic: x.id })}>
-                  <span className="cz-row-icon">
-                    <x.icon className="w-5 h-5" aria-hidden />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block font-display font-bold text-white text-[15px]">{t(`tutorial.topics.${x.id}.title`)}</span>
-                    <span className="block text-xs text-[var(--cz-muted)] mt-0.5 leading-snug">{t(`tutorial.topics.${x.id}.summary`)}</span>
-                  </span>
-                  <ChevronRight className="w-5 h-5 text-[var(--cz-muted)] shrink-0" aria-hidden />
-                </button>
-              ))}
+              {gamesIn(section).map((g) =>
+                g.tutorials.length === 1 ? (
+                  row(byId(g.tutorials[0]))
+                ) : (
+                  <div key={g.id} className="flex flex-col gap-2">
+                    <p className="mt-1 flex items-center gap-2 px-1 text-[13px] font-bold text-white/85">
+                      {t(g.nameKey)} <span className="text-[11px] font-semibold text-[var(--cz-muted)]">· {t('tutorial.lessons', { n: g.tutorials.length })}</span>
+                    </p>
+                    {g.tutorials.map((id) => row(byId(id)))}
+                  </div>
+                ),
+              )}
             </div>
           </section>
         ))}

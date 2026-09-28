@@ -4,6 +4,7 @@ import { isRed } from '@/casino/cards';
 import { GameCard } from '@/components/table/GameCard';
 import { useI18n } from '@/i18n';
 import { FrenchSuit } from './frenchSuits';
+import './playingCard.css';
 
 interface PlayingCardViewProps {
   card: PlayingCard;
