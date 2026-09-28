@@ -12,3 +12,8 @@ Ready to upload in Play Console → Grow → Store presence → Main store listi
 Screenshots in Spanish, taken from the Google Play build (`VITE_DISTRIBUTION=play`) of the current app:
 home, Play list, slot machines, a machine, Blackjack, Roulette, Air Hockey and the Bank. They only show
 virtual coins; no real-money symbols.
+
+## English
+
+`en/phone/` and `en/tablet/`: the same screenshots in English, for the English (en-US) store listing. The icon
+and the feature graphic have no text in a language, so they serve both listings.
