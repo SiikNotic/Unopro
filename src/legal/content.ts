@@ -52,7 +52,7 @@ function es(): LegalDoc[] {
         {
           h: 'Anuncios recompensados',
           p: [
-            'Los anuncios recompensados son opcionales. En la app para Android, ver un anuncio puede otorgar una cantidad determinada de monedas virtuales (actualmente 100) solo cuando el proveedor de anuncios confirma a nuestro servidor que el anuncio se completó.',
+            'Los anuncios recompensados son opcionales. En la app para Android, ver un anuncio puede otorgar una cantidad determinada de monedas virtuales (actualmente 500) solo cuando el proveedor de anuncios confirma a nuestro servidor que el anuncio se completó.',
             'Ganar en un juego de casino simulado no significa que vayas a ganar en juegos de apuestas con dinero real.',
           ],
         },
@@ -68,8 +68,8 @@ function es(): LegalDoc[] {
           h: 'Cómo se obtienen',
           p: [
             'Bonificación de bienvenida al crear una cuenta (1.000 monedas, una vez por cuenta).',
-            'Préstamo del Banco: 500 monedas, como máximo una vez cada 24 horas (calculado por el servidor).',
-            'Anuncio recompensado opcional (Android): 100 monedas cuando el proveedor confirma el anuncio completado; hay un límite diario.',
+            'Préstamo de emergencia del Banco: actualmente 1.000 monedas, solo si tu saldo es bajo (actualmente menos de 500), como máximo uno cada 24 horas y uno pendiente a la vez. Se devuelve desde tu saldo, sin interés, para poder pedir otro; el servidor decide y registra cada préstamo y devolución.',
+            'Anuncio recompensado opcional (Android): actualmente 500 monedas cuando el proveedor confirma a nuestro servidor el anuncio completado; hay un límite diario.',
             'Resultados de los juegos. Las mesas de práctica (por ejemplo, el póker contra bots) usan fichas de práctica que no afectan a las monedas de tu cuenta.',
           ],
         },
@@ -208,7 +208,7 @@ function en(): LegalDoc[] {
         {
           h: 'Rewarded ads',
           p: [
-            'Rewarded ads are optional. In the Android app, watching an ad may grant a set amount of virtual coins (currently 100) only when the ad provider confirms to our server that the ad was completed.',
+            'Rewarded ads are optional. In the Android app, watching an ad may grant a set amount of virtual coins (currently 500) only when the ad provider confirms to our server that the ad was completed.',
             'Winning at a simulated casino game does not mean you would win at real-money gambling.',
           ],
         },
@@ -224,8 +224,8 @@ function en(): LegalDoc[] {
           h: 'How you get them',
           p: [
             'Welcome bonus when you create an account (1,000 coins, once per account).',
-            'Bank loan: 500 coins, at most once every 24 hours (timed by the server).',
-            'Optional rewarded ad (Android): 100 coins when the provider confirms the completed ad; there is a daily limit.',
+            'Bank emergency loan: currently 1,000 coins, only while your balance is low (currently below 500), at most one every 24 hours and one owed at a time. It is paid back from your balance, interest-free, before you can take another; the server decides and records every loan and repayment.',
+            'Optional rewarded ad (Android): currently 500 coins when the provider confirms the completed ad to our server; there is a daily limit.',
             'Game results. Practice tables (for example poker against bots) use practice chips that don\'t affect your account coins.',
           ],
         },

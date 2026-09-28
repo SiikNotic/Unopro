@@ -29,12 +29,13 @@ export interface Overview {
 
 /** A Bank grant (loan or ad reward) or a rejected ad event. Read-only: corrections are coin adjustments. */
 export interface BankActivityRow {
-  kind: 'loan' | 'ad_reward';
+  kind: 'loan' | 'loan_repay' | 'ad_reward';
   id: number;
   user_id: string;
   username: string | null;
   amount: number;
-  status: 'granted' | 'rejected';
+  /** Ads: granted / rejected. Loans: outstanding / repaid / settled ('granted' before the second version). */
+  status: 'granted' | 'rejected' | 'outstanding' | 'repaid' | 'settled';
   reason: string | null;
   at: string;
   reference: string;
@@ -89,7 +90,7 @@ export interface AuditRow {
   actor_username?: string | null;
   target_id: string | null;
   target_username?: string | null;
-  action: 'ADD_COINS' | 'REMOVE_COINS' | 'BAN' | 'UNBAN' | 'USERNAME_CHANGE' | 'ROLE_CHANGE' | 'GUEST_MIGRATION' | 'GAME_AVAILABILITY' | 'HORSE_CONFIG';
+  action: 'ADD_COINS' | 'REMOVE_COINS' | 'BAN' | 'UNBAN' | 'USERNAME_CHANGE' | 'ROLE_CHANGE' | 'GUEST_MIGRATION' | 'GAME_AVAILABILITY' | 'HORSE_CONFIG' | 'BANK_CONFIG';
   reason: string | null;
   metadata: Record<string, unknown>;
 }
@@ -151,6 +152,20 @@ export interface UserDetail {
   ledger: LedgerRow[];
   bans: BanRow[];
   audit: AuditRow[];
+}
+
+/** The Bank's rules (bank_config) and the loans owed right now. */
+export interface BankConfig {
+  adAmount: number;
+  adDailyCap: number;
+  loanAmount: number;
+  loanCooldownHours: number;
+  loanMaxBalance: number;
+  loanRequiresRepayment: boolean;
+  openLoans: number;
+  openLoanCoins: number;
+  updatedAt: string;
+  updatedBy: string | null;
 }
 
 /** Horse Racing: configuration (RTP in basis points, bet limits) and reports. */
@@ -290,6 +305,17 @@ export const staffApi = {
   crashRounds: (limit = 50, before: number | null = null) => rpc<CrashRoundRow[]>('staff_crash_rounds', { p_limit: limit, p_before: before }),
   crashRound: (id: number) => rpc<CrashRoundDetail>('staff_crash_round', { p_id: id }),
   /** Admin or owner: the database checks the role and records the change in the audit log. */
+  bankConfig: () => rpc<BankConfig>('staff_bank_config'),
+  setBankConfig: (c: Omit<BankConfig, 'openLoans' | 'openLoanCoins' | 'updatedAt' | 'updatedBy'>, reason: string) =>
+    rpc<BankConfig>('admin_set_bank_config', {
+      p_ad_amount: c.adAmount,
+      p_ad_daily_cap: c.adDailyCap,
+      p_loan_amount: c.loanAmount,
+      p_loan_cooldown_hours: c.loanCooldownHours,
+      p_loan_max_balance: c.loanMaxBalance,
+      p_loan_requires_repayment: c.loanRequiresRepayment,
+      p_reason: reason,
+    }),
   setHorseConfig: (rtpBp: number, minBet: number, maxBet: number, reason: string) =>
     rpc<HorseConfig>('admin_set_horse_config', { p_rtp_bp: rtpBp, p_min_bet: minBet, p_max_bet: maxBet, p_reason: reason }),
 };

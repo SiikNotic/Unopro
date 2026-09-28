@@ -20,6 +20,10 @@ export function auditLine(a: AuditRow, t: (k: string, v?: Record<string, string 
       const to = (m.to ?? {}) as Record<string, number>;
       return t('staff.audit.horseConfig', { rtp: (Number(to.rtp ?? 0) / 100).toFixed(2), min: fmtNum(Number(to.minBet ?? 0), lang), max: fmtNum(Number(to.maxBet ?? 0), lang) });
     }
+    case 'BANK_CONFIG': {
+      const to = (m.to ?? {}) as Record<string, number>;
+      return t('staff.audit.bankConfig', { ad: fmtNum(Number(to.adAmount ?? 0), lang), loan: fmtNum(Number(to.loanAmount ?? 0), lang), hours: Number(to.loanCooldownHours ?? 0), max: fmtNum(Number(to.loanMaxBalance ?? 0), lang) });
+    }
     case 'ROLE_CHANGE':
       return t('staff.audit.role', { from: String(m.from ?? '—'), to: String(m.to ?? m.role ?? '') });
     default:

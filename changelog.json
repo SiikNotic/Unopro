@@ -89,6 +89,28 @@
         "es": "Información de contacto de LiveNest en Ajustes y en Legal.",
         "en": "LiveNest contact details in Settings and Legal."
       }
+    ],
+    "1.2.56": [
+      {
+        "icon": "coins",
+        "es": "Banco renovado: ver un anuncio ahora da 500 monedas.",
+        "en": "Revamped Bank: watching an ad now gives 500 coins."
+      },
+      {
+        "icon": "new",
+        "es": "Préstamo de emergencia de 1,000 monedas que devuelves sin interés.",
+        "en": "A 1,000-coin emergency loan you pay back interest-free."
+      },
+      {
+        "icon": "design",
+        "es": "Historial del Banco con el estado de cada préstamo y recompensa.",
+        "en": "Bank history with the state of every loan and reward."
+      },
+      {
+        "icon": "security",
+        "es": "El servidor decide y registra cada pago del Banco.",
+        "en": "The server decides and records every Bank payment."
+      }
     ]
   }
 }

@@ -196,7 +196,7 @@ export function StaffScreen() {
           {section === 'games' && (
             <GamesTab games={games} gamesError={gamesError} report={report} period={period} onPeriod={setPeriod} open={openGame} onOpenGame={setOpenGame} version={version} role={myRole} onChanged={refresh} onOpen={setSelected} />
           )}
-          {section === 'economy' && <EconomyTab report={report} reportError={reportError} period={period} onPeriod={setPeriod} version={version} onOpen={setSelected} />}
+          {section === 'economy' && <EconomyTab report={report} reportError={reportError} period={period} onPeriod={setPeriod} version={version} role={myRole} onChanged={refresh} onOpen={setSelected} />}
           {section === 'bans' && <BansTab version={version} onOpen={setSelected} />}
           {section === 'audit' && <AuditTab version={version} onOpen={setSelected} />}
         </main>

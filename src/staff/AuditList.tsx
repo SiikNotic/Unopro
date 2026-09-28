@@ -1,5 +1,5 @@
 // The team's actions (audit log) and the Bank's activity, as readable lists.
-import { Ban, Coins, Flag, Gamepad2, PencilLine, RotateCcw, ShieldCheck, UserCog, UserPlus } from 'lucide-react';
+import { Ban, Coins, Flag, Gamepad2, Landmark, PencilLine, RotateCcw, ShieldCheck, UserCog, UserPlus } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useI18n } from '@/i18n';
 import type { AuditRow, BankActivityRow } from './api';
@@ -16,6 +16,7 @@ const ICON: Record<AuditRow['action'], LucideIcon> = {
   USERNAME_CHANGE: PencilLine,
   GAME_AVAILABILITY: Gamepad2,
   HORSE_CONFIG: Flag,
+  BANK_CONFIG: Landmark,
   GUEST_MIGRATION: UserPlus,
 };
 const TONE: Partial<Record<AuditRow['action'], string>> = { ADD_COINS: 'good', REMOVE_COINS: 'bad', BAN: 'bad', UNBAN: 'good' };
@@ -66,13 +67,14 @@ export function BankList({ rows, onOpen }: { rows: BankActivityRow[]; onOpen: (i
           <span className="min-w-0 flex-1">
             <PlayerLink id={b.user_id} name={b.username} onOpen={onOpen} />
             <span className="block text-[12px]">
-              {t(`staff.ledger.${b.kind}`)} · <span className={b.status === 'granted' ? '' : 'sd-minus'}>{b.status === 'granted' ? t('staff.bank.status.granted') : t(`staff.bank.reason.${b.reason ?? 'other'}`)}</span>
+              {t(`staff.ledger.${b.kind}`)} ·{' '}
+              <span className={b.status === 'rejected' ? 'sd-minus' : ''}>{b.status === 'rejected' ? t(`staff.bank.reason.${b.reason ?? 'other'}`) : t(`staff.bank.status.${b.status}`)}</span>
             </span>
             <span className="block text-[11px] sd-muted break-all">
               <Ago iso={b.at} /> · {t('staff.bank.reference', { id: b.reference })}
             </span>
           </span>
-          {b.status === 'granted' && <b className="cz-num sd-plus">+{fmtNum(b.amount, language)}</b>}
+          {b.kind === 'loan_repay' ? <b className="cz-num sd-minus">−{fmtNum(b.amount, language)}</b> : b.status !== 'rejected' && <b className="cz-num sd-plus">+{fmtNum(b.amount, language)}</b>}
         </li>
       ))}
     </ul>

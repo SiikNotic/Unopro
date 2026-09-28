@@ -36,7 +36,7 @@ export function useGameName() {
 /** Realised return to player (paid ÷ staked), as a percentage string. */
 export const rtpText = (paid: number, staked: number) => (staked > 0 ? `${((paid / staked) * 100).toFixed(1)} %` : '—');
 
-export const AUDIT_ACTIONS: AuditRow['action'][] = ['ADD_COINS', 'REMOVE_COINS', 'BAN', 'UNBAN', 'ROLE_CHANGE', 'USERNAME_CHANGE', 'GAME_AVAILABILITY', 'HORSE_CONFIG', 'GUEST_MIGRATION'];
+export const AUDIT_ACTIONS: AuditRow['action'][] = ['ADD_COINS', 'REMOVE_COINS', 'BAN', 'UNBAN', 'ROLE_CHANGE', 'USERNAME_CHANGE', 'GAME_AVAILABILITY', 'HORSE_CONFIG', 'BANK_CONFIG', 'GUEST_MIGRATION'];
 
 /** The ledger codes that belong to each game shown in Staff → Games (the slot machines count both kinds). */
 export const GAME_LEDGER: Record<ControlledGame, string[]> = {

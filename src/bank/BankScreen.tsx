@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Ban, CircleUserRound, Clock, Coins, Landmark, Loader2, MonitorPlay, RefreshCw, ShieldCheck, Sparkles, Tv } from 'lucide-react';
+import { Ban, CalendarClock, CircleUserRound, Clock, Coins, HandCoins, Landmark, Loader2, MonitorPlay, RefreshCw, ShieldCheck, Sparkles, Tv, Undo2 } from 'lucide-react';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { useNavigation } from '@/components/Navigation';
 import { useI18n } from '@/i18n';
@@ -10,14 +10,14 @@ import { playSfx } from '@/audio/sfx';
 import { usePreferences, vibrate } from '@/settings/usePreferences';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { newId } from '@/casino/random';
-import { claimLoan, fetchBankStatus } from './bankApi';
-import { cooldownProgress, formatCountdown, loanRemainingMs, serverClock } from './bankLogic';
-import type { AdState, BankStatus, ServerClock } from './bankLogic';
+import { claimLoan, fetchBankStatus, repayLoan } from './bankApi';
+import { adRewardArrived, clearPendingAd, cooldownProgress, formatCountdown, loanRemainingMs, loanView, openLoan, readPendingAd, savePendingAd, serverClock } from './bankLogic';
+import type { AdState, BankHistoryItem, BankStatus, ServerClock } from './bankLogic';
 import { useRewardedAd } from './useRewardedAd';
 import { getAdsIssue } from './ads';
 import './bank.css';
 
-type LoanPhase = 'idle' | 'claiming';
+type LoanPhase = 'idle' | 'claiming' | 'confirmRepay' | 'repaying';
 
 /** A coin shower from the button that paid, plus the balance bounce (skipped with reduced motion). */
 function CoinBurst({ burst }: { burst: { key: number; amount: number } | null }) {
@@ -42,7 +42,7 @@ function useTicker(active: boolean): number {
   return now;
 }
 
-/** The vault: the 24-hour loan and rewarded ads, both paid into account coins by the server. */
+/** The vault: the emergency loan and rewarded ads, both paid into account coins by the server. */
 export function BankScreen() {
   const { t, language } = useI18n();
   const { navigate } = useNavigation();
@@ -57,8 +57,11 @@ export function BankScreen() {
   const [message, setMessage] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null);
   const [burst, setBurst] = useState<{ key: number; amount: number } | null>(null);
   const [bounce, setBounce] = useState(0);
-  // One idempotency key per loan attempt: kept after a network failure, so the retry can't pay twice.
+  // One idempotency key per loan (and repayment) attempt: kept after a network failure, so the retry can't
+  // pay or charge twice.
   const pendingLoan = useRef<string | null>(null);
+  const pendingRepay = useRef<string | null>(null);
+  const [spin, setSpin] = useState(0);
 
   const signedIn = account.status === 'user';
   const registered = signedIn && !!account.coins?.registered;
@@ -84,11 +87,23 @@ export function BankScreen() {
     }
   }, [signedIn, account.profile?.userId, load]);
 
+  useEffect(() => {
+    if (!signedIn) return;
+    const onVisible = () => {
+      if (!document.hidden) void load();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [signedIn, load]);
+
   const celebrate = useCallback(
     (amount: number, sound: 'cashIn' | 'coin') => {
       playSfx(sound);
       vibrate(preferences.haptics, [30, 40, 60]);
-      if (!reduced) setBurst({ key: Date.now(), amount });
+      if (!reduced) {
+        setBurst({ key: Date.now(), amount });
+        setSpin((n) => n + 1);
+      }
       setBounce((b) => b + 1);
     },
     [preferences.haptics, reduced]
@@ -111,14 +126,18 @@ export function BankScreen() {
     wasCooling.current = cooling;
   }, [cooling, load]);
 
-  const errorText = (code: string) => {
-    const key = `bank.errors.${code}`;
-    const text = t(key);
+  const errorText = (code: string, detail = '') => {
+    const specific = code === 'conflict' && (detail === 'loan_outstanding' || detail === 'balance_too_high') ? detail : code;
+    const key = `bank.errors.${specific}`;
+    const text = t(key, { amount: formatChips(status?.loanMaxBalance ?? 0) });
     return text === key ? t('bank.errors.server') : text;
   };
 
+  const view = loanView(registered && !banned ? status : null, remaining);
+  const owed = openLoan(status);
+
   const requestLoan = async () => {
-    if (loanPhase !== 'idle' || !registered || banned || cooling) return;
+    if (loanPhase !== 'idle' || view !== 'available') return;
     setLoanPhase('claiming');
     setMessage(null);
     playSfx('chip');
@@ -138,8 +157,32 @@ export function BankScreen() {
       if (res.code !== 'network') pendingLoan.current = null;
       playSfx('error');
       vibrate(preferences.haptics, 20);
-      setMessage({ tone: 'error', text: errorText(res.code) });
-      if (res.code === 'cooldown' || res.code === 'banned') await load();
+      setMessage({ tone: 'error', text: errorText(res.code, res.detail) });
+      if (res.code !== 'network') await load();
+    }
+    setLoanPhase('idle');
+  };
+
+  const repay = async () => {
+    if (loanPhase !== 'confirmRepay' || !owed) return;
+    setLoanPhase('repaying');
+    setMessage(null);
+    playSfx('chip');
+    const id = pendingRepay.current ?? newId();
+    pendingRepay.current = id;
+    const res = await repayLoan(id);
+    if (res.ok) {
+      pendingRepay.current = null;
+      account.setBalance(res.data.balance);
+      setMessage({ tone: 'ok', text: t('bank.loan.repaid', { amount: formatChips(res.data.amount) }) });
+      setBounce((b) => b + 1);
+      await load();
+    } else {
+      if (res.code !== 'network') pendingRepay.current = null;
+      playSfx('error');
+      vibrate(preferences.haptics, 20);
+      setMessage({ tone: 'error', text: errorText(res.code, res.detail) });
+      if (res.code !== 'network') await load();
     }
     setLoanPhase('idle');
   };
@@ -147,20 +190,41 @@ export function BankScreen() {
   const ad = useRewardedAd({
     enabled: registered && !banned,
     userId: account.profile?.userId ?? null,
-    checkServer: async () => {
-      const s = await load();
-      const ids = (s?.history ?? []).filter((h) => h.kind === 'ad_reward').map((h) => h.id);
-      return ids.length ? Math.max(...ids) : null;
-    },
+    checkServer: async () => (await load())?.lastAdRewardId ?? null,
     onConfirmed: () => {
+      clearPendingAd();
       void account.refreshCoins();
-      celebrate(status?.adAmount ?? 100, 'coin');
-      setMessage({ tone: 'ok', text: t('bank.ad.rewarded', { amount: formatChips(status?.adAmount ?? 100) }) });
+      celebrate(status?.adAmount ?? 0, 'coin');
+      setMessage({ tone: 'ok', text: t('bank.ad.rewarded', { amount: formatChips(status?.adAmount ?? 0) }) });
     },
   });
 
-  const loanAmount = status?.loanAmount ?? 500;
-  const adAmount = status?.adAmount ?? 100;
+  // While the server confirms an ad, remember it in this tab: after a refresh the Bank keeps checking and
+  // shows the reward once the server has granted it (it never shows one the server didn't grant).
+  const lastAdId = status?.lastAdRewardId ?? null;
+  const lastAdRef = useRef(lastAdId);
+  lastAdRef.current = lastAdId;
+  useEffect(() => {
+    if (ad.state === 'VERIFYING') savePendingAd(lastAdRef.current);
+  }, [ad.state]);
+  const [recovering, setRecovering] = useState(() => readPendingAd() !== null);
+  useEffect(() => {
+    if (!recovering || !status || ad.state === 'VERIFYING') return;
+    const pending = readPendingAd();
+    if (!pending) return setRecovering(false);
+    if (adRewardArrived(pending.before, status.lastAdRewardId)) {
+      clearPendingAd();
+      setRecovering(false);
+      void account.refreshCoins();
+      celebrate(status.adAmount, 'coin');
+      setMessage({ tone: 'ok', text: t('bank.ad.rewarded', { amount: formatChips(status.adAmount) }) });
+      return;
+    }
+    const id = window.setTimeout(() => void load(), 3000);
+    return () => window.clearTimeout(id);
+  }, [recovering, status, ad.state, load, account, celebrate, t]);
+
+  const adAmount = status?.adAmount ?? 0;
   const capReached = !!status && status.adToday >= status.adDailyCap;
   const dateFmt = new Intl.DateTimeFormat(language, { dateStyle: 'medium', timeStyle: 'short' });
   const progress = cooldownProgress(remaining, status?.loanCooldownHours ?? 24);
@@ -172,7 +236,7 @@ export function BankScreen() {
         <section className="bk-vault" aria-label={t('bank.balance')}>
           <div className="bk-door" aria-hidden>
             <div className="bk-door-ring">
-              <div className="bk-wheel">
+              <div key={spin} className={`bk-wheel ${spin ? 'bk-wheel-turn' : ''}`}>
                 {Array.from({ length: 6 }, (_, i) => (
                   <span key={i} className="bk-spoke" style={{ transform: `rotate(${i * 30}deg)` }} />
                 ))}
@@ -230,45 +294,24 @@ export function BankScreen() {
         )}
 
         <div className="grid gap-4 sm:grid-cols-2">
-          {/* The loan */}
-          <section className={`bk-card bk-wood ${cooling ? 'bk-card-rest' : ''}`} aria-labelledby="bk-loan-title">
-            <div className="bk-card-top">
-              <span className="bk-badge">
-                <Clock className="w-3.5 h-3.5" aria-hidden /> {t('bank.loan.every', { hours: status?.loanCooldownHours ?? 24 })}
-              </span>
-            </div>
-            <h2 id="bk-loan-title" className="bk-card-title">{t('bank.loan.title')}</h2>
-            <p className="bk-amount cz-num">
-              +{formatChips(loanAmount)} <span>{t('bank.coins')}</span>
-            </p>
-            {cooling ? (
-              <div className="bk-cool" role="timer" aria-live="off" aria-label={t('bank.loan.nextIn', { time: formatCountdown(remaining) })}>
-                <svg viewBox="0 0 44 44" className="bk-ring" aria-hidden>
-                  <circle cx="22" cy="22" r="19" className="bk-ring-bg" />
-                  <circle cx="22" cy="22" r="19" className="bk-ring-fg" style={{ strokeDasharray: `${progress * 119.4} 119.4` }} />
-                </svg>
-                <div className="min-w-0">
-                  <p className="text-[11px] uppercase tracking-[0.12em] text-white/60">{t('bank.loan.nextLabel')}</p>
-                  <p className="bk-countdown cz-num">{formatCountdown(remaining)}</p>
-                </div>
-              </div>
-            ) : (
-              <p className="text-xs text-white/70 min-h-[2.5em]">{t('bank.loan.hint')}</p>
-            )}
-            <button
-              type="button"
-              className="cz-btn cz-btn-primary w-full mt-auto"
-              disabled={!registered || banned || cooling || loanPhase !== 'idle' || !status}
-              aria-busy={loanPhase === 'claiming'}
-              onClick={() => void requestLoan()}
-            >
-              {loanPhase === 'claiming' ? <Loader2 className="w-5 h-5 animate-spin" /> : <Coins className="w-5 h-5" />}
-              {loanPhase === 'claiming' ? t('bank.loan.claiming') : cooling ? t('bank.loan.cooling') : !registered ? t('bank.needAccount') : t('bank.loan.cta', { amount: formatChips(loanAmount) })}
-            </button>
-          </section>
+          {/* The emergency loan */}
+          <LoanCard
+            view={view}
+            status={status}
+            owed={owed}
+            balance={balance}
+            remaining={remaining}
+            progress={progress}
+            phase={loanPhase}
+            dateFmt={dateFmt}
+            onRequest={() => void requestLoan()}
+            onAskRepay={() => loanPhase === 'idle' && setLoanPhase('confirmRepay')}
+            onCancelRepay={() => loanPhase === 'confirmRepay' && setLoanPhase('idle')}
+            onRepay={() => void repay()}
+          />
 
           {/* Rewarded ad */}
-          <AdCard state={ad.state} failure={ad.failure} amount={adAmount} capReached={capReached} locked={!registered || banned} today={status?.adToday ?? 0} cap={status?.adDailyCap ?? 20} onStart={ad.start} />
+          <AdCard state={recovering && ad.state !== 'VERIFYING' ? 'VERIFYING' : ad.state} failure={ad.failure} amount={adAmount} capReached={capReached} locked={!registered || banned || recovering} today={status?.adToday ?? 0} cap={status?.adDailyCap ?? 0} onStart={ad.start} />
         </div>
 
         {/* History */}
@@ -280,16 +323,7 @@ export function BankScreen() {
             ) : (
               <ul className="cz-panel divide-y divide-[var(--cz-line)]">
                 {status.history.map((h) => (
-                  <li key={`${h.kind}-${h.id}`} className="flex items-center gap-3 px-4 py-3">
-                    <span className="bk-hist-icon" aria-hidden>
-                      {h.kind === 'loan' ? <Landmark className="w-4 h-4" /> : <Tv className="w-4 h-4" />}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-white truncate">{t(h.kind === 'loan' ? 'bank.kind.loan' : 'bank.kind.ad')}</p>
-                      <p className="text-[11px] text-[var(--cz-muted)]">{dateFmt.format(new Date(h.at))}</p>
-                    </div>
-                    <span className="cz-num text-sm font-bold text-[var(--cz-gold-hover)]">+{formatChips(h.amount)}</span>
-                  </li>
+                  <HistoryRow key={`${h.kind}-${h.id}`} item={h} dateFmt={dateFmt} />
                 ))}
               </ul>
             )}
@@ -350,5 +384,162 @@ function AdCard({ state, failure, amount, capReached, locked, today, cap, onStar
         {label}
       </button>
     </section>
+  );
+}
+
+type LoanViewName = ReturnType<typeof loanView>;
+
+/** The emergency loan: what can be asked for now, the open loan and its repayment, or when the next one comes. */
+function LoanCard(p: {
+  view: LoanViewName;
+  status: BankStatus | null;
+  owed: ReturnType<typeof openLoan>;
+  balance: number;
+  remaining: number;
+  progress: number;
+  phase: LoanPhase;
+  dateFmt: Intl.DateTimeFormat;
+  onRequest: () => void;
+  onAskRepay: () => void;
+  onCancelRepay: () => void;
+  onRepay: () => void;
+}) {
+  const { t } = useI18n();
+  const s = p.status;
+  const amount = s?.loanAmount ?? 0;
+  const busy = p.phase === 'claiming' || p.phase === 'repaying';
+  const canRepay = !!p.owed && p.balance >= p.owed.amount;
+  const nextAt = s?.loan?.availableAt ? p.dateFmt.format(new Date(s.loan.availableAt)) : '';
+  const rest = p.view === 'cooldown' || p.view === 'balance';
+  return (
+    <section className={`bk-card bk-wood ${rest ? 'bk-card-rest' : ''}`} aria-labelledby="bk-loan-title" data-view={p.view}>
+      <div className="bk-card-top">
+        <span className="bk-badge">
+          <Clock className="w-3.5 h-3.5" aria-hidden /> {t('bank.loan.every', { hours: s?.loanCooldownHours ?? 24 })}
+        </span>
+        {p.view === 'outstanding' && <span className="bk-chip bk-chip-warn">{t('bank.status.outstanding')}</span>}
+      </div>
+      <h2 id="bk-loan-title" className="bk-card-title">{t('bank.loan.title')}</h2>
+
+      {p.view === 'outstanding' && p.owed ? (
+        <>
+          <p className="bk-amount bk-amount-owed cz-num">
+            {formatChips(p.owed.amount)} <span>{t('bank.loan.owed')}</span>
+          </p>
+          <p className="text-xs text-white/70">{t('bank.loan.owedHint', { date: p.dateFmt.format(new Date(p.owed.claimedAt)) })}</p>
+        </>
+      ) : (
+        <p className="bk-amount cz-num">
+          +{formatChips(amount)} <span>{t('bank.coins')}</span>
+        </p>
+      )}
+
+      {p.view === 'cooldown' && (
+        <div className="bk-cool" role="timer" aria-live="off" aria-label={t('bank.loan.nextIn', { time: formatCountdown(p.remaining) })}>
+          <svg viewBox="0 0 44 44" className="bk-ring" aria-hidden>
+            <circle cx="22" cy="22" r="19" className="bk-ring-bg" />
+            <circle cx="22" cy="22" r="19" className="bk-ring-fg" style={{ strokeDasharray: `${p.progress * 119.4} 119.4` }} />
+          </svg>
+          <div className="min-w-0">
+            <p className="text-[11px] uppercase tracking-[0.12em] text-white/60">{t('bank.loan.nextLabel')}</p>
+            <p className="bk-countdown cz-num">{formatCountdown(p.remaining)}</p>
+            {nextAt && (
+              <p className="flex items-center gap-1 text-[11px] text-white/60">
+                <CalendarClock className="w-3.5 h-3.5 shrink-0" aria-hidden /> {nextAt}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+      {p.view === 'balance' && <p className="text-xs text-white/75">{t('bank.loan.balanceRule', { amount: formatChips(s?.loanMaxBalance ?? 0) })}</p>}
+      {p.view === 'available' && <p className="text-xs text-white/70">{t(s?.loanRequiresRepayment ? 'bank.loan.hintRepay' : 'bank.loan.hint')}</p>}
+      {p.view === 'locked' && <p className="text-xs text-white/70">{t('bank.loan.hintRepay')}</p>}
+
+      {s && (
+        <dl className="bk-facts">
+          <div>
+            <dt>{t('bank.loan.factAmount')}</dt>
+            <dd className="cz-num">{formatChips(amount)}</dd>
+          </div>
+          <div>
+            <dt>{t('bank.loan.factBalance')}</dt>
+            <dd className="cz-num">&lt; {formatChips(s.loanMaxBalance)}</dd>
+          </div>
+          <div>
+            <dt>{t('bank.loan.factRepay')}</dt>
+            <dd>{t(s.loanRequiresRepayment ? 'bank.loan.repayYes' : 'bank.loan.repayNo')}</dd>
+          </div>
+        </dl>
+      )}
+
+      {p.view === 'outstanding' && p.owed ? (
+        p.phase === 'confirmRepay' || p.phase === 'repaying' ? (
+          <div className="bk-confirm" role="group" aria-label={t('bank.loan.confirmTitle', { amount: formatChips(p.owed.amount) })}>
+            <p className="text-sm text-white">{t('bank.loan.confirmTitle', { amount: formatChips(p.owed.amount) })}</p>
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button" className="cz-btn cz-btn-secondary" disabled={busy} onClick={p.onCancelRepay}>
+                {t('common.cancel')}
+              </button>
+              <button type="button" className="cz-btn cz-btn-primary" disabled={busy} aria-busy={p.phase === 'repaying'} onClick={p.onRepay}>
+                {p.phase === 'repaying' ? <Loader2 className="w-5 h-5 animate-spin" /> : <Undo2 className="w-5 h-5" />}
+                {t('bank.loan.repayConfirm')}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {!canRepay && <p className="text-[11px] text-white/60">{t('bank.loan.repayNeed', { amount: formatChips(p.owed.amount) })}</p>}
+            <button type="button" className="cz-btn cz-btn-primary w-full mt-auto" disabled={!canRepay || p.phase !== 'idle'} onClick={p.onAskRepay}>
+              <Undo2 className="w-5 h-5" /> {t('bank.loan.repay', { amount: formatChips(p.owed.amount) })}
+            </button>
+          </>
+        )
+      ) : (
+        <button type="button" className="cz-btn cz-btn-primary w-full mt-auto" disabled={p.view !== 'available' || p.phase !== 'idle'} aria-busy={p.phase === 'claiming'} onClick={p.onRequest}>
+          {p.phase === 'claiming' ? <Loader2 className="w-5 h-5 animate-spin" /> : <HandCoins className="w-5 h-5" />}
+          {p.phase === 'claiming'
+            ? t('bank.loan.claiming')
+            : p.view === 'cooldown'
+              ? t('bank.loan.cooling')
+              : p.view === 'balance'
+                ? t('bank.loan.notNeeded')
+                : p.view === 'locked'
+                  ? t('bank.needAccount')
+                  : t('bank.loan.cta', { amount: formatChips(amount) })}
+        </button>
+      )}
+    </section>
+  );
+}
+
+const HISTORY_ICON: Record<BankHistoryItem['kind'], typeof Landmark> = { loan: Landmark, loan_repay: Undo2, ad_reward: Tv, ad_rejected: Tv };
+
+/** One Bank movement: what it was, when, how much, and its state (open loan, paid back, refused ad…). */
+function HistoryRow({ item: h, dateFmt }: { item: BankHistoryItem; dateFmt: Intl.DateTimeFormat }) {
+  const { t } = useI18n();
+  const Icon = HISTORY_ICON[h.kind];
+  const chip =
+    h.kind === 'loan'
+      ? { tone: h.status === 'outstanding' ? 'warn' : h.status === 'repaid' ? 'ok' : 'muted', text: t(`bank.status.${h.status === 'outstanding' || h.status === 'repaid' ? h.status : 'settled'}`) }
+      : h.kind === 'ad_rejected'
+        ? { tone: 'err', text: t(`bank.status.reason.${['daily_cap', 'banned', 'not_registered'].includes(h.status) ? h.status : 'rejected'}`) }
+        : { tone: 'ok', text: t('bank.status.done') };
+  const sign = h.kind === 'loan_repay' ? '−' : h.kind === 'ad_rejected' ? '' : '+';
+  return (
+    <li className="flex items-center gap-3 px-4 py-3">
+      <span className={`bk-hist-icon ${h.kind === 'ad_rejected' ? 'bk-hist-off' : ''}`} aria-hidden>
+        <Icon className="w-4 h-4" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold text-white leading-snug break-words">{t(`bank.kind.${h.kind}`)}</p>
+        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-[var(--cz-muted)]">
+          <span>{dateFmt.format(new Date(h.at))}</span>
+          <span className={`bk-chip bk-chip-${chip.tone}`}>{chip.text}</span>
+        </p>
+      </div>
+      <span className={`cz-num text-sm font-bold shrink-0 ${h.kind === 'loan_repay' ? 'text-white/80' : h.kind === 'ad_rejected' ? 'text-[var(--cz-muted)]' : 'text-[var(--cz-gold-hover)]'}`}>
+        {h.kind === 'ad_rejected' ? '—' : `${sign}${formatChips(h.amount)}`}
+      </span>
+    </li>
   );
 }

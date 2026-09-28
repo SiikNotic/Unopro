@@ -310,8 +310,8 @@ export function AccountProvider({ children }: { children: ReactNode }) {
           seen.add(id);
           const game = c.row.game;
           // Game rounds are shown by the game itself when its animation ends.
-          // Bank grants (a loan, or an ad reward confirmed by the provider's server callback).
-          if (game === 'loan' || game === 'ad_reward') setBalance(Number(c.row.balance_after));
+          // Bank movements (a loan, its repayment, or an ad reward confirmed by the provider's server callback).
+          if (game === 'loan' || game === 'loan_repay' || game === 'ad_reward') setBalance(Number(c.row.balance_after));
           // Multiplayer tables book bets and wins as they happen (from any player's request).
           if ((game === 'blackjack' || game === 'roulette') && (c.row.detail as { table?: boolean } | null)?.table) setBalance(Number(c.row.balance_after));
           if (game === 'admin_add' || game === 'admin_remove') {

@@ -6,13 +6,15 @@ import { useI18n } from '@/i18n';
 import { staffApi } from './api';
 import type { StaffReport } from './api';
 import { AuditList, BankList } from './AuditList';
+import { BankConfigCard } from './BankConfigCard';
+import type { Role } from '@/account/accountContext';
 import { fmtNum, signed } from './format';
 import { UserTable } from './PlayersTab';
 import { ErrorLine, Kpi, Loading, Panel, PeriodPicker } from './ui';
 import { rtpText, useLoader } from './lib';
 import type { Period } from './lib';
 
-export function EconomyTab({ report, reportError, period, onPeriod, version, onOpen }: { report: StaffReport | null; reportError: string | null; period: Period; onPeriod: (p: Period) => void; version: number; onOpen: (id: string) => void }) {
+export function EconomyTab({ report, reportError, period, onPeriod, version, role, onChanged, onOpen }: { report: StaffReport | null; reportError: string | null; period: Period; onPeriod: (p: Period) => void; version: number; role: Role; onChanged: () => void; onOpen: (id: string) => void }) {
   const { t, language } = useI18n();
   const top = useLoader(() => staffApi.users('', 'balance', 10), [version]);
   const audit = useLoader(() => staffApi.audit(200), [version]);
@@ -47,6 +49,8 @@ export function EconomyTab({ report, reportError, period, onPeriod, version, onO
         <Kpi label={t('staff.eco.adjustments')} value={r ? signed(adminNet, language) : '…'} icon={SlidersHorizontal} hint={r ? t('staff.eco.adjustHint', { n: fmtNum(Number(r.adjustments), language), added: fmtNum(Number(r.adminAdded), language), removed: fmtNum(Number(r.adminRemoved), language) }) : undefined} />
         <Kpi label={t('staff.eco.minted')} value={r ? signed(minted, language) : '…'} hint={t('staff.eco.mintedHint')} />
       </div>
+
+      <BankConfigCard version={version} role={role} onSaved={onChanged} />
 
       <div className="sd-grid-2">
         <Panel title={t('staff.bank.title')} icon={Landmark} flush>

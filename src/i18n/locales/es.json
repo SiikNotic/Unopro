@@ -1,7 +1,7 @@
 {
   "app": {
-    "name": "Carta",
-    "tagline": "Un juego de cartas moderno"
+    "name": "Carta Casino",
+    "tagline": "Casino social con monedas virtuales"
   },
   "common": {
     "back": "Volver",
@@ -19,8 +19,8 @@
     "settings": "Ajustes"
   },
   "home": {
-    "title": "Carta",
-    "subtitle": "Un juego de cartas moderno",
+    "title": "Carta Casino",
+    "subtitle": "Casino social con monedas virtuales",
     "play": "Jugar",
     "tutorial": "Tutorial",
     "settings": "Ajustes",
@@ -149,13 +149,13 @@
         "title": "Monedas y cuenta",
         "summary": "Fichas de invitado, monedas de cuenta y el Banco",
         "intro": "Carta Casino usa solo monedas virtuales: no tienen valor real, no se compran y no se pueden retirar ni cambiar por premios.",
-        "facts": "1,000 de bienvenida|Préstamo diario de 500|Sin dinero real",
+        "facts": "1,000 de bienvenida|Préstamo de emergencia|Sin dinero real",
         "s1t": "Cuenta registrada",
         "s1b": "Al crear tu cuenta (correo confirmado, Google o Discord) recibes una sola vez 1,000 monedas. Tu saldo se guarda en el servidor y te sigue en cualquier dispositivo.",
         "s2t": "Quién decide los resultados",
         "s2b": "En los juegos con monedas de cuenta, el servidor sortea o verifica cada resultado y aplica el cobro y el pago en una sola operación. Repetir una petición nunca cobra ni paga dos veces.",
         "s3t": "El Banco",
-        "s3b": "Si te quedas sin monedas, el Banco te da un préstamo de 500 monedas cada 24 horas y, cuando haya anuncios disponibles, 100 monedas por cada anuncio completo verificado.",
+        "s3b": "Si te quedas sin monedas, el Banco te presta 1,000 (solo con saldo menor a 500 y uno cada 24 horas; lo devuelves sin interés para pedir otro) y, cuando haya anuncios, da 500 monedas por cada anuncio completo que el servidor verifica.",
         "s4t": "Juegos sin monedas",
         "s4b": "Carta contra bots, Dominó, Bingo, Póker y Jewellery se juegan sin arriesgar monedas de tu cuenta. Póker usa fichas de práctica propias de cada mesa."
       },
@@ -1650,7 +1650,8 @@
       "carta": "Carta",
       "crash": "Crash",
       "horse": "Horse Racing",
-      "airhockey": "Air Hockey"
+      "airhockey": "Air Hockey",
+      "loan_repay": "Préstamo devuelto"
     },
     "rounds": "Rondas jugadas",
     "bannedPermanent": "Sanción permanente",
@@ -1697,7 +1698,8 @@
       "role": "rol {from} → {to}",
       "gameOn": "{game} en servicio",
       "gameOff": "{game} fuera de servicio",
-      "horseConfig": "Horse Racing: RTP {rtp} %, apuestas {min}–{max}"
+      "horseConfig": "Horse Racing: RTP {rtp} %, apuestas {min}–{max}",
+      "bankConfig": "Banco: anuncio {ad}, préstamo {loan} cada {hours} h con saldo < {max}"
     },
     "kpi": {
       "registered": "Usuarios registrados",
@@ -1750,13 +1752,31 @@
       "reference": "Transacción: {id}",
       "status": {
         "granted": "Pagado",
-        "rejected": "Rechazado"
+        "rejected": "Rechazado",
+        "outstanding": "Pendiente",
+        "repaid": "Devuelto",
+        "settled": "Sin deuda"
       },
       "reason": {
         "not_registered": "Rechazado: sin cuenta",
         "banned": "Rechazado: suspendido",
         "daily_cap": "Rechazado: límite diario",
         "other": "Rechazado"
+      },
+      "config": {
+        "title": "Reglas del Banco",
+        "adAmount": "Monedas por anuncio",
+        "adDailyCap": "Anuncios por día",
+        "loanAmount": "Préstamo",
+        "loanCooldown": "Espera (horas)",
+        "loanMaxBalance": "Solo con saldo menor a",
+        "loanRepay": "El préstamo se devuelve",
+        "open": "{count} préstamos pendientes ({coins} monedas)",
+        "note": "Los cambios se aplican a los próximos pagos. Se guardan en la auditoría.",
+        "readOnly": "Solo un admin o el owner puede cambiarlas.",
+        "save": "Guardar reglas",
+        "saved": "Reglas guardadas.",
+        "invalid": "Revisa los valores: anuncio 1–100,000, anuncios 0–100, préstamo 1–1,000,000, espera 1–720 h."
       }
     },
     "games": {
@@ -1912,7 +1932,8 @@
       "USERNAME_CHANGE": "Cambio de nombre",
       "GAME_AVAILABILITY": "Estado de un juego",
       "HORSE_CONFIG": "Configuración de Horse Racing",
-      "GUEST_MIGRATION": "Fichas de invitado"
+      "GUEST_MIGRATION": "Fichas de invitado",
+      "BANK_CONFIG": "Reglas del Banco"
     },
     "bansHelp": "Para sancionar o levantar una sanción, abre la ficha del jugador (búscalo en Jugadores).",
     "bansActiveTitle": "Sanciones activas ({n})",
@@ -1992,8 +2013,8 @@
   },
   "bank": {
     "title": "Banco",
-    "subtitle": "Préstamos y recompensas para tu cuenta",
-    "shortcutHint": "Préstamo diario y recompensas",
+    "subtitle": "Monedas para cuando te quedas sin saldo",
+    "shortcutHint": "Anuncios y préstamo de emergencia",
     "goTo": "Ir al Banco",
     "balance": "Saldo",
     "balanceAccount": "Monedas de tu cuenta, guardadas en el servidor.",
@@ -2008,25 +2029,42 @@
     "history": "Historial del Banco",
     "historyEmpty": "Todavía no has recibido nada del Banco.",
     "kind": {
-      "loan": "Préstamo",
-      "ad": "Recompensa por anuncio"
+      "loan": "Préstamo recibido",
+      "loan_repay": "Préstamo devuelto",
+      "ad_reward": "Recompensa por anuncio",
+      "ad_rejected": "Anuncio sin recompensa"
     },
-    "footer": "El servidor decide cada pago. Monedas virtuales sin valor real.",
+    "footer": "El servidor decide y registra cada movimiento. Monedas virtuales sin valor real.",
     "loan": {
-      "title": "Préstamo del Banco",
+      "title": "Préstamo de emergencia",
       "every": "Cada {hours} h",
-      "hint": "Recíbelo una vez cada 24 horas.",
-      "cta": "Recibir {amount}",
+      "hint": "Para cuando te quedas sin monedas.",
+      "cta": "Pedir {amount}",
       "claiming": "Procesando…",
-      "cooling": "Préstamo recibido",
-      "nextLabel": "Disponible en",
-      "nextIn": "Disponible en {time}",
-      "granted": "¡Recibiste {amount} monedas!"
+      "cooling": "En espera",
+      "nextLabel": "Próxima solicitud en",
+      "nextIn": "Próxima solicitud en {time}",
+      "granted": "¡Recibiste un préstamo de {amount} monedas!",
+      "hintRepay": "Para cuando te quedas sin monedas. Devuélvelo, sin interés, para poder pedir otro.",
+      "owed": "pendientes",
+      "owedHint": "Préstamo recibido el {date}. Devuélvelo para poder pedir otro.",
+      "balanceRule": "El préstamo es para emergencias: podrás pedirlo cuando tengas menos de {amount} monedas.",
+      "notNeeded": "Aún tienes monedas",
+      "factAmount": "Disponible",
+      "factBalance": "Con saldo",
+      "factRepay": "Devolución",
+      "repayYes": "Sin interés",
+      "repayNo": "No se devuelve",
+      "repay": "Devolver {amount}",
+      "repayConfirm": "Devolver",
+      "confirmTitle": "¿Devolver {amount} monedas de tu saldo?",
+      "repayNeed": "Necesitas {amount} monedas para devolverlo.",
+      "repaid": "Préstamo devuelto: {amount} monedas descontadas de tu saldo."
     },
     "ad": {
       "title": "Ver anuncio",
-      "length": "≈ 15 s",
-      "hint": "Mira un anuncio completo y recibe monedas.",
+      "length": "≈ 10 s",
+      "hint": "Mira el anuncio completo. El servidor confirma la recompensa y la suma a tu saldo.",
       "cta": "Ver anuncio",
       "loading": "Cargando anuncio…",
       "showing": "Anuncio en curso…",
@@ -2047,9 +2085,26 @@
       "network": "Sin conexión. Inténtalo de nuevo: no se cobrará dos veces.",
       "server": "No se pudo completar. Inténtalo de nuevo.",
       "invalid": "Solicitud no válida.",
-      "forbidden": "No tienes permiso."
+      "forbidden": "No tienes permiso.",
+      "loan_outstanding": "Tienes un préstamo pendiente: devuélvelo para pedir otro.",
+      "balance_too_high": "El préstamo es para emergencias: podrás pedirlo cuando tengas menos de {amount} monedas.",
+      "insufficient_funds": "No tienes monedas suficientes para devolver el préstamo.",
+      "not_found": "No tienes ningún préstamo pendiente.",
+      "conflict": "No se pudo completar. Inténtalo de nuevo."
     },
-    "needAccount": "Requiere una cuenta"
+    "needAccount": "Requiere una cuenta",
+    "status": {
+      "outstanding": "Pendiente",
+      "repaid": "Devuelto",
+      "settled": "Sin deuda",
+      "done": "Completado",
+      "reason": {
+        "daily_cap": "Límite diario",
+        "banned": "Cuenta suspendida",
+        "not_registered": "Sin cuenta",
+        "rejected": "Rechazado"
+      }
+    }
   },
   "update": {
     "title": "Nueva versión {version}",

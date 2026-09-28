@@ -1,6 +1,23 @@
-# Unopro
+# Carta Casino
 
-Juego de cartas estilo UNO hecho con React, TypeScript, Vite y Tailwind CSS.
+**Carta Casino** es un casino social de **LiveNest** (contacto: livenestapp@gmail.com): juegos de mesa, de
+cartas, puzzle y casino con **monedas virtuales**. Sin dinero real: no se compran monedas, no hay retiros
+ni premios reales. Hecho con React, TypeScript, Vite y Tailwind CSS; app Android con Capacitor
+(`io.github.siiknotic.carta`) y servidor en Supabase.
+
+> El repositorio se llama `Unopro` por su origen, pero el producto es Carta Casino. Carta (el juego de
+> cartas estilo UNO) es solo uno de sus juegos.
+
+## Juegos
+
+Carta, Dominó, Bingo, Jewellery: Olympus, Crash, Carta Horse Racing, Air Hockey Casino, Blackjack,
+Ruleta, Póker y Tragamonedas. La lista única está en `src/games/catalog.ts` (ver
+`docs/games-platform.md`); cada juego tiene su documento en `docs/`.
+
+## Banco
+
+Monedas para quien se queda sin saldo: recompensa por anuncio (verificada por el servidor con AdMob SSV)
+y préstamo de emergencia. Ver `docs/bank.md`.
 
 ## Jugar online
 
@@ -25,7 +42,7 @@ npm run typecheck  # comprobación de tipos
 npm run lint       # ESLint
 ```
 
-## Motor del juego (`src/game/engine`)
+## Carta: motor del juego (`src/game/engine`)
 
 Independiente de React. Todo pasa por una única función pura:
 
@@ -48,10 +65,12 @@ applyAction(state, action) // → { ok: true, state } | { ok: false, error, stat
 
 ## Estructura
 
-- `src/game/engine` — motor del juego (mazo, turnos, reglas, efectos) y sus tests
-- `src/game/rules` — modos de juego
-- `src/game/multiplayer` — tipos para el modo multijugador
-- `src/screens` — pantallas (inicio, modos, ajustes, tutorial)
+- `src/game/engine` — motor de Carta (mazo, turnos, reglas, efectos) y sus tests
+- `src/game/rules` — modos de Carta
+- `src/games` — el resto de juegos (dominó, bingo, crash, caballos, air hockey, póker…) y el catálogo
+- `src/casino`, `src/bank`, `src/account`, `src/staff` — monedas, Banco, cuentas y panel del staff
+- `supabase/` — migraciones SQL, funciones Edge y sus tests
+- `src/screens` — pantallas (inicio, jugar, ajustes, tutoriales)
 - `src/components` — componentes de UI
 - `src/i18n` — traducciones (español / inglés)
 - `src/storage` — persistencia local

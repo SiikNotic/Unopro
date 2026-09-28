@@ -52,6 +52,9 @@ psql -q -v ON_ERROR_STOP=1 -d "$DB" -f staff_dashboard_test.sql
 psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20261010000000_air_hockey.sql
 psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20261010000000_air_hockey.sql
 psql -q -v ON_ERROR_STOP=1 -d "$DB" -f air_hockey_test.sql
+psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20261011000000_bank_v2.sql
+psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20261011000000_bank_v2.sql
+psql -q -v ON_ERROR_STOP=1 -d "$DB" -f bank_v2_test.sql
 
 # Two players ask for the same username at the same instant: exactly one gets it.
 for u in 21 22 23 24 25 26; do
@@ -89,8 +92,8 @@ wait
 read -r ROUNDS ABAL < <(psql -At -F ' ' -d "$DB" -c "select (select count(*) from public.account_ledger where user_id = '00000000-0000-0000-0000-0000000000dd' and game = 'roulette'), (select balance from public.account_wallets where user_id = '00000000-0000-0000-0000-0000000000dd')")
 echo "account concurrency: rounds=$ROUNDS balance=$ABAL"
 [ "$ROUNDS" = 4 ] && [ "$ABAL" = 0 ] || { echo "ACCOUNT CONCURRENCY TEST FAILED"; exit 1; }
-# Bank: 20 simultaneous loan claims (5 of them replaying one request id) pay exactly one loan of 500,
-# and 10 simultaneous deliveries of one ad reward id pay 100 exactly once.
+# Bank: 20 simultaneous loan claims (5 of them replaying one request id) pay exactly one loan of 1,000,
+# and 10 simultaneous deliveries of one ad reward id pay 500 exactly once.
 BU=00000000-0000-0000-0003-0000000000ee
 psql -q -d "$DB" -c "insert into auth.users (id, email_confirmed_at) values ('$BU', now()); insert into public.terms_acceptances (user_id, version, adult_confirmed) values ('$BU', public.terms_version(), true)"
 LREPLAY=33333333-3333-4333-8333-333333333333
@@ -104,7 +107,16 @@ done
 wait
 read -r LOANS ADS BBAL < <(psql -At -F ' ' -d "$DB" -c "select (select count(*) from public.bank_loans where user_id = '$BU'), (select count(*) from public.account_ledger where user_id = '$BU' and game = 'ad_reward'), (select balance from public.account_wallets where user_id = '$BU')")
 echo "bank concurrency: loans=$LOANS ad_payments=$ADS balance=$BBAL"
-[ "$LOANS" = 1 ] && [ "$ADS" = 1 ] && [ "$BBAL" = 600 ] || { echo "BANK CONCURRENCY TEST FAILED"; exit 1; }
+[ "$LOANS" = 1 ] && [ "$ADS" = 1 ] && [ "$BBAL" = 1500 ] || { echo "BANK CONCURRENCY TEST FAILED"; exit 1; }
+# Bank: 20 simultaneous repayments (5 replaying one request id) pay the loan back exactly once.
+for i in $(seq 1 20); do
+  if [ "$i" -le 5 ]; then RID=55555555-5555-4555-8555-555555555555; else RID=$(cat /proc/sys/kernel/random/uuid); fi
+  psql -q -d "$DB" -c "set role authenticated; select set_config('request.jwt.claim.sub', '$BU', false); select * from public.bank_repay_loan('$RID')" >/dev/null 2>&1 &
+done
+wait
+read -r REPAYS RBAL OPEN < <(psql -At -F ' ' -d "$DB" -c "select (select count(*) from public.account_ledger where user_id = '$BU' and game = 'loan_repay'), (select balance from public.account_wallets where user_id = '$BU'), (select count(*) from public.bank_loans where user_id = '$BU' and status = 'outstanding')")
+echo "bank repay concurrency: repayments=$REPAYS balance=$RBAL open=$OPEN"
+[ "$REPAYS" = 1 ] && [ "$RBAL" = 500 ] && [ "$OPEN" = 0 ] || { echo "BANK REPAY CONCURRENCY TEST FAILED"; exit 1; }
 # Tables: 20 simultaneous bets of 100 against a balance of 500 (5 of them replaying one request id):
 # exactly 5 bets are taken, never a negative balance.
 TU=00000000-0000-0000-0004-0000000000ee

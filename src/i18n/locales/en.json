@@ -1,7 +1,7 @@
 {
   "app": {
-    "name": "Carta",
-    "tagline": "A modern card game"
+    "name": "Carta Casino",
+    "tagline": "A social casino with virtual coins"
   },
   "common": {
     "back": "Back",
@@ -19,8 +19,8 @@
     "settings": "Settings"
   },
   "home": {
-    "title": "Carta",
-    "subtitle": "A modern card game",
+    "title": "Carta Casino",
+    "subtitle": "A social casino with virtual coins",
     "play": "Play",
     "tutorial": "Tutorial",
     "settings": "Settings",
@@ -149,13 +149,13 @@
         "title": "Coins and your account",
         "summary": "Guest chips, account coins and the Bank",
         "intro": "Carta Casino only uses virtual coins: they have no real value, can't be bought and can't be withdrawn or exchanged for prizes.",
-        "facts": "1,000 welcome coins|500 daily loan|No real money",
+        "facts": "1,000 welcome coins|Emergency loan|No real money",
         "s1t": "A registered account",
         "s1b": "When you create your account (confirmed email, Google or Discord) you get 1,000 coins once. Your balance is kept on the server and follows you on any device.",
         "s2t": "Who decides the results",
         "s2b": "In games played with account coins, the server draws or checks every result and books the stake and the payout in a single step. Repeating a request never charges or pays twice.",
         "s3t": "The Bank",
-        "s3b": "If you run out of coins, the Bank lends you 500 coins every 24 hours and, when ads are available, gives 100 coins for each completed, verified ad.",
+        "s3b": "If you run out of coins, the Bank lends you 1,000 (only with a balance below 500, one every 24 hours; pay it back interest-free to take another) and, when ads are available, gives 500 coins for each completed ad the server verifies.",
         "s4t": "Games without coins",
         "s4b": "Carta against bots, Domino, Bingo, Poker and Jewellery are played without risking your account coins. Poker uses each table's own practice chips."
       },
@@ -1650,7 +1650,8 @@
       "carta": "Carta",
       "crash": "Crash",
       "horse": "Horse Racing",
-      "airhockey": "Air Hockey"
+      "airhockey": "Air Hockey",
+      "loan_repay": "Loan paid back"
     },
     "rounds": "Rounds played",
     "bannedPermanent": "Permanent ban",
@@ -1697,7 +1698,8 @@
       "role": "role {from} → {to}",
       "gameOn": "{game} in service",
       "gameOff": "{game} out of service",
-      "horseConfig": "Horse Racing: RTP {rtp}%, bets {min}–{max}"
+      "horseConfig": "Horse Racing: RTP {rtp}%, bets {min}–{max}",
+      "bankConfig": "Bank: ad {ad}, loan {loan} every {hours} h with balance < {max}"
     },
     "kpi": {
       "registered": "Registered users",
@@ -1750,13 +1752,31 @@
       "reference": "Transaction: {id}",
       "status": {
         "granted": "Paid",
-        "rejected": "Rejected"
+        "rejected": "Rejected",
+        "outstanding": "Owed",
+        "repaid": "Paid back",
+        "settled": "Nothing owed"
       },
       "reason": {
         "not_registered": "Rejected: no account",
         "banned": "Rejected: suspended",
         "daily_cap": "Rejected: daily limit",
         "other": "Rejected"
+      },
+      "config": {
+        "title": "Bank rules",
+        "adAmount": "Coins per ad",
+        "adDailyCap": "Ads per day",
+        "loanAmount": "Loan",
+        "loanCooldown": "Wait (hours)",
+        "loanMaxBalance": "Only with a balance below",
+        "loanRepay": "The loan is paid back",
+        "open": "{count} loans owed ({coins} coins)",
+        "note": "Changes apply to the next payments and are kept in the audit log.",
+        "readOnly": "Only an admin or the owner can change them.",
+        "save": "Save rules",
+        "saved": "Rules saved.",
+        "invalid": "Check the values: ad 1–100,000, ads 0–100, loan 1–1,000,000, wait 1–720 h."
       }
     },
     "games": {
@@ -1912,7 +1932,8 @@
       "USERNAME_CHANGE": "Name change",
       "GAME_AVAILABILITY": "Game state",
       "HORSE_CONFIG": "Horse Racing settings",
-      "GUEST_MIGRATION": "Guest chips"
+      "GUEST_MIGRATION": "Guest chips",
+      "BANK_CONFIG": "Bank rules"
     },
     "bansHelp": "To ban a player or lift a ban, open their file (search for them in Players).",
     "bansActiveTitle": "Active bans ({n})",
@@ -1992,8 +2013,8 @@
   },
   "bank": {
     "title": "Bank",
-    "subtitle": "Loans and rewards for your account",
-    "shortcutHint": "Daily loan and rewards",
+    "subtitle": "Coins for when you run out",
+    "shortcutHint": "Ads and emergency loan",
     "goTo": "Go to the Bank",
     "balance": "Balance",
     "balanceAccount": "Your account coins, kept on the server.",
@@ -2008,25 +2029,42 @@
     "history": "Bank history",
     "historyEmpty": "You haven't received anything from the Bank yet.",
     "kind": {
-      "loan": "Loan",
-      "ad": "Ad reward"
+      "loan": "Loan received",
+      "loan_repay": "Loan paid back",
+      "ad_reward": "Ad reward",
+      "ad_rejected": "Ad without reward"
     },
-    "footer": "The server decides every payment. Virtual coins with no real value.",
+    "footer": "The server decides and records every movement. Virtual coins with no real value.",
     "loan": {
-      "title": "Bank loan",
+      "title": "Emergency loan",
       "every": "Every {hours} h",
-      "hint": "Get it once every 24 hours.",
-      "cta": "Get {amount}",
+      "hint": "For when you run out of coins.",
+      "cta": "Borrow {amount}",
       "claiming": "Processing…",
-      "cooling": "Loan received",
-      "nextLabel": "Available in",
-      "nextIn": "Available in {time}",
-      "granted": "You received {amount} coins!"
+      "cooling": "On hold",
+      "nextLabel": "Next request in",
+      "nextIn": "Next request in {time}",
+      "granted": "You received a loan of {amount} coins!",
+      "hintRepay": "For when you run out of coins. Pay it back, interest-free, to take another one.",
+      "owed": "owed",
+      "owedHint": "Loan received on {date}. Pay it back to take another one.",
+      "balanceRule": "The loan is for emergencies: you can take it when you have fewer than {amount} coins.",
+      "notNeeded": "You still have coins",
+      "factAmount": "Available",
+      "factBalance": "With balance",
+      "factRepay": "Repayment",
+      "repayYes": "Interest-free",
+      "repayNo": "Not repaid",
+      "repay": "Pay back {amount}",
+      "repayConfirm": "Pay back",
+      "confirmTitle": "Pay back {amount} coins from your balance?",
+      "repayNeed": "You need {amount} coins to pay it back.",
+      "repaid": "Loan paid back: {amount} coins taken from your balance."
     },
     "ad": {
       "title": "Watch an ad",
-      "length": "≈ 15 s",
-      "hint": "Watch a full ad and receive coins.",
+      "length": "≈ 10 s",
+      "hint": "Watch the whole ad. The server confirms the reward and adds it to your balance.",
       "cta": "Watch ad",
       "loading": "Loading ad…",
       "showing": "Ad playing…",
@@ -2047,9 +2085,26 @@
       "network": "No connection. Try again: you won't be paid twice.",
       "server": "Couldn't complete. Try again.",
       "invalid": "Invalid request.",
-      "forbidden": "You don't have permission."
+      "forbidden": "You don't have permission.",
+      "loan_outstanding": "You have a loan to pay back before taking another one.",
+      "balance_too_high": "The loan is for emergencies: you can take it when you have fewer than {amount} coins.",
+      "insufficient_funds": "You don’t have enough coins to pay the loan back.",
+      "not_found": "You have no loan to pay back.",
+      "conflict": "That didn’t go through. Try again."
     },
-    "needAccount": "Account required"
+    "needAccount": "Account required",
+    "status": {
+      "outstanding": "Owed",
+      "repaid": "Paid back",
+      "settled": "Nothing owed",
+      "done": "Completed",
+      "reason": {
+        "daily_cap": "Daily limit",
+        "banned": "Account suspended",
+        "not_registered": "No account",
+        "rejected": "Refused"
+      }
+    }
   },
   "update": {
     "title": "New version {version}",

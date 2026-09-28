@@ -10,8 +10,8 @@ AdMob only serves ads inside mobile apps, so the rewarded ad of the Bank works i
 2. When Google considers the reward earned, **Google's servers** call
    `https://mdwkigzorhvktgqlffck.supabase.co/functions/v1/admob-ssv?…&signature=…&key_id=…`.
 3. The `admob-ssv` function (`src/bank/server/admobSsv.ts`) checks the ECDSA signature with Google's
-   public keys and calls `bank_grant_ad_reward(user, 'admob', transaction_id)`: +100 coins, once per
-   transaction id, only for registered, non-banned accounts, at most 20 per day.
+   public keys and calls `bank_grant_ad_reward(user, 'admob', transaction_id)`: + the Bank's ad amount (500 by default,
+   `bank_config`), once per transaction id, only for registered, non-banned accounts, at most 20 per day by default.
 4. The app waits for the server to record the reward and only then shows it.
 
 The app itself never grants coins. Without a valid Google signature nothing is paid.

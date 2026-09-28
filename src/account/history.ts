@@ -5,7 +5,7 @@ import { onlineConfig, tokenFor } from '@/games/online/client';
 
 export interface LedgerEntry {
   id: string;
-  game: 'bonus' | 'premium' | 'roulette' | 'slots' | 'blackjack' | 'guest_migration' | 'admin_add' | 'admin_remove' | 'loan' | 'ad_reward';
+  game: 'bonus' | 'premium' | 'roulette' | 'slots' | 'blackjack' | 'guest_migration' | 'admin_add' | 'admin_remove' | 'loan' | 'loan_repay' | 'ad_reward';
   stake: number;
   payout: number;
   at: number;
