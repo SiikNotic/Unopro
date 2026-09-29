@@ -17,7 +17,7 @@ name: Android app (APK)
 on:
   push:
     branches: ['**']
-    paths: ['android/**', 'src/**', 'app-release.json', 'changelog.json', 'capacitor.config.ts', 'package.json', 'package-lock.json', '.github/workflows/android.yml']
+    paths: ['android/**', 'src/**', 'app-release.json', 'changelog.json', 'capacitor.config.ts', 'vite.config.ts', 'package.json', 'package-lock.json', '.github/workflows/android.yml']
   workflow_dispatch:
 
 permissions:
