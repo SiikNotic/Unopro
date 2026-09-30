@@ -375,6 +375,14 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         if (isNativeApp()) await (await import('@capacitor/browser')).Browser.open({ url });
         else window.location.assign(url);
       },
+      async linkIdentity(provider: OAuthProvider) {
+        const token = cfg ? await tokenFor(cfg) : null;
+        if (!token) throw new AuthError('invalid_credentials');
+        const url = await need().linkIdentity(token, provider);
+        // Linking keeps the current Carta account and adds the OAuth identity to it.
+        if (isNativeApp()) await (await import('@capacitor/browser')).Browser.open({ url });
+        else window.location.assign(url);
+      },
       async signOut() {
         const s = readSession();
         if (s && api) await api.signOut(s.access_token);
