@@ -798,7 +798,14 @@
     "bonus": "Regalo de bienvenida",
     "premium": "Tragamonedas premium",
     "accountHistoryNote": "Últimas 50 operaciones de tu cuenta. Monedas virtuales, sin valor real.",
-    "accountName": "Este nombre se usa en las salas online"
+    "accountName": "Este nombre se usa en las salas online",
+    "discordTitle": "Discord",
+    "discordHint": "Vincula tu cuenta para participar en funciones y sorteos de Discord.",
+    "discordLink": "Vincular",
+    "discordConnecting": "Conectando…",
+    "discordConnected": "Vinculado",
+    "discordLinked": "Tu cuenta de Discord está vinculada",
+    "discordError": "No se pudo iniciar la vinculación. Inténtalo de nuevo."
   },
   "lobby": {
     "featured": "Destacados",
