@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { ChevronRight, Cloud, Coins, Crown, Eye, EyeOff, Gamepad2, Gift, LogOut, Mail, MonitorSmartphone, Play, UserRound, Users } from 'lucide-react';
+import { CheckCircle2, ChevronRight, Cloud, Coins, Crown, Eye, EyeOff, Gamepad2, Gift, Link2, LogOut, Mail, MessageCircle, MonitorSmartphone, Play, UserRound, Users } from 'lucide-react';
 import { LuxPage } from '@/screens/lux/LuxPage';
 import { LUX_ART } from '@/screens/lux/art';
 import { useNavigation } from '@/components/Navigation';
@@ -291,11 +291,14 @@ function AccountPanel() {
   const account = useAccount();
   const u = account.user;
   const [busy, setBusy] = useState(false);
+  const [discordBusy, setDiscordBusy] = useState(false);
+  const [discordError, setDiscordError] = useState(false);
   const [avatarOk, setAvatarOk] = useState(true);
   const username = account.profile?.username ?? '';
   const shown = username || u?.name || u?.email || t('profile.guest');
   const role = account.profile?.role ?? 'user';
   const providerLabel = u?.provider === 'google' ? 'Google' : u?.provider === 'discord' ? 'Discord' : t('account.email');
+  const discordLinked = u?.identities.some((identity) => identity.provider === 'discord') ?? false;
   // The profile card opens the name editor (the only editable part of the profile).
   const editName = () => {
     const input = document.getElementById('ac-username') as HTMLInputElement | null;
@@ -358,6 +361,45 @@ function AccountPanel() {
       </section>
 
       {account.profile && <UsernameEditor />}
+
+      <section className="lx-card p-4 flex items-center gap-3">
+        <span className="w-10 h-10 shrink-0 rounded-xl bg-[#5865F2]/15 border border-[#5865F2]/35 flex items-center justify-center text-[#8ea1ff]" aria-hidden>
+          <MessageCircle className="w-5 h-5" />
+        </span>
+        <span className="min-w-0 flex-1 text-left">
+          <span className="flex items-center gap-2">
+            <span className="lx-row-title">{t('profile.discordTitle')}</span>
+            {discordLinked && <CheckCircle2 className="w-4 h-4 text-[var(--cz-gold)]" aria-label={t('profile.discordLinked')} />}
+          </span>
+          <span className="lx-row-text">{discordLinked ? t('profile.discordLinked') : t('profile.discordHint')}</span>
+        </span>
+        {discordLinked ? (
+          <span className="lx-btn lx-btn-ghost lx-btn-sm shrink-0">{t('profile.discordConnected')}</span>
+        ) : (
+          <button
+            type="button"
+            className="lx-btn lx-btn-gold lx-btn-sm shrink-0 inline-flex items-center gap-1.5"
+            disabled={discordBusy}
+            aria-busy={discordBusy}
+            onClick={async () => {
+              setDiscordBusy(true);
+              setDiscordError(false);
+              try {
+                await account.linkIdentity('discord');
+              } catch {
+                setDiscordError(true);
+                setDiscordBusy(false);
+              }
+            }}
+          >
+            <Link2 className="w-4 h-4" aria-hidden />
+            {t(discordBusy ? 'profile.discordConnecting' : 'profile.discordLink')}
+          </button>
+        )}
+        {discordError && (
+          <p className="basis-full text-xs text-[#f3c4c8]" role="alert">{t('profile.discordError')}</p>
+        )}
+      </section>
 
       {ROLE_RANK[role] >= 1 && (
         <button type="button" className="lx-card lx-nav-row" onClick={() => navigate('staff')}>
