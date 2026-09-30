@@ -126,7 +126,10 @@ Deno.serve(async (req) => {
       const channelId = String(body?.channelId ?? "").trim();
       const messageId = String(body?.messageId ?? "").trim();
       const prizeCoins = Number(body?.prizeCoins);
-      const endsAt = String(body?.endsAt ?? "");
+      const rawEndsAt = body?.endsAt;
+      const endsAt = typeof rawEndsAt === "number" && Number.isFinite(rawEndsAt)
+        ? new Date(rawEndsAt * 1000).toISOString()
+        : String(rawEndsAt ?? "");
       if (!guildId || !channelId || !Number.isSafeInteger(prizeCoins) || prizeCoins <= 0 || !endsAt) {
         return Response.json({ ok: false, code: "bad_request" }, { status: 400, headers });
       }
@@ -156,6 +159,15 @@ Deno.serve(async (req) => {
       if (!giveawayId) return Response.json({ ok: false, code: "bad_request" }, { status: 400, headers });
       const result = await rpc("discord_list_entries", { p_giveaway_id: giveawayId });
       return Response.json({ ok: true, entries: Array.isArray(result) ? result.map((x) => x.discord_user_id) : [] }, { status: 200, headers });
+    }
+
+    if (op === "draw") {
+      const giveawayId = String(body?.giveawayId ?? "").trim();
+      if (!giveawayId) return Response.json({ ok: false, code: "bad_request" }, { status: 400, headers });
+      const result = firstRow(await rpc("discord_draw_giveaway", {
+        p_giveaway_id: giveawayId,
+      }));
+      return Response.json({ ok: result?.ok === true, ...result }, { status: result?.ok ? 200 : 409, headers });
     }
 
     if (op === "award") {
