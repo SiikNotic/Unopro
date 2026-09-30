@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, ChevronRight, CircleUserRound, Pencil } from 'lucide-react';
+import { Check, CheckCircle2, ChevronRight, CircleUserRound, Link2, MessageCircle, Pencil } from 'lucide-react';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { ChipBalance } from '@/components/casino/chips';
 import { useI18n } from '@/i18n';
@@ -34,6 +34,9 @@ export function ProfileScreen() {
   const shown = (accountMode && account.profile?.username) || name || t('profile.guest');
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(name);
+  const [discordBusy, setDiscordBusy] = useState(false);
+  const [discordError, setDiscordError] = useState(false);
+  const discordLinked = account.user?.identities.some((identity) => identity.provider === 'discord') ?? false;
 
   const net = stats.won - stats.wagered;
   const time = new Intl.DateTimeFormat(language, { dateStyle: 'short', timeStyle: 'short' });
@@ -101,6 +104,51 @@ export function ProfileScreen() {
             </span>
             <ChevronRight className="w-4 h-4 text-[var(--cz-muted)]" aria-hidden />
           </button>
+        )}
+
+        {accountMode && account.user && (
+          <section className="cz-panel p-4 flex items-center gap-3">
+            <span className="w-10 h-10 shrink-0 rounded-xl bg-[#5865F2]/15 border border-[#5865F2]/35 flex items-center justify-center text-[#8ea1ff]" aria-hidden>
+              <MessageCircle className="w-5 h-5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-semibold text-white">{t('profile.discordTitle')}</h2>
+                {discordLinked && <CheckCircle2 className="w-4 h-4 text-[var(--cz-gold)]" aria-label={t('profile.discordLinked')} />}
+              </div>
+              <p className="text-xs text-[var(--cz-muted)] mt-0.5">
+                {discordLinked ? t('profile.discordLinked') : t('profile.discordHint')}
+              </p>
+            </div>
+            {discordLinked ? (
+              <span className="cz-btn cz-btn-secondary cz-btn-sm shrink-0">
+                {t('profile.discordConnected')}
+              </span>
+            ) : (
+              <button
+                type="button"
+                className="cz-btn cz-btn-primary cz-btn-sm shrink-0 inline-flex items-center gap-1.5"
+                disabled={discordBusy}
+                aria-busy={discordBusy}
+                onClick={async () => {
+                  setDiscordBusy(true);
+                  setDiscordError(false);
+                  try {
+                    await account.linkIdentity('discord');
+                  } catch {
+                    setDiscordError(true);
+                    setDiscordBusy(false);
+                  }
+                }}
+              >
+                <Link2 className="w-4 h-4" aria-hidden />
+                {t(discordBusy ? 'profile.discordConnecting' : 'profile.discordLink')}
+              </button>
+            )}
+            {discordError && (
+              <p className="basis-full text-xs text-[#f3c4c8]" role="alert">{t('profile.discordError')}</p>
+            )}
+          </section>
         )}
 
         {accountMode ? (
