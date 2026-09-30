@@ -21,6 +21,11 @@ export interface Session {
 
 export type OAuthProvider = 'google' | 'discord';
 
+export interface AccountIdentity {
+  provider: string;
+  identityId: string;
+}
+
 export interface AccountUser {
   id: string;
   email: string | null;
@@ -29,6 +34,7 @@ export interface AccountUser {
   provider: string;
   anonymous: boolean;
   confirmed: boolean;
+  identities: AccountIdentity[];
 }
 
 export type AuthErrorCode =
@@ -200,6 +206,22 @@ export function createAuthApi(
       return `${cfg.authUrl}/authorize?${q}`;
     },
 
+    /** Starts Supabase manual identity linking for a signed-in user. */
+    async linkIdentity(token: string, provider: OAuthProvider): Promise<string> {
+      const { challenge } = await newPkce();
+      const q = new URLSearchParams({
+        provider,
+        redirect_to: appReturnUrl(),
+        code_challenge: challenge,
+        code_challenge_method: 's256',
+        skip_http_redirect: 'true',
+      });
+      const body = (await call(`/user/identities/authorize?${q.toString()}`, { method: 'GET', token })) as Record<string, unknown>;
+      const url = typeof body.url === 'string' ? body.url : '';
+      if (!url) throw new AuthError('unknown');
+      return url;
+    },
+
     /** Trades the code from the return URL (OAuth, email confirmation, password reset) for a session. */
     async exchangeCode(code: string, verifier: string): Promise<Session> {
       const s = sessionFrom(await call('/token?grant_type=pkce', { method: 'POST', body: JSON.stringify({ auth_code: code, code_verifier: verifier }) }));
@@ -226,6 +248,15 @@ export function createAuthApi(
         provider: str(app.provider) ?? 'email',
         anonymous: u.is_anonymous === true,
         confirmed: typeof u.email_confirmed_at === 'string',
+        identities: Array.isArray(u.identities)
+          ? u.identities.flatMap((identity) => {
+              if (!identity || typeof identity !== 'object') return [];
+              const item = identity as Record<string, unknown>;
+              const provider = typeof item.provider === 'string' ? item.provider : '';
+              const identityId = typeof item.identity_id === 'string' ? item.identity_id : '';
+              return provider && identityId ? [{ provider, identityId }] : [];
+            })
+          : [],
       };
     },
 
