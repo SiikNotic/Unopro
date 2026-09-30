@@ -798,7 +798,14 @@
     "bonus": "Welcome gift",
     "premium": "Premium slots",
     "accountHistoryNote": "Your account's last 50 entries. Virtual coins with no real value.",
-    "accountName": "This name is used in online rooms"
+    "accountName": "This name is used in online rooms",
+    "discordTitle": "Discord",
+    "discordHint": "Link your account to use Discord features and giveaways.",
+    "discordLink": "Link",
+    "discordConnecting": "Connecting…",
+    "discordConnected": "Linked",
+    "discordLinked": "Your Discord account is linked",
+    "discordError": "Couldn't start the linking flow. Try again."
   },
   "lobby": {
     "featured": "Featured",
