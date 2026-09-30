@@ -71,7 +71,7 @@ async function rpc(name: string, args: Record<string, unknown>) {
   let body: unknown = null;
   try { body = text ? JSON.parse(text) : null; } catch { body = text; }
   if (!res.ok) {
-    const message = typeof body === "object" && body && "message" in body ? String((body as any).message) : "rpc_error";
+    const message = typeof body === "object" && body && "message" in body ? String((body as Record<string, unknown>).message) : "rpc_error";
     throw new Error(message);
   }
   return body;
@@ -87,7 +87,7 @@ Deno.serve(async (req) => {
 
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers });
 
-  let body: any = null;
+  let body: Record<string, unknown> | null = null;
   if (req.method === "POST") {
     const text = await req.text();
     if (text.length > 8192) return Response.json({ ok: false, code: "bad_request" }, { status: 413, headers });
