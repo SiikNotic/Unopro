@@ -163,9 +163,8 @@ Deno.serve(async (req) => {
 
     if (op === "draw") {
       const giveawayId = String(body?.giveawayId ?? "").trim();
-      if (!giveawayId) return Response.json({ ok: false, code: "bad_request" }, { status: 400, headers });
       const result = firstRow(await rpc("discord_draw_giveaway", {
-        p_giveaway_id: giveawayId,
+        p_giveaway_id: giveawayId || null,
       }));
       return Response.json({ ok: result?.ok === true, ...result }, { status: result?.ok ? 200 : 409, headers });
     }
