@@ -58,6 +58,8 @@ export interface AccountContextValue {
   /** 'signed_in' when the project doesn't ask to confirm emails, else 'check_email'. */
   signUp: (email: string, password: string, name: string) => Promise<'signed_in' | 'check_email'>;
   signInWith: (provider: OAuthProvider) => Promise<void>;
+  /** Links an OAuth identity to the currently signed-in account. */
+  linkIdentity: (provider: OAuthProvider) => Promise<void>;
   signOut: () => Promise<void>;
   /** Deletes the signed-in account and its data on the server (the owner can't). */
   deleteAccount: () => Promise<{ ok: boolean; code?: string }>;
