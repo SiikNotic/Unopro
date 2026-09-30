@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { CheckCircle2, ChevronRight, Cloud, Coins, Crown, Eye, EyeOff, Gamepad2, Gift, Link2, LogOut, Mail, MessageCircle, MonitorSmartphone, Play, UserRound, Users } from 'lucide-react';
+import { ChevronRight, Cloud, Coins, Crown, Eye, EyeOff, Gamepad2, Gift, Link2, LogOut, Mail, MonitorSmartphone, Play, UserRound, Users } from 'lucide-react';
 import { LuxPage } from '@/screens/lux/LuxPage';
 import { LUX_ART } from '@/screens/lux/art';
 import { useNavigation } from '@/components/Navigation';
