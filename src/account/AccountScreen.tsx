@@ -21,6 +21,7 @@ import './signup.css';
 
 /** The sign-up hero art (the file is optional: without it the screen keeps its lit backdrop). */
 const HERO_ART = Object.values(import.meta.glob('./art/signup-hero.webp', { eager: true, import: 'default' }) as Record<string, string>)[0];
+const DISCORD_BANNER = Object.values(import.meta.glob('./art/discord-banner.svg', { eager: true, import: 'default' }) as Record<string, string>)[0];
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
@@ -362,44 +363,47 @@ function AccountPanel() {
 
       {account.profile && <UsernameEditor />}
 
-      <section className="lx-card p-4 flex items-center gap-3">
-        <span className="w-10 h-10 shrink-0 rounded-xl bg-[#5865F2]/15 border border-[#5865F2]/35 flex items-center justify-center text-[#8ea1ff]" aria-hidden>
-          <MessageCircle className="w-5 h-5" />
-        </span>
-        <span className="min-w-0 flex-1 text-left">
-          <span className="flex items-center gap-2">
-            <span className="lx-row-title">{t('profile.discordTitle')}</span>
-            {discordLinked && <CheckCircle2 className="w-4 h-4 text-[var(--cz-gold)]" aria-label={t('profile.discordLinked')} />}
-          </span>
-          <span className="lx-row-text">{discordLinked ? t('profile.discordLinked') : t('profile.discordHint')}</span>
-        </span>
-        {discordLinked ? (
-          <span className="lx-btn lx-btn-ghost lx-btn-sm shrink-0">{t('profile.discordConnected')}</span>
-        ) : (
-          <button
-            type="button"
-            className="lx-btn lx-btn-gold lx-btn-sm shrink-0 inline-flex items-center gap-1.5"
-            disabled={discordBusy}
-            aria-busy={discordBusy}
-            onClick={async () => {
-              setDiscordBusy(true);
-              setDiscordError(false);
-              try {
-                await account.linkIdentity('discord');
-              } catch {
-                setDiscordError(true);
-                setDiscordBusy(false);
-              }
-            }}
-          >
-            <Link2 className="w-4 h-4" aria-hidden />
-            {t(discordBusy ? 'profile.discordConnecting' : 'profile.discordLink')}
-          </button>
-        )}
-        {discordError && (
-          <p className="basis-full text-xs text-[#f3c4c8]" role="alert">{t('profile.discordError')}</p>
-        )}
-      </section>
+      {discordLinked ? (
+        <section className="overflow-hidden rounded-[28px] border border-[rgba(216,178,106,0.55)] bg-[#080a16] shadow-[0_18px_50px_rgba(0,0,0,0.35)]">
+          <img src={DISCORD_BANNER} alt={t('profile.discordLinked')} className="block w-full h-auto" />
+        </section>
+      ) : (
+        <section className="relative overflow-hidden rounded-[28px] border border-[rgba(216,178,106,0.55)] bg-[radial-gradient(circle_at_15%_50%,rgba(88,101,242,.24),transparent_35%),linear-gradient(135deg,#080a16,#12152b_55%,#090914)] p-5 shadow-[0_18px_50px_rgba(0,0,0,0.35)]">
+          <div className="absolute -right-12 -top-12 w-36 h-36 rounded-full bg-[#5865F2]/15 blur-2xl" aria-hidden />
+          <div className="relative flex items-center gap-4">
+            <span className="w-14 h-14 shrink-0 rounded-2xl bg-[#5865F2]/15 border border-[#5865F2]/40 flex items-center justify-center text-[#8ea1ff] shadow-[0_0_24px_rgba(88,101,242,.18)]">
+              <DiscordLogo />
+            </span>
+            <span className="min-w-0 flex-1 text-left">
+              <span className="flex items-center gap-2">
+                <span className="lx-row-title">Discord</span>
+                <span className="text-[var(--cz-gold)]">✦</span>
+              </span>
+              <span className="lx-row-text">{t('profile.discordHint')}</span>
+            </span>
+            <button
+              type="button"
+              className="lx-btn lx-btn-gold lx-btn-sm shrink-0 inline-flex items-center gap-1.5"
+              disabled={discordBusy}
+              aria-busy={discordBusy}
+              onClick={async () => {
+                setDiscordBusy(true);
+                setDiscordError(false);
+                try {
+                  await account.linkIdentity('discord');
+                } catch {
+                  setDiscordError(true);
+                  setDiscordBusy(false);
+                }
+              }}
+            >
+              <Link2 className="w-4 h-4" aria-hidden />
+              {t(discordBusy ? 'profile.discordConnecting' : 'profile.discordLink')}
+            </button>
+          </div>
+          {discordError && <p className="relative mt-3 text-xs text-[#f3c4c8]" role="alert">{t('profile.discordError')}</p>}
+        </section>
+      )}
 
       {ROLE_RANK[role] >= 1 && (
         <button type="button" className="lx-card lx-nav-row" onClick={() => navigate('staff')}>
