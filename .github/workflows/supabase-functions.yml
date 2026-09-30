@@ -45,5 +45,6 @@ jobs:
           npx --yes supabase@2 functions deploy game-room --project-ref "$PROJECT_REF" --use-api
           npx --yes supabase@2 functions deploy casino --project-ref "$PROJECT_REF" --use-api
           npx --yes supabase@2 functions deploy account --project-ref "$PROJECT_REF" --use-api
+          npx --yes supabase@2 functions deploy discord-giveaway --project-ref "$PROJECT_REF" --use-api --no-verify-jwt
           # Called by Google, not by the app: it checks Google's signature instead of a Supabase JWT.
           npx --yes supabase@2 functions deploy admob-ssv --project-ref "$PROJECT_REF" --use-api --no-verify-jwt
