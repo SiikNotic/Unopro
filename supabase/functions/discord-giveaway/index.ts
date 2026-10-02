@@ -213,7 +213,7 @@ async function handle(req, deps) {
   };
   const current = async () => giveawayView(await call("discord_current_giveaway", {}));
   const outcome = (op, row, extra = {}) => {
-    const r = row ?? {};
+    const { user_id: _userId, balance: _balance, ...r } = row ?? {};
     const reason = typeof r.reason === "string" ? r.reason : null;
     const body = { ...r, ...extra, ...reason ? { reason, message: message(reason) } : r.ok === true ? { message: message(`${op}_ok`) } : {} };
     return r.ok === true ? ok(op, body) : fail(op, reason === "giveaway_not_found" ? 404 : 409, reason ?? "invalid_request", body);

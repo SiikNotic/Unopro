@@ -238,7 +238,8 @@ describe('the other operations keep working', () => {
   it('link: consumes a code for a Discord user', async () => {
     const { send, calls } = setup({ discord_consume_link_code: () => ({ ok: true, data: [{ ok: true, user_id: 'u1', reason: null }] }) });
     const res = await send({ op: 'link', discordUserId: '111111111111111111', code: 'ab12cd34' });
-    expect(res.body).toMatchObject({ ok: true, operation: 'link', user_id: 'u1' });
+    expect(res.body).toMatchObject({ ok: true, operation: 'link' });
+    expect(res.body).not.toHaveProperty('user_id');
     expect(calls[0].args).toEqual({ p_code: 'ab12cd34', p_discord_user_id: '111111111111111111' });
   });
 
@@ -275,6 +276,8 @@ describe('the other operations keep working', () => {
     const entered = await send({ op: 'enter', discordUserId: '222222222222222222', alwaysOk: true });
     expect(entered).toEqual({ status: 200, body: expect.objectContaining({ ok: true, entries: 1, message: expect.stringContaining('participando') }) });
     expect(entered.body).not.toHaveProperty('httpStatus');
+    expect(entered.body).not.toHaveProperty('user_id');
+    expect(entered.body).not.toHaveProperty('balance');
     expect((await send({ op: 'create', guildId: GUILD, channelId: CHANNEL, alwaysOk: 'true' })).body).toMatchObject({ ok: false, code: 'active_giveaway_exists', httpStatus: 409 });
     expect((await send({ op: 'enter', discordUserId: '{user_id}', alwaysOk: true })).body).toMatchObject({ code: 'unresolved_variable', httpStatus: 400 });
     // The secret stays mandatory and visible as such.

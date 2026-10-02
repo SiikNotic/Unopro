@@ -308,7 +308,10 @@ async function handle(req: GiveawayRequest, deps: GiveawayDeps): Promise<Giveawa
   const current = async () => giveawayView(await call('discord_current_giveaway', {}));
   /** A reason-carrying result row ({ ok, reason, ... }): 200 when ok, 409 otherwise, with a readable message. */
   const outcome = (op: string, row: Record<string, unknown> | null, extra: Record<string, unknown> = {}) => {
-    const r = row ?? {};
+    // The Carta account id and balance stay on the server: the bot only needs the Discord side.
+    const { user_id: _userId, balance: _balance, ...r } = row ?? {};
+    void _userId;
+    void _balance;
     const reason = typeof r.reason === 'string' ? r.reason : null;
     const body = { ...r, ...extra, ...(reason ? { reason, message: message(reason) } : r.ok === true ? { message: message(`${op}_ok`) } : {}) };
     return r.ok === true ? ok(op, body) : fail(op, reason === 'giveaway_not_found' ? 404 : 409, reason ?? 'invalid_request', body);
