@@ -91,6 +91,7 @@ const MESSAGES: Record<string, string> = {
   enter_ok: '✅ ¡Ya estás participando en el sorteo!',
   link_ok: '✅ Tu cuenta de Discord quedó vinculada a Carta Casino.',
   awarded: 'Premio pagado.',
+  panel_ok: 'Panel del sorteo guardado: el bot lo actualizará con cada sorteo nuevo.',
 };
 const message = (code: string) => MESSAGES[code] ?? code;
 
@@ -186,6 +187,53 @@ export function prizeFrom(body: Record<string, unknown>): number | null {
 }
 
 /** A giveaway row (snake_case from the table, or already camelCase from a jsonb helper) in the API's shape. */
+const unixSeconds = (v: unknown): number | null => {
+  const ms = typeof v === 'string' ? Date.parse(v) : NaN;
+  return Number.isFinite(ms) ? Math.floor(ms / 1000) : null;
+};
+
+const coins = (n: number) => n.toLocaleString('en-US');
+
+/**
+ * The bot's timed event, flattened for BotGhost (which can't loop over lists): the finished giveaway to announce
+ * (if any) with the texts ready to post, the active giveaway for the panel, and the panel message.
+ */
+export function cycleView(data: unknown): Record<string, unknown> {
+  const d = (data ?? {}) as Record<string, unknown>;
+  const result = giveawayView(d.result);
+  const active = giveawayView(d.active);
+  const panel = (d.panel ?? {}) as Record<string, unknown>;
+  const winner = typeof result?.winnerDiscordUserId === 'string' ? result.winnerDiscordUserId : null;
+  const prize = Number(result?.prizeCoins ?? 0);
+  const announcement = !result
+    ? ''
+    : winner
+      ? `🏆 ¡Felicidades <@${winner}>! Ganaste ${coins(prize)} Carta Coins en el sorteo semanal. Ya están en tu cuenta de Carta Casino.`
+      : 'El sorteo semanal terminó sin participantes válidos.';
+  return {
+    hasResult: !!result,
+    hasWinner: !!winner,
+    announcement,
+    winnerDiscordUserId: winner ?? '',
+    winnerMention: winner ? `<@${winner}>` : '',
+    dmText: winner ? `🎉 ¡Ganaste el sorteo semanal de Carta Casino! ${coins(prize)} Carta Coins ya están en tu cuenta.` : '',
+    resultGiveawayId: result?.id ?? '',
+    resultPrizeCoins: prize,
+    hasActive: !!active,
+    giveawayId: active?.id ?? '',
+    prizeCoins: Number(active?.prizeCoins ?? 0),
+    prizeText: coins(Number(active?.prizeCoins ?? 0)),
+    entries: Number(active?.entries ?? 0),
+    startsAtUnix: active?.startsAtUnix ?? 0,
+    endsAtUnix: active?.endsAtUnix ?? 0,
+    hasPanel: typeof panel.messageId === 'string' && typeof panel.channelId === 'string',
+    panelChannelId: typeof panel.channelId === 'string' ? panel.channelId : '',
+    panelMessageId: typeof panel.messageId === 'string' ? panel.messageId : '',
+    result,
+    active,
+  };
+}
+
 export function giveawayView(row: unknown): Record<string, unknown> | null {
   if (!row || typeof row !== 'object') return null;
   const r = row as Record<string, unknown>;
@@ -199,6 +247,9 @@ export function giveawayView(row: unknown): Record<string, unknown> | null {
     prizeCoins: Number(g('prize_coins', 'prizeCoins')),
     startsAt: g('starts_at', 'startsAt'),
     endsAt: g('ends_at', 'endsAt'),
+    // Unix seconds, for Discord timestamps (<t:1791401400:R>), which show in each reader's own time zone.
+    startsAtUnix: unixSeconds(g('starts_at', 'startsAt')),
+    endsAtUnix: unixSeconds(g('ends_at', 'endsAt')),
     status: r.status,
     winnerDiscordUserId: g('winner_discord_user_id', 'winnerDiscordUserId') ?? null,
     ...(r.entries !== undefined ? { entries: Number(r.entries) } : {}),
@@ -391,6 +442,17 @@ async function handle(req: GiveawayRequest, deps: GiveawayDeps): Promise<Giveawa
         });
       }
 
+      case 'panel': {
+        const channelId = discordId(body, ['channelId', 'channel_id'], true);
+        const messageId = discordId(body, ['messageId', 'message_id'], true);
+        const panel = await call('discord_set_panel', { p_channel_id: channelId, p_message_id: messageId });
+        return ok(op, { panel, message: message('panel_ok') });
+      }
+
+      case 'cycle': {
+        return ok(op, cycleView(await call('discord_giveaway_cycle', {})));
+      }
+
       case 'pending': {
         const pending = (await call('discord_pending_announcements', {})) as Record<string, unknown>;
         return ok(op, { ...pending });
@@ -403,7 +465,7 @@ async function handle(req: GiveawayRequest, deps: GiveawayDeps): Promise<Giveawa
       }
 
       default:
-        return fail(op || null, 400, 'unknown_operation', { operations: ['link_code', 'link', 'create', 'message', 'enter', 'entries', 'draw', 'award', 'status', 'current', 'tick', 'pending', 'announced'] });
+        return fail(op || null, 400, 'unknown_operation', { operations: ['link_code', 'link', 'create', 'message', 'enter', 'entries', 'draw', 'award', 'status', 'current', 'tick', 'cycle', 'panel', 'pending', 'announced'] });
     }
   } catch (e) {
     if (e instanceof HttpError) return fail(operation || null, e.status, e.code, e.extra);

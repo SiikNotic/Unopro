@@ -44,7 +44,8 @@ var MESSAGES = {
   account_already_linked: "Esa cuenta de Carta ya est\xE1 vinculada a otra cuenta de Discord.",
   enter_ok: "\u2705 \xA1Ya est\xE1s participando en el sorteo!",
   link_ok: "\u2705 Tu cuenta de Discord qued\xF3 vinculada a Carta Casino.",
-  awarded: "Premio pagado."
+  awarded: "Premio pagado.",
+  panel_ok: "Panel del sorteo guardado: el bot lo actualizar\xE1 con cada sorteo nuevo."
 };
 var message = (code) => MESSAGES[code] ?? code;
 var ok = (operation, data = {}, status = 200) => ({ status, body: { ok: true, operation, ...data } });
@@ -116,6 +117,42 @@ function prizeFrom(body) {
   if (!Number.isSafeInteger(n) || n <= 0 || n > 1e9) throw new HttpError(400, "invalid_prize", { field: "prizeCoins" });
   return n;
 }
+var unixSeconds = (v) => {
+  const ms = typeof v === "string" ? Date.parse(v) : NaN;
+  return Number.isFinite(ms) ? Math.floor(ms / 1e3) : null;
+};
+var coins = (n) => n.toLocaleString("en-US");
+function cycleView(data) {
+  const d = data ?? {};
+  const result = giveawayView(d.result);
+  const active = giveawayView(d.active);
+  const panel = d.panel ?? {};
+  const winner = typeof result?.winnerDiscordUserId === "string" ? result.winnerDiscordUserId : null;
+  const prize = Number(result?.prizeCoins ?? 0);
+  const announcement = !result ? "" : winner ? `\u{1F3C6} \xA1Felicidades <@${winner}>! Ganaste ${coins(prize)} Carta Coins en el sorteo semanal. Ya est\xE1n en tu cuenta de Carta Casino.` : "El sorteo semanal termin\xF3 sin participantes v\xE1lidos.";
+  return {
+    hasResult: !!result,
+    hasWinner: !!winner,
+    announcement,
+    winnerDiscordUserId: winner ?? "",
+    winnerMention: winner ? `<@${winner}>` : "",
+    dmText: winner ? `\u{1F389} \xA1Ganaste el sorteo semanal de Carta Casino! ${coins(prize)} Carta Coins ya est\xE1n en tu cuenta.` : "",
+    resultGiveawayId: result?.id ?? "",
+    resultPrizeCoins: prize,
+    hasActive: !!active,
+    giveawayId: active?.id ?? "",
+    prizeCoins: Number(active?.prizeCoins ?? 0),
+    prizeText: coins(Number(active?.prizeCoins ?? 0)),
+    entries: Number(active?.entries ?? 0),
+    startsAtUnix: active?.startsAtUnix ?? 0,
+    endsAtUnix: active?.endsAtUnix ?? 0,
+    hasPanel: typeof panel.messageId === "string" && typeof panel.channelId === "string",
+    panelChannelId: typeof panel.channelId === "string" ? panel.channelId : "",
+    panelMessageId: typeof panel.messageId === "string" ? panel.messageId : "",
+    result,
+    active
+  };
+}
 function giveawayView(row) {
   if (!row || typeof row !== "object") return null;
   const r = row;
@@ -129,6 +166,9 @@ function giveawayView(row) {
     prizeCoins: Number(g("prize_coins", "prizeCoins")),
     startsAt: g("starts_at", "startsAt"),
     endsAt: g("ends_at", "endsAt"),
+    // Unix seconds, for Discord timestamps (<t:1791401400:R>), which show in each reader's own time zone.
+    startsAtUnix: unixSeconds(g("starts_at", "startsAt")),
+    endsAtUnix: unixSeconds(g("ends_at", "endsAt")),
     status: r.status,
     winnerDiscordUserId: g("winner_discord_user_id", "winnerDiscordUserId") ?? null,
     ...r.entries !== void 0 ? { entries: Number(r.entries) } : {}
@@ -292,6 +332,15 @@ async function handle(req, deps) {
           pending
         });
       }
+      case "panel": {
+        const channelId = discordId(body, ["channelId", "channel_id"], true);
+        const messageId = discordId(body, ["messageId", "message_id"], true);
+        const panel = await call("discord_set_panel", { p_channel_id: channelId, p_message_id: messageId });
+        return ok(op, { panel, message: message("panel_ok") });
+      }
+      case "cycle": {
+        return ok(op, cycleView(await call("discord_giveaway_cycle", {})));
+      }
       case "pending": {
         const pending = await call("discord_pending_announcements", {});
         return ok(op, { ...pending });
@@ -302,7 +351,7 @@ async function handle(req, deps) {
         return marked ? ok(op, { giveawayId: id }) : fail(op, 409, "invalid_request", { giveawayId: id });
       }
       default:
-        return fail(op || null, 400, "unknown_operation", { operations: ["link_code", "link", "create", "message", "enter", "entries", "draw", "award", "status", "current", "tick", "pending", "announced"] });
+        return fail(op || null, 400, "unknown_operation", { operations: ["link_code", "link", "create", "message", "enter", "entries", "draw", "award", "status", "current", "tick", "cycle", "panel", "pending", "announced"] });
     }
   } catch (e) {
     if (e instanceof HttpError) return fail(operation || null, e.status, e.code, e.extra);

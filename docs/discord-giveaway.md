@@ -54,6 +54,8 @@ wrong secret (401/403) and server errors keep their status.
 | `draw` | optional `giveawayId` (default: the oldest expired one) | `awarded` / `already_awarded` (200), `no_entries` (409) |
 | `award` | `giveawayId`, `discordUserId` | pays a chosen entry (same guarantees) |
 | `tick` | — | draws expired giveaways, opens the next, returns `pending` |
+| `panel` | `channelId`, `messageId` | remembers the permanent panel message (`20261014000000_discord_giveaway_panel.sql`) |
+| `cycle` | — | the timed event: tick, then the oldest unannounced result (claimed once) flattened for BotGhost: `hasResult`, `hasWinner`, `announcement`, `winnerMention`, `winnerDiscordUserId`, `dmText`, the active giveaway (`prizeText`, `entries`, `startsAtUnix`, `endsAtUnix`) and `panelChannelId` / `panelMessageId` |
 | `pending` | — | `results` (finished, not announced) and `unposted` (active without a message) |
 | `announced` | `giveawayId` | marks a result as announced |
 | `link` | `discordUserId`, `code` | links a Discord account with a link code (optional; the app button is the main way) |
@@ -93,3 +95,12 @@ account (not anonymous, email confirmed). Supabase Auth must allow manual identi
 
 The draw and the next giveaway happen in the database every 10 minutes even if the bot is offline; the bot only
 announces.
+
+### Permanent panel
+
+1. Post the panel once (embed + "Participar" button wired to `op: "enter"`), save its message id, and call
+   `{ "op": "panel", "channelId": "{channel_id}", "messageId": "<saved id>", "alwaysOk": true }`.
+2. Timed event every 10 minutes: `{ "op": "cycle", "alwaysOk": true }`. When `hasResult` is true: post
+   `announcement` in the channel, DM `dmText` to `winnerDiscordUserId` when `hasWinner`, and edit the panel message
+   (`panelMessageId`) with the new giveaway: prize `prizeText`, end `<t:{endsAtUnix}:F>` / `<t:{endsAtUnix}:R>`.
+

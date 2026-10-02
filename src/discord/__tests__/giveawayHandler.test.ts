@@ -3,7 +3,7 @@
 // instead of crashes, and every operation the bot and the app use.
 import { createHash } from 'node:crypto';
 import { describe, expect, it, vi } from 'vitest';
-import { endsAtFrom, giveawayView, handleGiveawayRequest, parseBody, prizeFrom } from '../giveawayHandler';
+import { cycleView, endsAtFrom, giveawayView, handleGiveawayRequest, parseBody, prizeFrom } from '../giveawayHandler';
 import type { DbResult, GiveawayDeps, GiveawayRequest } from '../giveawayHandler';
 
 const SECRET = 'test-secret-value-0123456789abcdef';
@@ -325,5 +325,62 @@ describe('the other operations keep working', () => {
     });
     const res = await send({ op: 'tick' });
     expect(res.body).toMatchObject({ ok: true, operation: 'tick', created: { id: 'next', channelId: CHANNEL }, pending: { results: [{ id: ROW.id }], unposted: [{ id: 'next' }] } });
+  });
+});
+
+describe('the permanent panel', () => {
+  it('panel stores the panel message (exact ids, secret required)', async () => {
+    const { send, calls } = setup({ discord_set_panel: (args) => ({ ok: true, data: { channelId: args.p_channel_id, messageId: args.p_message_id } }) });
+    const res = await send({ op: 'panel', channelId: CHANNEL, messageId: '1555000000000000777', alwaysOk: true });
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ ok: true, panel: { channelId: CHANNEL, messageId: '1555000000000000777' } });
+    expect(calls[0]).toEqual({ name: 'discord_set_panel', args: { p_channel_id: CHANNEL, p_message_id: '1555000000000000777' } });
+    expect((await send({ op: 'panel', channelId: CHANNEL, messageId: '{message_id}', alwaysOk: true })).body).toMatchObject({ code: 'unresolved_variable' });
+    expect((await send({ op: 'panel', channelId: CHANNEL, messageId: '1555000000000000777' }, { secret: null })).status).toBe(401);
+  });
+
+  it('cycle: a winner to announce, the new giveaway and the panel, flat for BotGhost', async () => {
+    const { send } = setup({
+      discord_giveaway_cycle: () => ({
+        ok: true,
+        data: {
+          result: { ...ROW, status: 'awarded', winnerDiscordUserId: '111111111111111111', prizeCoins: 10000 },
+          active: { id: 'b0000000-0000-4000-8000-000000000002', prizeCoins: 10000, startsAt: '2026-10-07T19:30:00+00:00', endsAt: '2026-10-14T19:30:00+00:00', status: 'active', entries: 0 },
+          panel: { channelId: CHANNEL, messageId: '1555000000000000777' },
+        },
+      }),
+    });
+    const res = await send({ op: 'cycle', alwaysOk: true });
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      ok: true,
+      operation: 'cycle',
+      hasResult: true,
+      hasWinner: true,
+      winnerMention: '<@111111111111111111>',
+      resultPrizeCoins: 10000,
+      hasActive: true,
+      prizeText: '10,000',
+      entries: 0,
+      startsAtUnix: 1791401400,
+      endsAtUnix: 1792006200,
+      hasPanel: true,
+      panelChannelId: CHANNEL,
+      panelMessageId: '1555000000000000777',
+    });
+    expect(String(res.body.announcement)).toContain('<@111111111111111111>');
+    expect(String(res.body.announcement)).toContain('10,000');
+    expect(String(res.body.dmText)).toContain('10,000');
+  });
+
+  it('cycle with nothing to announce, a giveaway without winner, no panel yet', () => {
+    expect(cycleView({ result: null, active: null, panel: {} })).toMatchObject({ hasResult: false, hasWinner: false, announcement: '', hasActive: false, hasPanel: false, endsAtUnix: 0 });
+    const empty = cycleView({ result: { ...ROW, status: 'ended', winnerDiscordUserId: null }, active: null, panel: { channelId: null, messageId: null } });
+    expect(empty).toMatchObject({ hasResult: true, hasWinner: false, winnerMention: '', dmText: '', hasPanel: false });
+    expect(String(empty.announcement)).toContain('sin participantes');
+  });
+
+  it('giveawayView gives Unix seconds for Discord timestamps', () => {
+    expect(giveawayView(ROW)).toMatchObject({ startsAtUnix: 1790812800, endsAtUnix: 1791401400 });
   });
 });
