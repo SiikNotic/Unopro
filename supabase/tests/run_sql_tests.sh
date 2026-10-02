@@ -55,6 +55,11 @@ psql -q -v ON_ERROR_STOP=1 -d "$DB" -f air_hockey_test.sql
 psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20261011000000_bank_v2.sql
 psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20261011000000_bank_v2.sql
 psql -q -v ON_ERROR_STOP=1 -d "$DB" -f bank_v2_test.sql
+# Discord giveaway: the three earlier migrations (applied in production in this order), then the full version.
+for m in 20260930170000_discord_giveaway_base 20260930174252_discord_giveaway_ledger_support 20260930174341_discord_giveaway_draw 20260930174424_discord_giveaway_draw_latest_v2 20261012000000_discord_giveaway_v2 20261012000000_discord_giveaway_v2; do
+  psql -q -v ON_ERROR_STOP=1 -d "$DB" -f "../migrations/$m.sql"
+done
+psql -q -v ON_ERROR_STOP=1 -d "$DB" -f discord_giveaway_test.sql
 
 # Two players ask for the same username at the same instant: exactly one gets it.
 for u in 21 22 23 24 25 26; do
@@ -202,4 +207,23 @@ wait
 read -r AHPAY AHBAL < <(psql -At -F ' ' -d "$DB" -c "select (select count(*) from public.account_ledger where user_id = '$AH' and game = 'airhockey' and payout > 0), (select balance from public.account_wallets where user_id = '$AH')")
 echo "air hockey concurrency: payouts=$AHPAY balance=$AHBAL"
 [ "$AHPAY" = 1 ] && [ "$AHBAL" = 1000 ] || { echo "AIR HOCKEY CONCURRENCY TEST FAILED"; exit 1; }
+# Discord giveaway: 10 simultaneous creates leave exactly one active giveaway; 10 simultaneous draws of an expired
+# giveaway pay its prize once.
+psql -q -d "$DB" -c "update public.discord_giveaways set status = 'ended', ended_at = now() where status = 'active'"
+for i in $(seq 1 10); do
+  psql -q -d "$DB" -c "set role service_role; select public.discord_create_giveaway('1554894448767401984', '1554894449572581489', null, 10000, now() + interval '7 days')" >/dev/null 2>&1 &
+done
+wait
+ACTIVE=$(psql -At -d "$DB" -c "select count(*) from public.discord_giveaways where status = 'active'")
+echo "discord create concurrency: active=$ACTIVE"
+[ "$ACTIVE" = 1 ] || { echo "DISCORD CREATE CONCURRENCY TEST FAILED"; exit 1; }
+psql -q -d "$DB" -c "insert into public.discord_giveaway_entries (giveaway_id, discord_user_id, user_id) select g.id, '111111111111111111', '00000000-0000-0000-000f-000000000001' from public.discord_giveaways g where g.status = 'active'; update public.discord_giveaways set starts_at = now() - interval '8 days', ends_at = now() - interval '1 minute' where status = 'active'"
+GID=$(psql -At -d "$DB" -c "select id from public.discord_giveaways where status = 'active'")
+for i in $(seq 1 10); do
+  psql -q -d "$DB" -c "set role service_role; select * from public.discord_draw_giveaway('$GID')" >/dev/null 2>&1 &
+done
+wait
+PAID=$(psql -At -d "$DB" -c "select count(*) from public.account_ledger where game = 'discord_giveaway' and request_id = '$GID'")
+echo "discord draw concurrency: payouts=$PAID"
+[ "$PAID" = 1 ] || { echo "DISCORD DRAW CONCURRENCY TEST FAILED"; exit 1; }
 echo "all SQL tests passed"
