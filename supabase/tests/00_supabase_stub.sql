@@ -7,6 +7,15 @@ do $$ begin
 end $$;
 create schema if not exists auth;
 create table if not exists auth.users (id uuid primary key);
+create table if not exists auth.identities (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  provider text not null,
+  provider_id text not null,
+  identity_data jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  unique (provider_id, provider)
+);
 create or replace function auth.uid() returns uuid language sql stable as $$
   select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
 $$;

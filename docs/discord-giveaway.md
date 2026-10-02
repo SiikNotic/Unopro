@@ -56,7 +56,7 @@ wrong secret (401/403) and server errors keep their status.
 | `tick` | — | draws expired giveaways, opens the next, returns `pending` |
 | `pending` | — | `results` (finished, not announced) and `unposted` (active without a message) |
 | `announced` | `giveawayId` | marks a result as announced |
-| `link` | `discordUserId`, `code` | links a Discord account with the code shown in the app |
+| `link` | `discordUserId`, `code` | links a Discord account with a link code (optional; the app button is the main way) |
 | `link_code` | (app, signed-in player's `Authorization: Bearer`) | a link code |
 
 End time: `endsAt`, `ends_at`, `giveaway_end`, `giveawayEnd`, `endTime` or `end_time`; an ISO date, Unix seconds or
@@ -65,6 +65,14 @@ the configured duration (7 days). Prize: `prizeCoins` (number or digits); missin
 
 Discord IDs may be sent quoted or unquoted: 19-digit numbers are kept exact. An unreplaced ID variable
 (`{guild_id}`) answers 400 `unresolved_variable` naming the field.
+
+## Linking (the app)
+
+The player taps **Perfil → Discord → Vincular** in the app: Supabase Auth links the Discord identity (the player
+authorises on discord.com; signing in with Discord does the same). A trigger on `auth.identities`
+(`20261013000000_discord_identity_links.sql`) copies the verified Discord user id into `discord_account_links`, and
+removes it when the identity is removed. An existing link is never taken over. Entering also requires a registered
+account (not anonymous, email confirmed). Supabase Auth must allow manual identity linking for the button.
 
 ## BotGhost setup
 

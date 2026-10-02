@@ -60,6 +60,9 @@ for m in 20260930170000_discord_giveaway_base 20260930174252_discord_giveaway_le
   psql -q -v ON_ERROR_STOP=1 -d "$DB" -f "../migrations/$m.sql"
 done
 psql -q -v ON_ERROR_STOP=1 -d "$DB" -f discord_giveaway_test.sql
+psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20261013000000_discord_identity_links.sql
+psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20261013000000_discord_identity_links.sql
+psql -q -v ON_ERROR_STOP=1 -d "$DB" -f discord_identity_links_test.sql
 
 # Two players ask for the same username at the same instant: exactly one gets it.
 for u in 21 22 23 24 25 26; do
