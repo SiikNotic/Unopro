@@ -2650,5 +2650,50 @@
       "account": "Inicia sesión con tu cuenta para jugar con monedas.",
       "server": "No se pudo conectar con el servidor. Inténtalo de nuevo."
     }
+  },
+  "homeExtras": {
+    "dh": "{d} d {h} h",
+    "hm": "{h} h {m} min",
+    "m": "{m} min",
+    "error": "No se pudo completar. Inténtalo de nuevo.",
+    "giveaway": {
+      "chip": "SORTEO SEMANAL",
+      "title": "Sorteo de {amount} Carta Coins",
+      "next": "Próximo sorteo muy pronto",
+      "sub": "Termina en {time} · {entries} participantes",
+      "lastWinner": "Último ganador: {name} ({amount})",
+      "lastNoWinner": "El último sorteo terminó sin participantes.",
+      "signUp": "Crear cuenta para participar",
+      "link": "Vincular Discord",
+      "entered": "Ya participas",
+      "enter": "Participar",
+      "discord": "Servidor de Discord",
+      "banned": "Tu cuenta está suspendida.",
+      "reason": {
+        "discord_not_linked": "Vincula tu Discord en Perfil para participar.",
+        "no_active_giveaway": "No hay un sorteo activo ahora.",
+        "giveaway_closed": "Este sorteo ya terminó.",
+        "account_required": "Necesitas una cuenta registrada.",
+        "banned": "Tu cuenta está suspendida.",
+        "other": "No se pudo completar. Inténtalo de nuevo."
+      }
+    },
+    "daily": {
+      "chip": "RECOMPENSA DIARIA",
+      "title": "Racha diaria",
+      "streak": "Racha de {n} días",
+      "rowAria": "Recompensas de la racha diaria",
+      "day": "Día {n}",
+      "claimed": "¡+{amount} Carta Coins! Día {day} de tu racha.",
+      "already": "Ya reclamaste la recompensa de hoy.",
+      "signUp": "Crear cuenta para reclamar",
+      "comeBack": "Vuelve en {time}",
+      "claim": "Reclamar {amount}"
+    },
+    "win": {
+      "title": "¡Ganaste el sorteo!",
+      "body": "Ganaste {amount} Carta Coins en el sorteo semanal. Ya están en tu saldo.",
+      "ok": "¡Genial!"
+    }
   }
 }

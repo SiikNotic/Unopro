@@ -135,6 +135,23 @@
         "es": "Mejoras de seguridad y correcciones.",
         "en": "Security improvements and fixes."
       }
+    ],
+    "1.2.79": [
+      {
+        "icon": "coins",
+        "es": "Racha diaria: reclama monedas cada día; cuanto más seguido, más ganas.",
+        "en": "Daily streak: claim coins every day; the longer the streak, the more you get."
+      },
+      {
+        "icon": "star",
+        "es": "El sorteo semanal ahora en Inicio: participa desde la app y ve al ganador.",
+        "en": "The weekly giveaway is now on Home: enter from the app and see the winner."
+      },
+      {
+        "icon": "fix",
+        "es": "Mejoras de estabilidad y correcciones.",
+        "en": "Stability improvements and fixes."
+      }
     ]
   }
 }

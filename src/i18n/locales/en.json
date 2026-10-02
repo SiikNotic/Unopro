@@ -2650,5 +2650,50 @@
       "account": "Sign in with your account to play for coins.",
       "server": "Couldn't reach the server. Try again."
     }
+  },
+  "homeExtras": {
+    "dh": "{d}d {h}h",
+    "hm": "{h}h {m}m",
+    "m": "{m} min",
+    "error": "Something went wrong. Please try again.",
+    "giveaway": {
+      "chip": "WEEKLY GIVEAWAY",
+      "title": "{amount} Carta Coins giveaway",
+      "next": "Next giveaway coming soon",
+      "sub": "Ends in {time} · {entries} entries",
+      "lastWinner": "Last winner: {name} ({amount})",
+      "lastNoWinner": "The last giveaway ended with no entries.",
+      "signUp": "Create an account to enter",
+      "link": "Link Discord",
+      "entered": "You're in",
+      "enter": "Enter",
+      "discord": "Discord server",
+      "banned": "Your account is suspended.",
+      "reason": {
+        "discord_not_linked": "Link your Discord in Profile to enter.",
+        "no_active_giveaway": "There is no active giveaway right now.",
+        "giveaway_closed": "This giveaway has ended.",
+        "account_required": "You need a registered account.",
+        "banned": "Your account is suspended.",
+        "other": "Something went wrong. Please try again."
+      }
+    },
+    "daily": {
+      "chip": "DAILY REWARD",
+      "title": "Daily streak",
+      "streak": "{n}-day streak",
+      "rowAria": "Daily streak rewards",
+      "day": "Day {n}",
+      "claimed": "+{amount} Carta Coins! Day {day} of your streak.",
+      "already": "You already claimed today's reward.",
+      "signUp": "Create an account to claim",
+      "comeBack": "Come back in {time}",
+      "claim": "Claim {amount}"
+    },
+    "win": {
+      "title": "You won the giveaway!",
+      "body": "You won {amount} Carta Coins in the weekly giveaway. They're already in your balance.",
+      "ok": "Awesome!"
+    }
   }
 }

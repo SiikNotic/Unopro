@@ -4,6 +4,10 @@ import App from './App.tsx';
 import './index.css';
 import './styles-cz.css';
 import { registerAdMobIfNative } from './bank/admobProvider';
+import { installErrorReporter } from './app/errorReporter';
+
+// Uncaught errors are reported (anonymously, rate-limited) so crashes on players' devices get fixed.
+installErrorReporter();
 
 // Inside the Android app: rewarded ads through AdMob (on the web nothing is loaded).
 void registerAdMobIfNative().catch(() => undefined);

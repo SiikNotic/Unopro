@@ -18,6 +18,7 @@ import { gameInfo } from '@/games/catalog';
 import { CASINO, CATEGORIES, EXTRA_IMAGES, HERO_ART, HOME_GAMES, POPULAR, PROMO_IMAGE, RECOMMENDED } from './home/homeGames';
 import type { HomeCategory, HomeGame, HomeGameId } from './home/homeGames';
 import { ApkBanner } from '@/app/ApkBanner';
+import { HomeExtras } from './home/HomeExtras';
 import './home/home.css';
 
 const CATEGORY_ICON: Record<HomeCategory, LucideIcon> = { all: LayoutGrid, cards: Spade, table: CircleDot, slots: Cherry, puzzle: Gem, instant: Rocket };
@@ -206,6 +207,8 @@ export function HomeScreen() {
           </section>
         ) : (
           <>
+            <HomeExtras />
+
             <section aria-labelledby="hm-popular">
               <SectionHead id="hm-popular" icon={Crown} title={t('home2.popular')} action={{ label: t('lobby.seeAll'), onClick: () => navigate('gameModes') }} />
               <div className="hm-grid">

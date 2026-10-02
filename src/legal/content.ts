@@ -108,8 +108,9 @@ function es(): LegalDoc[] {
             'Al crear tu cuenta guardamos tu confirmación de edad y la aceptación de los textos legales (versión y fecha).',
             'Si usas funciones en línea sin cuenta (salas en línea, tragamonedas premium), nuestro servidor crea un identificador anónimo para esa sesión.',
             'Si creas una cuenta: correo electrónico y contraseña (la contraseña la guarda el servicio de autenticación de forma cifrada), o los datos que Google o Discord nos envían si inicias sesión con ellos (normalmente correo, nombre, imagen de perfil e identificador del proveedor).',
-            'Datos de juego de la cuenta: nombre de usuario, saldo de monedas, historial de partidas (juego, apuesta, resultado, fecha), préstamos, recompensas por anuncios, salas en línea en curso, última actividad y, si corresponde, sanciones y registros de moderación.',
+            'Datos de juego de la cuenta: nombre de usuario, saldo de monedas, historial de partidas (juego, apuesta, resultado, fecha), préstamos, recompensas por anuncios, racha diaria, participaciones y premios del sorteo semanal (con tu id de Discord si vinculas tu cuenta), salas en línea en curso, última actividad y, si corresponde, sanciones y registros de moderación.',
             'Datos técnicos: al conectarte, nuestro proveedor de servidor (Supabase, región us-east-1, EE. UU.) y el alojamiento web (GitHub Pages) reciben tu dirección IP y datos del navegador o dispositivo en sus registros técnicos.',
+            'Informes de fallos: si la app tiene un error inesperado, envía a nuestro servidor el mensaje técnico del error, la dirección de la página (sin parámetros), la plataforma y el navegador o dispositivo, sin tu sesión ni tu identificador de cuenta. Se usan solo para corregir fallos y se borran a los 30 días.',
           ],
         },
         {
@@ -120,7 +121,7 @@ function es(): LegalDoc[] {
             'Para verificar la recompensa, enviamos a Google nuestro identificador interno de tu cuenta, y Google nos lo devuelve en una confirmación firmada. Más información: https://policies.google.com/technologies/partner-sites',
           ],
         },
-        { h: 'Qué no recopilamos', p: ['La app no solicita ubicación GPS, contactos, fotos, cámara ni micrófono, y no procesa pagos (no hay compras). El código de la app no incluye SDK de analítica ni de informes de fallos. Otros datos que puedan recopilar Google Play o el sistema operativo quedan fuera de esta app y se rigen por sus propias políticas.'] },
+        { h: 'Qué no recopilamos', p: ['La app no solicita ubicación GPS, contactos, fotos, cámara ni micrófono, y no procesa pagos (no hay compras). El código de la app no incluye SDK de analítica ni de terceros para informes de fallos (los informes de fallos propios se describen arriba). Otros datos que puedan recopilar Google Play o el sistema operativo quedan fuera de esta app y se rigen por sus propias políticas.'] },
         {
           h: 'Para qué',
           p: ['Crear y mantener tu cuenta, guardar tu saldo e historial, hacer funcionar las partidas en línea, entregar recompensas y préstamos, prevenir trampas y abusos (moderación), mostrar anuncios solicitados (Android) y mantener la seguridad del servicio.'],
@@ -261,8 +262,9 @@ function en(): LegalDoc[] {
             'When you create your account we keep your age confirmation and your acceptance of the legal texts (version and date).',
             'If you use online features without an account (online rooms, premium slots), our server creates an anonymous identifier for that session.',
             'If you create an account: email and password (the password is stored hashed by the authentication service), or the data Google or Discord send us if you sign in with them (usually email, name, profile picture and provider identifier).',
-            'Account game data: username, coin balance, game history (game, stake, result, date), loans, ad rewards, online rooms in progress, last activity and, where applicable, sanctions and moderation records.',
+            'Account game data: username, coin balance, game history (game, stake, result, date), loans, ad rewards, daily streak, weekly giveaway entries and prizes (with your Discord ID if you link your account), online rooms in progress, last activity and, where applicable, sanctions and moderation records.',
             'Technical data: when you connect, our server provider (Supabase, region us-east-1, USA) and the web host (GitHub Pages) receive your IP address and browser or device information in their technical logs.',
+            'Error reports: if the app hits an unexpected error, it sends our server the technical error message, the page address (without parameters), the platform and the browser or device, without your session or account ID. They are used only to fix bugs and deleted after 30 days.',
           ],
         },
         {
@@ -273,7 +275,7 @@ function en(): LegalDoc[] {
             'To verify the reward we send Google our internal identifier for your account, and Google returns it to us in a signed confirmation. More: https://policies.google.com/technologies/partner-sites',
           ],
         },
-        { h: 'What we don\'t collect', p: ['The app does not request GPS location, contacts, photos, camera or microphone, and does not process payments (there are no purchases). The app\'s code includes no analytics or crash-reporting SDK. Data that Google Play or the operating system may collect is outside this app and governed by their own policies.'] },
+        { h: 'What we don\'t collect', p: ['The app does not request GPS location, contacts, photos, camera or microphone, and does not process payments (there are no purchases). The app\'s code includes no analytics SDK and no third-party crash-reporting SDK (our own error reports are described above). Data that Google Play or the operating system may collect is outside this app and governed by their own policies.'] },
         { h: 'Why', p: ['To create and keep your account, store your balance and history, run online games, grant rewards and loans, prevent cheating and abuse (moderation), show requested ads (Android) and keep the service secure.'] },
         {
           h: 'Who we share with',

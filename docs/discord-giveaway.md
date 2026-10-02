@@ -104,3 +104,20 @@ announces.
    `announcement` in the channel, DM `dmText` to `winnerDiscordUserId` when `hasWinner`, and edit the panel message
    (`panelMessageId`) with the new giveaway: prize `prizeText`, end `<t:{endsAtUnix}:F>` / `<t:{endsAtUnix}:R>`.
 
+3. Confirm the announcement (recommended): as the last block of the `hasResult` branch, call
+   `{ "op": "announced", "giveawayId": "{<cycle API>.response.resultGiveawayId}", "alwaysOk": true }`.
+   The first confirmation switches the server to confirm mode: from then on a result whose announcement was not
+   confirmed within 30 minutes (the bot was offline, Discord failed) is handed out again by `cycle`, at most 3
+   times. Without confirmations nothing changes: each result is handed out once.
+
+### In the app
+
+The home screen shows the active giveaway (prize, countdown, entries, the last winner by username) and lets a
+registered player with a linked Discord account enter from the app (`giveaway_enter`, same rules as the button).
+A player who won sees a one-time "¡Ganaste!" notice (`giveaway_home().win`, cleared with `giveaway_ack_win`).
+The optional "Servidor de Discord" link is `discord_bot_config.invite_url` (only `https://discord.gg/...` or
+`https://discord.com/invite/...` is accepted):
+
+```sql
+update public.discord_bot_config set invite_url = 'https://discord.gg/<code>' where id;
+```

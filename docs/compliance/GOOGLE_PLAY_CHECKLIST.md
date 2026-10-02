@@ -6,7 +6,7 @@
 ## 0. Build correcto
 - [ ] Subir el **AAB del flavor `play`** (artefacto `carta-play-aab` del workflow *Android app*, job `play-bundle`), **nunca** el APK `direct`.
 - [ ] Comprobar que el job verificó que **no** tiene `REQUEST_INSTALL_PACKAGES` ("OK: no REQUEST_INSTALL_PACKAGES").
-- [ ] Ajustar `APP_VERSION_NAME` / `APP_VERSION_CODE` del job `play-bundle` antes de cada subida: ahora son `1.0` / `1` y cada subida necesita un versionCode mayor.
+- [x] Versión automática: el workflow calcula `versionName` (base de `app-release.json` + número de ejecución) y `versionCode` = 10000·a + 100·b + c, siempre mayor que la subida anterior.
 - [ ] Play App Signing: la clave del CI actúa como clave de subida.
 - [ ] `ADMOB_APP_ID` y `VITE_ADMOB_REWARDED_ID` de producción configurados como Variables del repositorio (sin ellos se usan los IDs de prueba de Google).
 
@@ -36,17 +36,29 @@
 |---|---|---|---|---|---|
 | Email | Sí (solo con cuenta) | No | Gestión de cuenta | Sí | Supabase Auth |
 | Nombre de usuario | Sí (con cuenta) | No* | Funcionalidad | Sí | *Visible para otros jugadores en las mesas |
-| User IDs | Sí | Sí, con Google (AdMob SSV) | Funcionalidad, publicidad (verificación de la recompensa) | No con anuncios | UUID interno en el callback SSV |
+| User IDs | Sí (incluye el id de Discord si el jugador lo vincula) | Sí, con Google (AdMob SSV) | Funcionalidad, publicidad (verificación de la recompensa) | No con anuncios | UUID interno en el callback SSV |
 | Device or other IDs (AAID) | Sí (por el SDK de AdMob) | Sí, con Google | Publicidad, análisis de anuncios, prevención de fraude | — | Declarado por el SDK de Google Mobile Ads |
 | App interactions / in-game activity | Sí (saldo e historial virtual) | No | Funcionalidad | No | |
 | Approximate location (IP) | Por el SDK de AdMob | Sí, con Google | Publicidad | — | Según la documentación de datos de Google Mobile Ads — verificar |
-| Crash logs / Diagnostics | **NO VERIFICADO** | — | — | — | El código no tiene SDK de crash. Revisar lo que añade Play Console |
+| Crash logs / Diagnostics | **Sí** | No | Análisis (corregir fallos) | No | `src/app/errorReporter.ts`: mensaje y pila del error, URL sin query, plataforma y user agent. Se envía sin sesión ni id de cuenta; se borra a los 30 días |
 | Purchases / Financial info | **No** | — | — | — | No hay compras |
 | Precise location, contacts, photos, mensajes | **No** | — | — | — | |
 
 - [ ] Datos cifrados en tránsito: **Sí** (HTTPS).
 - [ ] Los usuarios pueden pedir el borrado: **Sí** (en la app y por web).
 - [ ] Completar la sección de SDK de Google Mobile Ads con su guía oficial de Data safety.
+
+## 3b. Declaración de casino simulado (lo que la app ya cumple)
+Política de Google Play: *Real-Money Gambling, Games and Contests* → los juegos de casino simulado están
+permitidos si no hay dinero real ni premios con valor real.
+- [x] Solo monedas virtuales (Carta Coins), sin compras, sin retiro y sin valor fuera de la app.
+- [x] Aviso visible en Inicio (`casino.disclaimer`): "Solo fichas virtuales. Sin dinero real, sin compras y sin premios reales."
+- [x] Registro con confirmación de 18+ y aceptación de términos (`signup gate`).
+- [x] Racha diaria y sorteo semanal: el premio son **monedas virtuales**; participar es gratis y no requiere compra.
+      El sorteo se decide en el servidor (no en el cliente) y las cuentas suspendidas no participan.
+- [x] Anuncios recompensados opcionales: dan monedas virtuales, nunca dinero.
+- [ ] En la ficha y en Discord, no llamar al sorteo "premio en efectivo" ni usar "$"; decir "10.000 Carta Coins (moneda virtual)".
+- [ ] Content rating: marcar "Simulated gambling: Sí" y "Usuarios interactúan: Sí" (chat no, pero hay nombres visibles y salas en línea).
 
 ## 4. Permisos del AAB `play`
 - `INTERNET`, `ACCESS_NETWORK_STATE` y el `AD_ID` que añade el SDK de AdMob → declarar el uso del Advertising ID: **Sí, para publicidad**.
