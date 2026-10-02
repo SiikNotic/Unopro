@@ -41,13 +41,16 @@ var MESSAGES = {
   not_an_entry: "Ese usuario no particip\xF3 en el giveaway.",
   invalid_or_expired_code: "El c\xF3digo no es v\xE1lido o caduc\xF3.",
   discord_already_linked: "Esa cuenta de Discord ya est\xE1 vinculada a otra cuenta de Carta.",
-  account_already_linked: "Esa cuenta de Carta ya est\xE1 vinculada a otra cuenta de Discord."
+  account_already_linked: "Esa cuenta de Carta ya est\xE1 vinculada a otra cuenta de Discord.",
+  enter_ok: "\u2705 \xA1Ya est\xE1s participando en el sorteo!",
+  link_ok: "\u2705 Tu cuenta de Discord qued\xF3 vinculada a Carta Casino.",
+  awarded: "Premio pagado."
 };
 var message = (code) => MESSAGES[code] ?? code;
 var ok = (operation, data = {}, status = 200) => ({ status, body: { ok: true, operation, ...data } });
 var fail = (operation, status, code, extra = {}) => ({
   status,
-  body: { ok: false, ...operation ? { operation } : {}, code, error: message(code), ...extra }
+  body: { ok: false, ...operation ? { operation } : {}, code, error: message(code), message: message(code), ...extra }
 });
 var HttpError = class extends Error {
   constructor(status, code, extra = {}) {
@@ -139,7 +142,20 @@ function timingSafeEqual(a, b) {
   return diff === 0;
 }
 var STATUS_OF = { P0400: 400, P0401: 401, P0403: 403, P0404: 404, P0409: 409 };
+var HARD_STATUSES = /* @__PURE__ */ new Set([401, 403, 405, 413]);
 async function handleGiveawayRequest(req, deps) {
+  const out = await handle(req, deps);
+  if (out.status < 400 || out.status >= 500 || HARD_STATUSES.has(out.status)) return out;
+  let soft = false;
+  try {
+    const body = parseBody(req.body);
+    soft = body.alwaysOk === true || body.alwaysOk === "true";
+  } catch {
+    soft = false;
+  }
+  return soft ? { status: 200, body: { ...out.body, httpStatus: out.status } } : out;
+}
+async function handle(req, deps) {
   const log = deps.log ?? (() => {
   });
   let operation = null;
@@ -159,7 +175,7 @@ async function handleGiveawayRequest(req, deps) {
   const outcome = (op, row, extra = {}) => {
     const r = row ?? {};
     const reason = typeof r.reason === "string" ? r.reason : null;
-    const body = { ...r, ...extra, ...reason ? { reason, message: message(reason) } : {} };
+    const body = { ...r, ...extra, ...reason ? { reason, message: message(reason) } : r.ok === true ? { message: message(`${op}_ok`) } : {} };
     return r.ok === true ? ok(op, body) : fail(op, reason === "giveaway_not_found" ? 404 : 409, reason ?? "invalid_request", body);
   };
   try {

@@ -36,8 +36,13 @@ uses the service role only after checking the bot secret.
 `Content-Type: application/json` and `X-BotGhost-Secret: <secret>` (every operation except `link_code`). The secret is
 stored only as a SHA-256 hash in `discord_bot_config.secret_hash`. `GET` on the same URL is a health check.
 
-Every answer is JSON: `{ "ok": true, "operation": "…", … }` or
-`{ "ok": false, "operation": "…", "code": "…", "error": "readable message" }`.
+Every answer is JSON: `{ "ok": true, "operation": "…", "message": "…", … }` or
+`{ "ok": false, "operation": "…", "code": "…", "error": "readable message", "message": "readable message" }`.
+
+BotGhost only fills a request's response variables on a 2xx answer. Add `"alwaysOk": true` to a bot request and a
+refusal (400/404/409: not linked, giveaway closed, active giveaway exists, unresolved variable…) answers **200** with
+the same body and the real status in `httpStatus`, so the bot can reply with `{name.response.message}`. A missing or
+wrong secret (401/403) and server errors keep their status.
 
 | op | Body | Result |
 | --- | --- | --- |
@@ -72,7 +77,8 @@ Discord IDs may be sent quoted or unquoted: 19-digit numbers are kept exact. An 
    (Add `"giveaway_end": "{giveaway_end}"` only if the command sets an end time; without it the giveaway lasts 7 days.)
    On success, post the giveaway message with an "Enter" button, then call `{ "op": "message", "messageId": "<posted message id>" }`.
    On 409 `active_giveaway_exists`, reply with the active one (`activeGiveaway`).
-2. **"Enter" button** → `{ "op": "enter", "discordUserId": "{user_id}" }`; reply ephemerally with `message`.
+2. **"Enter" button** → `{ "op": "enter", "discordUserId": "{user_id}", "alwaysOk": true }`; reply ephemerally
+   ("Only visible to them") with `{name.response.message}`.
 3. **Timed event every 10–15 minutes** → `{ "op": "tick" }`. For each item in `pending.results`: announce the winner
    (`winnerDiscordUserId`, `prizeCoins`) in the channel and DM them, then `{ "op": "announced", "giveawayId": "<id>" }`.
    For each item in `pending.unposted`: post the new giveaway message and call `op: "message"`.

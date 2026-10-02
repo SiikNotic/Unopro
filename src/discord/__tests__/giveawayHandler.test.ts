@@ -257,6 +257,34 @@ describe('the other operations keep working', () => {
     expect(byMessage.body).toMatchObject({ ok: true, operation: 'enter', giveaway_id: ROW.id });
   });
 
+  it('alwaysOk: refusals answer 200 (BotGhost fills its variables only on 2xx), credentials and server errors do not', async () => {
+    let linked = false;
+    const { send } = setup({
+      discord_current_giveaway: () => ({ ok: true, data: { id: ROW.id, status: 'active' } }),
+      discord_enter_giveaway: () => ({
+        ok: true,
+        data: [linked ? { ok: true, reason: null, user_id: 'u1', entries: 1 } : { ok: false, reason: 'discord_not_linked', user_id: null, entries: 0 }],
+      }),
+      discord_create_giveaway: () => ({ ok: false, error: { status: 409, code: 'P0409', message: 'active_giveaway_exists' } }),
+    });
+    const refused = await send({ op: 'enter', discordUserId: '222222222222222222', alwaysOk: true });
+    expect(refused.status).toBe(200);
+    expect(refused.body).toMatchObject({ ok: false, code: 'discord_not_linked', httpStatus: 409 });
+    expect(String(refused.body.message)).toContain('vinculada');
+    linked = true;
+    const entered = await send({ op: 'enter', discordUserId: '222222222222222222', alwaysOk: true });
+    expect(entered).toEqual({ status: 200, body: expect.objectContaining({ ok: true, entries: 1, message: expect.stringContaining('participando') }) });
+    expect(entered.body).not.toHaveProperty('httpStatus');
+    expect((await send({ op: 'create', guildId: GUILD, channelId: CHANNEL, alwaysOk: 'true' })).body).toMatchObject({ ok: false, code: 'active_giveaway_exists', httpStatus: 409 });
+    expect((await send({ op: 'enter', discordUserId: '{user_id}', alwaysOk: true })).body).toMatchObject({ code: 'unresolved_variable', httpStatus: 400 });
+    // The secret stays mandatory and visible as such.
+    expect((await send({ op: 'enter', discordUserId: '222222222222222222', alwaysOk: true }, { secret: null })).status).toBe(401);
+    expect((await send({ op: 'enter', discordUserId: '222222222222222222', alwaysOk: true }, { secret: 'wrong-secret-wrong-secret-wrong' })).status).toBe(403);
+    // Without the flag nothing changes.
+    linked = false;
+    expect((await send({ op: 'enter', discordUserId: '222222222222222222' })).status).toBe(409);
+  });
+
   it('entries, status/current, award, message, announced', async () => {
     const { send } = setup({
       discord_current_giveaway: () => ({ ok: true, data: { id: ROW.id, guildId: GUILD, channelId: CHANNEL, prizeCoins: 10000, status: 'active', entries: 2 } }),

@@ -88,13 +88,16 @@ const MESSAGES: Record<string, string> = {
   invalid_or_expired_code: 'El código no es válido o caducó.',
   discord_already_linked: 'Esa cuenta de Discord ya está vinculada a otra cuenta de Carta.',
   account_already_linked: 'Esa cuenta de Carta ya está vinculada a otra cuenta de Discord.',
+  enter_ok: '✅ ¡Ya estás participando en el sorteo!',
+  link_ok: '✅ Tu cuenta de Discord quedó vinculada a Carta Casino.',
+  awarded: 'Premio pagado.',
 };
 const message = (code: string) => MESSAGES[code] ?? code;
 
 const ok = (operation: string, data: Record<string, unknown> = {}, status = 200): GiveawayResponse => ({ status, body: { ok: true, operation, ...data } });
 const fail = (operation: string | null, status: number, code: string, extra: Record<string, unknown> = {}): GiveawayResponse => ({
   status,
-  body: { ok: false, ...(operation ? { operation } : {}), code, error: message(code), ...extra },
+  body: { ok: false, ...(operation ? { operation } : {}), code, error: message(code), message: message(code), ...extra },
 });
 
 class HttpError extends Error {
@@ -213,7 +216,28 @@ function timingSafeEqual(a: string, b: string): boolean {
 
 const STATUS_OF: Record<string, number> = { P0400: 400, P0401: 401, P0403: 403, P0404: 404, P0409: 409 };
 
+/** Statuses that stay as they are with alwaysOk: the request itself or its credentials are wrong. */
+const HARD_STATUSES = new Set([401, 403, 405, 413]);
+
+/**
+ * BotGhost only fills a request's response variables on a 2xx answer, so a bot can send `"alwaysOk": true`: a refusal
+ * (400/404/409) then answers 200 with the same body (`ok: false`, `code`, `message`) and the real status in
+ * `httpStatus`. Missing or wrong credentials and server errors keep their status.
+ */
 export async function handleGiveawayRequest(req: GiveawayRequest, deps: GiveawayDeps): Promise<GiveawayResponse> {
+  const out = await handle(req, deps);
+  if (out.status < 400 || out.status >= 500 || HARD_STATUSES.has(out.status)) return out;
+  let soft = false;
+  try {
+    const body = parseBody(req.body);
+    soft = body.alwaysOk === true || body.alwaysOk === 'true';
+  } catch {
+    soft = false;
+  }
+  return soft ? { status: 200, body: { ...out.body, httpStatus: out.status } } : out;
+}
+
+async function handle(req: GiveawayRequest, deps: GiveawayDeps): Promise<GiveawayResponse> {
   const log = deps.log ?? (() => {});
   let operation: string | null = null;
 
@@ -235,7 +259,7 @@ export async function handleGiveawayRequest(req: GiveawayRequest, deps: Giveaway
   const outcome = (op: string, row: Record<string, unknown> | null, extra: Record<string, unknown> = {}) => {
     const r = row ?? {};
     const reason = typeof r.reason === 'string' ? r.reason : null;
-    const body = { ...r, ...extra, ...(reason ? { reason, message: message(reason) } : {}) };
+    const body = { ...r, ...extra, ...(reason ? { reason, message: message(reason) } : r.ok === true ? { message: message(`${op}_ok`) } : {}) };
     return r.ok === true ? ok(op, body) : fail(op, reason === 'giveaway_not_found' ? 404 : 409, reason ?? 'invalid_request', body);
   };
 
