@@ -152,6 +152,13 @@
         "es": "Mejoras de estabilidad y correcciones.",
         "en": "Stability improvements and fixes."
       }
+    ],
+    "1.2.80": [
+      {
+        "icon": "design",
+        "es": "Nuevo diseño de la recompensa diaria y del sorteo semanal en Inicio.",
+        "en": "New look for the daily reward and the weekly giveaway on Home."
+      }
     ]
   }
 }

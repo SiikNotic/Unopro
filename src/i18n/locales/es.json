@@ -2676,7 +2676,11 @@
         "account_required": "Necesitas una cuenta registrada.",
         "banned": "Tu cuenta está suspendida.",
         "other": "No se pudo completar. Inténtalo de nuevo."
-      }
+      },
+      "live": "EN CURSO",
+      "unit": "Carta Coins",
+      "endsIn": "Termina en {time}",
+      "entries": "{n} participantes"
     },
     "daily": {
       "chip": "RECOMPENSA DIARIA",
@@ -2688,12 +2692,18 @@
       "already": "Ya reclamaste la recompensa de hoy.",
       "signUp": "Crear cuenta para reclamar",
       "comeBack": "Vuelve en {time}",
-      "claim": "Reclamar {amount}"
+      "claim": "Reclamar {amount}",
+      "sub": "Entra cada día: el premio crece hasta el día 7."
     },
     "win": {
       "title": "¡Ganaste el sorteo!",
       "body": "Ganaste {amount} Carta Coins en el sorteo semanal. Ya están en tu saldo.",
       "ok": "¡Genial!"
+    },
+    "unit": {
+      "d": "días",
+      "h": "horas",
+      "m": "min"
     }
   }
 }

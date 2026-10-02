@@ -2676,7 +2676,11 @@
         "account_required": "You need a registered account.",
         "banned": "Your account is suspended.",
         "other": "Something went wrong. Please try again."
-      }
+      },
+      "live": "LIVE",
+      "unit": "Carta Coins",
+      "endsIn": "Ends in {time}",
+      "entries": "{n} entries"
     },
     "daily": {
       "chip": "DAILY REWARD",
@@ -2688,12 +2692,18 @@
       "already": "You already claimed today's reward.",
       "signUp": "Create an account to claim",
       "comeBack": "Come back in {time}",
-      "claim": "Claim {amount}"
+      "claim": "Claim {amount}",
+      "sub": "Come back every day: the reward grows until day 7."
     },
     "win": {
       "title": "You won the giveaway!",
       "body": "You won {amount} Carta Coins in the weekly giveaway. They're already in your balance.",
       "ok": "Awesome!"
+    },
+    "unit": {
+      "d": "days",
+      "h": "hours",
+      "m": "min"
     }
   }
 }
