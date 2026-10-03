@@ -159,6 +159,23 @@
         "es": "Nuevo diseño de la recompensa diaria y del sorteo semanal en Inicio.",
         "en": "New look for the daily reward and the weekly giveaway on Home."
       }
+    ],
+    "1.2.81": [
+      {
+        "icon": "game",
+        "es": "Nuevo: Billar 8-Ball con física real, contra el bot o 1 VS 1.",
+        "en": "New: 8-Ball Pool with real physics, against the bot or 1 VS 1."
+      },
+      {
+        "icon": "star",
+        "es": "Cuatro niveles de bot: Fácil, Normal, Difícil y Experto.",
+        "en": "Four bot levels: Easy, Normal, Hard and Expert."
+      },
+      {
+        "icon": "design",
+        "es": "Mesa premium con guía de tiro, potencia y efecto.",
+        "en": "Premium table with aiming guide, power and spin."
+      }
     ]
   }
 }

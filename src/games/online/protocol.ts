@@ -5,8 +5,9 @@ import type { BingoSpeed, Difficulty } from '@/games/shared/setup';
 import type { CartaView } from './server/carta';
 import type { BjView } from '@/casino/table/blackjackTable';
 import type { RtView } from '@/casino/table/rouletteTable';
+import type { BilliardsView } from './server/billiards';
 
-export type RoomGame = 'domino' | 'bingo' | 'carta' | 'blackjack' | 'roulette';
+export type RoomGame = 'domino' | 'bingo' | 'carta' | 'blackjack' | 'roulette' | 'billiards';
 /** Games played for account coins (registered, non-banned accounts only). */
 export const COIN_GAMES: readonly RoomGame[] = ['blackjack', 'roulette'];
 /** Games whose rooms may be played for account coins (a stake per player, the pot to the winner). */
@@ -15,7 +16,7 @@ export const STAKE_GAMES: readonly RoomGame[] = ['domino', 'bingo', 'carta'];
 export const STAKES = [0, 100, 500, 1000, 5000] as const;
 export type Stake = (typeof STAKES)[number];
 /** Games the owner can take out of service (see the game_control_stakes migration). */
-export type ControlledGame = 'slots' | 'domino' | 'carta' | 'bingo' | 'blackjack' | 'roulette' | 'poker' | 'crash' | 'horse' | 'airhockey';
+export type ControlledGame = 'slots' | 'domino' | 'carta' | 'bingo' | 'blackjack' | 'roulette' | 'poker' | 'crash' | 'horse' | 'airhockey' | 'billiards';
 /** Games with quick match ("Jugar ahora"). */
 export const QUICK_GAMES: readonly RoomGame[] = ['carta', 'blackjack', 'roulette'];
 /** Seats allowed per game (min, max) and the default for quick match. */
@@ -25,6 +26,7 @@ export const SEAT_RANGE: Record<RoomGame, { min: number; max: number; quick: num
   carta: { min: 2, max: 6, quick: 4 },
   blackjack: { min: 1, max: 5, quick: 5 },
   roulette: { min: 1, max: 6, quick: 6 },
+  billiards: { min: 2, max: 2, quick: 2 },
 };
 export type RoomStatus = 'lobby' | 'playing' | 'closed';
 
@@ -85,6 +87,8 @@ export interface RoomView {
   carta: CartaView | null;
   blackjack: BjView | null;
   roulette: RtView | null;
+  /** 8-Ball (1 vs 1). */
+  billiards: BilliardsView | null;
   /** Staked rooms: the pot (null when the room isn't played for coins). */
   pot: PotView | null;
   /** Coin tables: your account balance after the server's last coin operation for you, if any. */
@@ -124,7 +128,7 @@ export type RoomErrorCode =
   | 'banned'
   /** The owner took this game out of service: no new matches. */
   | 'disabled'
-  /** A staked match needs at least two players at the table. */
+  /** A staked match (or an 8-Ball match) needs two players at the table. */
   | 'need_players';
 
 export type RoomResponse = { ok: true; view: RoomView } | { ok: false; code: RoomErrorCode; detail?: string };

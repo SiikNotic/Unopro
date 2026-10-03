@@ -6,7 +6,7 @@ import type { DominoAction } from '@/games/domino/engine';
 import type { BingoAction } from '@/games/bingo/engine';
 
 /** How often each client nudges the server clock (bots, balls, timeouts). The server decides if it's time. */
-const TICK_MS = { lobby: 3000, domino: 1000, bingo: 700, carta: 800, blackjack: 800, roulette: 1000 } as const;
+const TICK_MS = { lobby: 3000, domino: 1000, bingo: 700, carta: 800, blackjack: 800, roulette: 1000, billiards: 1500 } as const;
 
 export interface OnlineRoom {
   view: RoomView | null;

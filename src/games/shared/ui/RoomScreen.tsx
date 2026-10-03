@@ -35,7 +35,7 @@ export function RoomScreen() {
 }
 
 /** Where "back" goes from the room screen of this game. */
-const backScreen = (game: OnlineGame): Screen => ({ domino: 'dominoSetup', bingo: 'bingoSetup', carta: 'cartaSetup', blackjack: 'blackjackSetup', roulette: 'rouletteSetup' } as const)[game];
+const backScreen = (game: OnlineGame): Screen => ({ domino: 'dominoSetup', bingo: 'bingoSetup', carta: 'cartaSetup', blackjack: 'blackjackSetup', roulette: 'rouletteSetup', billiards: 'billiards' } as const)[game];
 
 /** Name of the game in room titles. */
 const gameName = (game: OnlineGame, t: (k: string) => string) => (game === 'domino' || game === 'bingo' ? t(`hub.${game}.name`) : t(`room.games.${game}`));
@@ -177,6 +177,10 @@ function RoomEntry({ game, cfg, joining }: { game: OnlineGame; cfg: OnlineConfig
           </>
         ) : (
           <div className="mt-4">
+            {range.min === range.max ? (
+              <p className="ms-note">{t('room.oneVsOne')}</p>
+            ) : (
+            <>
             <span className="ms-label">{t('room.seatsLabel')}</span>
             <div className="ms-seg" role="group" aria-label={t('room.seatsLabel')}>
               {Array.from({ length: range.max - range.min + 1 }, (_, i) => i + range.min).map((n) => (
@@ -186,6 +190,8 @@ function RoomEntry({ game, cfg, joining }: { game: OnlineGame; cfg: OnlineConfig
               ))}
             </div>
             <p className="ms-note mt-2">{t(coins ? 'room.seatsNoteTable' : 'room.seatsNote')}</p>
+            </>
+            )}
             {stakeGame && (
               <div className="mt-4">
                 <span className="ms-label">{t('room.stakeLabel')}</span>
@@ -266,7 +272,7 @@ function Lobby({ code }: { code: string }) {
   };
   const seats = Array.from({ length: v.seats }, (_, i) => `s${i}`);
   const staked = !!v.pot;
-  const tooFew = staked && v.members.length < 2;
+  const tooFew = (staked || v.game === 'billiards') && v.members.length < 2;
   const start = async () => {
     setStartError(null);
     const res = await room.send({ op: 'start' });
@@ -321,9 +327,11 @@ function Lobby({ code }: { code: string }) {
                     <i />
                     <i />
                   </span>
-                  <span className="ml-auto text-[11px] inline-flex items-center gap-1 opacity-80">
-                    <Bot className="w-3.5 h-3.5" aria-hidden /> {t('room.botIfEmpty')}
-                  </span>
+                  {v.game !== 'billiards' && (
+                    <span className="ml-auto text-[11px] inline-flex items-center gap-1 opacity-80">
+                      <Bot className="w-3.5 h-3.5" aria-hidden /> {t('room.botIfEmpty')}
+                    </span>
+                  )}
                 </li>
               );
             return (
@@ -344,7 +352,7 @@ function Lobby({ code }: { code: string }) {
               <Play className="w-5 h-5" /> {staked ? t('room.startStaked', { stake: formatChips(v.pot!.stake) }) : t('room.startOnline')}
             </button>
             {!allReady && <p className="ms-note mt-2 text-center">{t('room.waitReady')}</p>}
-            {allReady && tooFew && <p className="ms-note mt-2 text-center">{t('online.errors.need_players')}</p>}
+            {allReady && tooFew && <p className="ms-note mt-2 text-center">{t(v.game === 'billiards' ? 'billiards.waitingOpponent' : 'online.errors.need_players')}</p>}
             {startError?.code && (
               <p className="ms-note mt-2 text-center !text-[#ffb3b3]" role="alert">
                 {roomErrorText(t, startError)}

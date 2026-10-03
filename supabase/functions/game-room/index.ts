@@ -2247,6 +2247,577 @@ function cartaDeadline(state, lastAt) {
 }
 var botSeat = (state, seat) => ({ ...state, players: state.players.map((p) => p.id === seat ? { ...p, type: "BOT" } : p) });
 
+// src/games/billiards/table.ts
+var TABLE_W = 254;
+var TABLE_H = 127;
+var BALL_R = 2.8575;
+var BALL_D = BALL_R * 2;
+var HEAD_X = TABLE_W / 4;
+var HEAD_SPOT = { x: HEAD_X, y: TABLE_H / 2 };
+var FOOT_SPOT = { x: TABLE_W * 3 / 4, y: TABLE_H / 2 };
+var CORNER_GAP = 9.5;
+var SIDE_GAP = 6.8;
+var POCKETS2 = [
+  { x: -1.2, y: -1.2, r: 7, aimX: 1.6, aimY: 1.6, side: false },
+  { x: TABLE_W / 2, y: -3.6, r: 6, aimX: TABLE_W / 2, aimY: -0.5, side: true },
+  { x: TABLE_W + 1.2, y: -1.2, r: 7, aimX: TABLE_W - 1.6, aimY: 1.6, side: false },
+  { x: -1.2, y: TABLE_H + 1.2, r: 7, aimX: 1.6, aimY: TABLE_H - 1.6, side: false },
+  { x: TABLE_W / 2, y: TABLE_H + 3.6, r: 6, aimX: TABLE_W / 2, aimY: TABLE_H + 0.5, side: true },
+  { x: TABLE_W + 1.2, y: TABLE_H + 1.2, r: 7, aimX: TABLE_W - 1.6, aimY: TABLE_H - 1.6, side: false }
+];
+var W = TABLE_W;
+var H = TABLE_H;
+var C = CORNER_GAP;
+var S = SIDE_GAP;
+var J = 3.2;
+var CUSHIONS = [
+  // Top rail: two cushions with the side pocket between them, plus their jaws.
+  { ax: C, ay: 0, bx: W / 2 - S, by: 0 },
+  { ax: W / 2 + S, ay: 0, bx: W - C, by: 0 },
+  // Bottom rail.
+  { ax: C, ay: H, bx: W / 2 - S, by: H },
+  { ax: W / 2 + S, ay: H, bx: W - C, by: H },
+  // Head and foot rails.
+  { ax: 0, ay: C, bx: 0, by: H - C },
+  { ax: W, ay: C, bx: W, by: H - C },
+  // Corner jaws (angled into the pocket).
+  { ax: C, ay: 0, bx: C - J, by: -J },
+  { ax: 0, ay: C, bx: -J, by: C - J },
+  { ax: W - C, ay: 0, bx: W - C + J, by: -J },
+  { ax: W, ay: C, bx: W + J, by: C - J },
+  { ax: C, ay: H, bx: C - J, by: H + J },
+  { ax: 0, ay: H - C, bx: -J, by: H - C + J },
+  { ax: W - C, ay: H, bx: W - C + J, by: H + J },
+  { ax: W, ay: H - C, bx: W + J, by: H - C + J },
+  // Side jaws (slightly narrowing).
+  { ax: W / 2 - S, ay: 0, bx: W / 2 - S + 1.2, by: -J },
+  { ax: W / 2 + S, ay: 0, bx: W / 2 + S - 1.2, by: -J },
+  { ax: W / 2 - S, ay: H, bx: W / 2 - S + 1.2, by: H + J },
+  { ax: W / 2 + S, ay: H, bx: W / 2 + S - 1.2, by: H + J }
+];
+var isSolid = (n) => n >= 1 && n <= 7;
+var isStripe = (n) => n >= 9 && n <= 15;
+var groupOf = (n) => isSolid(n) ? "solids" : isStripe(n) ? "stripes" : null;
+var inGroup = (n, g) => g === "solids" ? isSolid(n) : isStripe(n);
+function rackPositions() {
+  const out = [];
+  const dx = BALL_D * 0.8660254037844386 + 0.02;
+  const dy = BALL_D + 0.02;
+  for (let row = 0; row < 5; row++) {
+    for (let k = 0; k <= row; k++) out.push({ x: FOOT_SPOT.x + row * dx, y: FOOT_SPOT.y + (k - row / 2) * dy });
+  }
+  return out;
+}
+function onCloth(x, y, kitchen) {
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return false;
+  if (x < BALL_R || x > TABLE_W - BALL_R || y < BALL_R || y > TABLE_H - BALL_R) return false;
+  return !kitchen || x <= HEAD_X;
+}
+
+// src/games/billiards/physics.ts
+var DT = 1 / 500;
+var MIN_SPEED = 60;
+var MAX_SPEED = 900;
+var ROLL_DECEL = 55;
+var DRAG = 0.25;
+var STOP = 1.5;
+var BALL_E = 0.95;
+var CUSHION_E = 0.76;
+var CUSHION_GRIP = 0.96;
+var MAX_STEPS = 500 * 40;
+var speedFor = (power) => MIN_SPEED + Math.min(1, Math.max(0, power)) * (MAX_SPEED - MIN_SPEED);
+var Simulation = class {
+  constructor(balls, shot, onEvent) {
+    this.onEvent = onEvent;
+    this.bodies = balls.map((b) => ({ id: b.id, x: b.x, y: b.y, vx: 0, vy: 0, down: b.down, moving: false }));
+    this.bodies.sort((a, b) => a.id - b.id);
+    const speed = speedFor(shot.power);
+    const cue = this.bodies.find((b) => b.id === 0 && !b.down);
+    this.follow = clamp(shot.spinY, -1, 1);
+    this.side = clamp(shot.spinX, -1, 1);
+    this.shotDx = shot.dx;
+    this.shotDy = shot.dy;
+    if (cue) {
+      cue.vx = shot.dx * speed;
+      cue.vy = shot.dy * speed;
+      cue.moving = true;
+      onEvent?.({ type: "cue", speed });
+    } else this.done = true;
+  }
+  bodies;
+  firstContact = null;
+  potted = [];
+  railAfterContact = false;
+  rails = /* @__PURE__ */ new Set();
+  follow;
+  side;
+  shotDx;
+  shotDy;
+  steps = 0;
+  done = false;
+  step() {
+    if (this.done) return;
+    this.steps++;
+    const bodies = this.bodies;
+    this.follow *= 1 - 0.9 * DT;
+    this.side *= 1 - 0.6 * DT;
+    for (const b of bodies) {
+      if (b.down || !b.moving) continue;
+      b.x += b.vx * DT;
+      b.y += b.vy * DT;
+      const sp = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
+      const next = sp - (ROLL_DECEL + DRAG * sp) * DT;
+      if (next <= STOP) {
+        b.vx = 0;
+        b.vy = 0;
+        b.moving = false;
+      } else {
+        const k = next / sp;
+        b.vx *= k;
+        b.vy *= k;
+      }
+    }
+    for (let i = 0; i < bodies.length; i++) {
+      const a = bodies[i];
+      if (a.down) continue;
+      for (let j = i + 1; j < bodies.length; j++) {
+        const b = bodies[j];
+        if (b.down || !a.moving && !b.moving) continue;
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const d2 = dx * dx + dy * dy;
+        if (d2 >= BALL_D * BALL_D) continue;
+        const d = Math.sqrt(d2);
+        const nx = d > 1e-9 ? dx / d : 1;
+        const ny = d > 1e-9 ? dy / d : 0;
+        const push = (BALL_D - d) / 2;
+        a.x -= nx * push;
+        a.y -= ny * push;
+        b.x += nx * push;
+        b.y += ny * push;
+        const rel = (a.vx - b.vx) * nx + (a.vy - b.vy) * ny;
+        if (rel <= 0) continue;
+        const cueA = a.id === 0 ? a : b.id === 0 ? b : null;
+        const first = cueA && this.firstContact === null;
+        const preX = cueA ? cueA.vx : 0;
+        const preY = cueA ? cueA.vy : 0;
+        const imp = (1 + BALL_E) / 2 * rel;
+        a.vx -= imp * nx;
+        a.vy -= imp * ny;
+        b.vx += imp * nx;
+        b.vy += imp * ny;
+        a.moving = true;
+        b.moving = true;
+        this.onEvent?.({ type: "ball", a: a.id, b: b.id, speed: rel });
+        if (first && cueA) {
+          this.firstContact = cueA === a ? b.id : a.id;
+          if (this.follow !== 0) {
+            const pre = Math.sqrt(preX * preX + preY * preY);
+            if (pre > 0) {
+              const kf = this.follow * 0.62;
+              cueA.vx += preX / pre * pre * kf;
+              cueA.vy += preY / pre * pre * kf;
+            }
+            this.follow = 0;
+          }
+        }
+      }
+    }
+    for (const b of bodies) {
+      if (b.down) continue;
+      if (!b.moving) continue;
+      for (let s = 0; s < CUSHIONS.length; s++) {
+        const seg = CUSHIONS[s];
+        const ex = seg.bx - seg.ax;
+        const ey = seg.by - seg.ay;
+        const len2 = ex * ex + ey * ey;
+        let t = ((b.x - seg.ax) * ex + (b.y - seg.ay) * ey) / len2;
+        t = t < 0 ? 0 : t > 1 ? 1 : t;
+        const qx = seg.ax + ex * t;
+        const qy = seg.ay + ey * t;
+        const ox = b.x - qx;
+        const oy = b.y - qy;
+        const d2 = ox * ox + oy * oy;
+        if (d2 >= BALL_R * BALL_R) continue;
+        const d = Math.sqrt(d2);
+        let nx;
+        let ny;
+        if (d > 1e-9) {
+          nx = ox / d;
+          ny = oy / d;
+        } else {
+          nx = -ey / Math.sqrt(len2);
+          ny = ex / Math.sqrt(len2);
+        }
+        b.x = qx + nx * BALL_R;
+        b.y = qy + ny * BALL_R;
+        const vn = b.vx * nx + b.vy * ny;
+        if (vn >= 0) continue;
+        let tx = b.vx - vn * nx;
+        let ty = b.vy - vn * ny;
+        tx *= CUSHION_GRIP;
+        ty *= CUSHION_GRIP;
+        let vx = tx - vn * CUSHION_E * nx;
+        let vy = ty - vn * CUSHION_E * ny;
+        if (b.id === 0 && this.side !== 0) {
+          const rx = -this.shotDy;
+          const ry = this.shotDx;
+          const along = rx * -ny + ry * nx;
+          const sign = along >= 0 ? 1 : -1;
+          const kick = this.side * -vn * 0.32 * sign;
+          vx += -ny * kick;
+          vy += nx * kick;
+          this.side *= 0.5;
+        }
+        b.vx = vx;
+        b.vy = vy;
+        this.onEvent?.({ type: "cushion", ball: b.id, speed: -vn });
+        if (this.firstContact !== null) this.railAfterContact = true;
+        if (b.id !== 0) this.rails.add(b.id);
+      }
+    }
+    for (const b of bodies) {
+      if (b.down) continue;
+      let pocket = -1;
+      for (let p = 0; p < POCKETS2.length; p++) {
+        const pk = POCKETS2[p];
+        const dx = b.x - pk.x;
+        const dy = b.y - pk.y;
+        if (dx * dx + dy * dy < pk.r * pk.r) {
+          pocket = p;
+          break;
+        }
+      }
+      if (pocket < 0 && (b.x < -10 || b.x > TABLE_W + 10 || b.y < -10 || b.y > TABLE_H + 10)) pocket = nearestPocket(b.x, b.y);
+      if (pocket < 0) continue;
+      b.down = true;
+      b.moving = false;
+      b.vx = 0;
+      b.vy = 0;
+      this.potted.push({ ball: b.id, pocket });
+      this.onEvent?.({ type: "pocket", ball: b.id, pocket });
+    }
+    if (!bodies.some((b) => b.moving) || this.steps >= MAX_STEPS) {
+      for (const b of bodies) {
+        b.vx = 0;
+        b.vy = 0;
+        b.moving = false;
+      }
+      this.done = true;
+    }
+  }
+  /** Runs to the end. */
+  finish() {
+    while (!this.done) this.step();
+    return this.result();
+  }
+  result() {
+    return {
+      balls: this.bodies.map((b) => ({ id: b.id, x: b.x, y: b.y, down: b.down })),
+      firstContact: this.firstContact,
+      potted: this.potted.slice(),
+      railAfterContact: this.railAfterContact,
+      objectRails: this.rails.size,
+      steps: this.steps
+    };
+  }
+  /** Where the balls are right now (for drawing). */
+  snapshot() {
+    return this.bodies.map((b) => ({ id: b.id, x: b.x, y: b.y, down: b.down }));
+  }
+};
+function simulate(balls, shot, onEvent) {
+  return new Simulation(balls, shot, onEvent).finish();
+}
+function nearestPocket(x, y) {
+  let best = 0;
+  let bd = Infinity;
+  for (let p = 0; p < POCKETS2.length; p++) {
+    const dx = x - POCKETS2[p].x;
+    const dy = y - POCKETS2[p].y;
+    const d = dx * dx + dy * dy;
+    if (d < bd) {
+      bd = d;
+      best = p;
+    }
+  }
+  return best;
+}
+function clamp(v, lo, hi) {
+  return Number.isFinite(v) ? v < lo ? lo : v > hi ? hi : v : 0;
+}
+
+// src/games/billiards/rules.ts
+function createBilliards(players, seed, breaker = 0, match = 1) {
+  if (players.length !== 2) throw new Error("8-Ball needs two players");
+  const rng = createRng(seed >>> 0);
+  const spots = rackPositions();
+  const solidCorner = 10 + (rng.next() < 0.5 ? 0 : 4);
+  const stripeCorner = solidCorner === 10 ? 14 : 10;
+  const solids = shuffle([1, 2, 3, 4, 5, 6, 7], rng);
+  const stripes = shuffle([9, 10, 11, 12, 13, 14, 15], rng);
+  const rack = new Array(15);
+  rack[4] = 8;
+  rack[solidCorner] = solids.pop();
+  rack[stripeCorner] = stripes.pop();
+  const rest = shuffle([...solids, ...stripes], rng);
+  for (let i = 0; i < 15; i++) if (rack[i] === void 0) rack[i] = rest.pop();
+  const balls = [{ id: 0, x: HEAD_SPOT.x, y: HEAD_SPOT.y, down: false }, ...rack.map((id, i) => ({ id, x: spots[i].x, y: spots[i].y, down: false }))];
+  balls.sort((a, b) => a.id - b.id);
+  return {
+    v: 1,
+    seed: seed >>> 0,
+    match,
+    balls,
+    players: [mkPlayer(players[0]), mkPlayer(players[1])],
+    turn: breaker,
+    breaker,
+    phase: "break",
+    ballInHand: true,
+    shots: 0,
+    winner: null,
+    reason: null,
+    last: null
+  };
+}
+var mkPlayer = (p) => ({ id: p.id, name: p.name, kind: p.kind, group: null, potted: 0, fouls: 0 });
+function rematchBilliards(s, seed) {
+  const players = s.players.map((p) => ({ id: p.id, name: p.name, kind: p.kind }));
+  return createBilliards(players, seed, s.breaker === 0 ? 1 : 0, s.match + 1);
+}
+function remaining(s, g) {
+  return s.balls.filter((b) => !b.down && inGroup(b.id, g)).length;
+}
+function onEight(s, seat) {
+  const g = s.players[seat].group;
+  return !!g && remaining(s, g) === 0;
+}
+function legalTargets(s, seat = s.turn) {
+  const live = s.balls.filter((b) => !b.down && b.id !== 0).map((b) => b.id);
+  if (s.phase === "break" || s.phase === "open") return live.filter((id) => id !== 8);
+  const g = s.players[seat].group;
+  if (remaining(s, g) === 0) return [8];
+  return live.filter((id) => inGroup(id, g));
+}
+function normalizeShot(raw) {
+  const { dx, dy, power } = raw;
+  if (![dx, dy, power].every((v) => typeof v === "number" && Number.isFinite(v))) return null;
+  const len = Math.sqrt(dx * dx + dy * dy);
+  if (len < 1e-6) return null;
+  const q = (v, step) => Math.round(v / step) * step;
+  const clampSpin = (v) => typeof v === "number" && Number.isFinite(v) ? Math.max(-1, Math.min(1, q(v, 0.01))) : 0;
+  return {
+    dx: q(dx / len, 1e-6),
+    dy: q(dy / len, 1e-6),
+    power: Math.max(0, Math.min(1, q(power, 1e-3))),
+    spinX: clampSpin(raw.spinX),
+    spinY: clampSpin(raw.spinY)
+  };
+}
+function canPlaceCue(s, x, y) {
+  if (!onCloth(x, y, s.phase === "break")) return false;
+  return s.balls.every((b) => b.id === 0 || b.down || (b.x - x) * (b.x - x) + (b.y - y) * (b.y - y) >= BALL_D * BALL_D);
+}
+function prepareShot(s, shot) {
+  if (s.phase === "over") return { ok: false, error: "game_over" };
+  const input = normalizeShot(shot);
+  if (!input) return { ok: false, error: "bad_shot" };
+  let before = s.balls.map((b) => ({ ...b }));
+  if (shot.cueX !== void 0 || shot.cueY !== void 0) {
+    if (!s.ballInHand) return { ok: false, error: "no_ball_in_hand" };
+    const x = Math.round(Number(shot.cueX) * 100) / 100;
+    const y = Math.round(Number(shot.cueY) * 100) / 100;
+    if (!canPlaceCue(s, x, y)) return { ok: false, error: "bad_cue_position" };
+    before = before.map((b) => b.id === 0 ? { id: 0, x, y, down: false } : b);
+  }
+  if (onEight(s, s.turn)) {
+    if (!Number.isInteger(shot.pocket) || shot.pocket < 0 || shot.pocket >= POCKETS2.length) return { ok: false, error: "call_pocket" };
+  }
+  return { ok: true, before, input };
+}
+function applyShot(s, shot) {
+  const prep = prepareShot(s, shot);
+  if (!prep.ok) return prep;
+  const result = simulate(prep.before, prep.input);
+  return { ok: true, state: judge(s, prep.before, prep.input, result, shot.pocket), result };
+}
+function judge(s, before, input, r, calledPocket) {
+  const me = s.turn;
+  const other = me === 0 ? 1 : 0;
+  const shooter = s.players[me];
+  const ids = r.potted.map((p) => p.ball);
+  const cueDown = ids.includes(0);
+  const eight = r.potted.find((p) => p.ball === 8);
+  const objects = ids.filter((id) => id !== 0 && id !== 8);
+  const wasOnEight = onEight(s, me);
+  const targets = legalTargets(s, me);
+  let balls = r.balls.map((b) => ({ ...b }));
+  let foul = null;
+  let phase = s.phase;
+  let players = [{ ...s.players[0] }, { ...s.players[1] }];
+  let assigned = null;
+  let again = false;
+  if (s.phase === "break") {
+    if (cueDown) foul = "scratch";
+    else if (r.firstContact === null) foul = "no_contact";
+    else if (ids.filter((id) => id !== 0).length === 0 && r.objectRails < 4) foul = "bad_break";
+    if (eight) balls = spotEight(balls);
+    phase = "open";
+    again = !foul && ids.some((id) => id !== 0);
+  } else {
+    if (r.firstContact === null) foul = "no_contact";
+    else if (!targets.includes(r.firstContact)) foul = "wrong_ball";
+    else if (cueDown) foul = "scratch";
+    else if (ids.length === 0 && !r.railAfterContact) foul = "no_rail";
+    if (cueDown && !foul) foul = "scratch";
+    if (eight) {
+      const rightPocket = calledPocket === void 0 || calledPocket === eight.pocket;
+      const win = wasOnEight && !foul && rightPocket;
+      const reason = win ? "eight" : !wasOnEight ? "eight_early" : foul ? "eight_foul" : "eight_wrong_pocket";
+      players = credit(players, me, objects, shooter.group, foul);
+      return {
+        ...s,
+        balls,
+        players,
+        phase: "over",
+        ballInHand: false,
+        shots: s.shots + 1,
+        winner: win ? me : other,
+        reason,
+        last: { no: s.shots + 1, by: me, before, input, potted: ids, foul, again: false, assigned: null }
+      };
+    }
+    if (s.phase === "open" && !foul && objects.length > 0) {
+      assigned = groupOf(objects[0]);
+      players[me] = { ...players[me], group: assigned };
+      players[other] = { ...players[other], group: assigned === "solids" ? "stripes" : "solids" };
+      phase = "assigned";
+    }
+    const myGroup = players[me].group;
+    const ownDown = myGroup ? objects.filter((id) => inGroup(id, myGroup)).length : objects.length;
+    again = !foul && ownDown > 0;
+  }
+  players = credit(players, me, objects, players[me].group, foul);
+  if (cueDown) balls = balls.map((b) => b.id === 0 ? { ...b, down: false, ...freeSpot(balls, HEAD_SPOT.x, HEAD_SPOT.y) } : b);
+  return {
+    ...s,
+    balls,
+    players,
+    phase,
+    turn: again ? me : other,
+    ballInHand: !!foul,
+    shots: s.shots + 1,
+    last: { no: s.shots + 1, by: me, before, input, potted: ids, foul, again, assigned }
+  };
+}
+function credit(players, me, objects, group, foul) {
+  const own = group ? objects.filter((id) => inGroup(id, group)).length : objects.length;
+  const next = [{ ...players[0] }, { ...players[1] }];
+  next[me] = { ...next[me], potted: next[me].potted + own, fouls: next[me].fouls + (foul ? 1 : 0) };
+  return next;
+}
+function spotEight(balls) {
+  const others = balls.filter((b) => b.id !== 8);
+  return balls.map((b) => b.id === 8 ? { id: 8, down: false, ...freeSpot(others, FOOT_SPOT.x, FOOT_SPOT.y) } : b);
+}
+function freeSpot(balls, x, y) {
+  const free = (px) => balls.every((b) => b.down || b.id === 0 || (b.x - px) * (b.x - px) + (b.y - y) * (b.y - y) >= BALL_D * BALL_D);
+  for (let px = x; px <= TABLE_W - BALL_R; px += 0.5) if (free(px)) return { x: px, y };
+  for (let px = x; px >= BALL_R; px -= 0.5) if (free(px)) return { x: px, y };
+  return { x, y };
+}
+function timeoutFoul(s) {
+  if (s.phase === "over") return s;
+  const me = s.turn;
+  const players = [{ ...s.players[0] }, { ...s.players[1] }];
+  players[me] = { ...players[me], fouls: players[me].fouls + 1 };
+  return {
+    ...s,
+    players,
+    phase: s.phase === "break" ? "open" : s.phase,
+    turn: me === 0 ? 1 : 0,
+    ballInHand: true,
+    last: s.last ? { ...s.last, foul: "timeout", again: false } : null
+  };
+}
+function forfeit(s, seat) {
+  if (s.phase === "over") return s;
+  return { ...s, phase: "over", ballInHand: false, winner: seat === 0 ? 1 : 0, reason: "forfeit" };
+}
+
+// src/games/online/server/billiards.ts
+var SHOT_LIMIT = 6e4;
+var AWAY_AFTER = 45e3;
+var seatIndex = (seat) => seat === "s0" ? 0 : seat === "s1" ? 1 : null;
+function createRoomBilliards(names, seed) {
+  return createBilliards(
+    [
+      { id: "s0", name: names[0], kind: "human" },
+      { id: "s1", name: names[1], kind: "human" }
+    ],
+    seed
+  );
+}
+function billiardsView(s, restAt, away) {
+  const { seed: _seed, ...state } = s;
+  return { state, away, restAt };
+}
+var num = (v) => typeof v === "number" && Number.isFinite(v) ? v : void 0;
+function parseBilliardsAction(raw) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const r = raw;
+  if (r.type !== "SHOOT" || !Number.isInteger(r.no)) return null;
+  const s = r.shot && typeof r.shot === "object" && !Array.isArray(r.shot) ? r.shot : null;
+  if (!s) return null;
+  const dx = num(s.dx);
+  const dy = num(s.dy);
+  const power = num(s.power);
+  if (dx === void 0 || dy === void 0 || power === void 0) return null;
+  const shot = { dx, dy, power, spinX: num(s.spinX) ?? 0, spinY: num(s.spinY) ?? 0 };
+  if (s.cueX !== void 0 || s.cueY !== void 0) {
+    const cx = num(s.cueX);
+    const cy = num(s.cueY);
+    if (cx === void 0 || cy === void 0) return null;
+    shot.cueX = cx;
+    shot.cueY = cy;
+  }
+  if (s.pocket !== void 0) {
+    if (!Number.isInteger(s.pocket)) return null;
+    shot.pocket = s.pocket;
+  }
+  return { type: "SHOOT", no: r.no, shot };
+}
+function shootBilliards(s, seat, a, now, restAt) {
+  const me = seatIndex(seat);
+  if (me === null) return { ok: false, error: "not_a_player" };
+  if (s.phase === "over") return { ok: false, error: "game_over" };
+  if (s.turn !== me) return { ok: false, error: "not_your_turn" };
+  if (a.no !== s.shots + 1) return { ok: false, error: "stale_shot" };
+  if (now < restAt - 250) return { ok: false, error: "balls_moving" };
+  const res = applyShot(s, a.shot);
+  if (!res.ok) return res;
+  const rolling = Math.ceil((res.result?.steps ?? 0) * DT * 1e3);
+  return { ok: true, state: res.state, restAt: now + rolling };
+}
+function advanceBilliards(s, restAt, now) {
+  let state = s;
+  let at = restAt;
+  for (let i = 0; i < 2 && state.phase !== "over" && now >= at + SHOT_LIMIT; i++) {
+    state = timeoutFoul(state);
+    at += SHOT_LIMIT;
+  }
+  return { state, restAt: at };
+}
+function billiardsWinner(s) {
+  if (s.phase !== "over" || s.winner === null) return null;
+  return [s.winner === 0 ? "s0" : "s1"];
+}
+var forfeitSeat = (s, seat) => {
+  const i = seatIndex(seat);
+  return i === null ? s : forfeit(s, i);
+};
+var rematchRoomBilliards = rematchBilliards;
+
 // src/games/online/protocol.ts
 var COIN_GAMES = ["blackjack", "roulette"];
 var STAKE_GAMES = ["domino", "bingo", "carta"];
@@ -2257,7 +2828,8 @@ var SEAT_RANGE = {
   bingo: { min: 1, max: 4, quick: 4 },
   carta: { min: 2, max: 6, quick: 4 },
   blackjack: { min: 1, max: 5, quick: 5 },
-  roulette: { min: 1, max: 6, quick: 6 }
+  roulette: { min: 1, max: 6, quick: 6 },
+  billiards: { min: 2, max: 2, quick: 2 }
 };
 
 // src/games/online/server/handler.ts
@@ -2318,6 +2890,7 @@ function cleanName(raw) {
 function cleanSettings(game, raw) {
   const r = raw && typeof raw === "object" ? raw : {};
   if (isCoinGame(game)) return { difficulty: "normal", public: r.public === true };
+  if (game === "billiards") return { difficulty: "normal" };
   if (!DIFFICULTIES.includes(r.difficulty)) return null;
   const difficulty = r.difficulty;
   if (r.stake !== void 0 && r.stake !== 0 && !STAKES.includes(r.stake)) return null;
@@ -2336,7 +2909,7 @@ function potView(room) {
   if (!p) return { stake, players: 0, total: 0, settled: false, winners: [], prize: 0 };
   return { stake: p.stake, players: p.seats.length, total: p.stake * p.seats.length, settled: p.settled, winners: p.winners, prize: p.prize };
 }
-var GAMES = ["domino", "bingo", "carta", "blackjack", "roulette"];
+var GAMES = ["domino", "bingo", "carta", "blackjack", "roulette", "billiards"];
 function parseRequest(raw) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
   const r = raw;
@@ -2396,6 +2969,13 @@ function viewFor(room, member, now, events = [], balance = null) {
     if (cur.kind !== "bot") turnDeadline = room.clock.lastAt + TIMING.turnLimit;
   }
   if (carta) turnDeadline = cartaDeadline(room.state, room.clock.lastAt);
+  let billiards = null;
+  if (room.game === "billiards" && room.state) {
+    const st = room.state;
+    const away = room.members.filter((m) => m.seenAt !== void 0 && now - m.seenAt > AWAY_AFTER).map((m) => m.seat);
+    billiards = billiardsView(st, room.clock.lastAt, away);
+    if (st.phase !== "over") turnDeadline = room.clock.lastAt + SHOT_LIMIT;
+  }
   return {
     roomId: room.id,
     code: room.code,
@@ -2414,6 +2994,7 @@ function viewFor(room, member, now, events = [], balance = null) {
     carta,
     blackjack,
     roulette,
+    billiards,
     pot: potView(room),
     balance,
     events: room.game === "domino" || room.game === "bingo" ? sanitizeEvents(room.game, events, member.seat) : []
@@ -2437,6 +3018,10 @@ function advance(room, now) {
   if (room.game === "roulette") {
     const t = advanceRt(room.state, now);
     return { room: t === room.state ? room : { ...room, state: t }, events: [] };
+  }
+  if (room.game === "billiards") {
+    const b = advanceBilliards(room.state, room.clock.lastAt, now);
+    return { room: b.state === room.state ? room : { ...room, state: b.state, clock: { ...room.clock, lastAt: b.restAt } }, events: [] };
   }
   const events = [];
   let r = room;
@@ -2545,6 +3130,7 @@ function newMatch(room, now, randomInt) {
     return m ? { id: seat, name: m.name, kind: "human" } : { id: seat, name: `Bot ${++bot}`, kind: "bot" };
   });
   if (room.game === "carta") return { ...room, status: "playing", state: createCarta(seats, seed), clock: { lastAt: now, lastCallAt: 0, closingAt: 0, roundOverAt: 0 } };
+  if (room.game === "billiards") return { ...room, status: "playing", state: createRoomBilliards([seats[0].name, seats[1].name], seed), clock: { lastAt: now, lastCallAt: 0, closingAt: 0, roundOverAt: 0 } };
   const state = room.game === "domino" ? createDomino({ seats, seed, targetScore: room.settings.target ?? 100 }) : createBingo({ seats, seed });
   const clock = { lastAt: now, lastCallAt: now - (TIMING.pace[room.settings.speed ?? "normal"] ?? 3800) + TIMING.firstBall, closingAt: 0, roundOverAt: 0 };
   return { ...room, status: "playing", state, clock };
@@ -2583,7 +3169,7 @@ async function progress(room, now, deps, balances) {
 }
 var walletError = (code, detail) => code === "insufficient_funds" || code === "not_registered" || code === "banned" || code === "disabled" ? fail2(code, detail) : code === "conflict" || code === "invalid" ? fail2("rule", code) : fail2("busy");
 async function outOfService(game, deps) {
-  if (!isStakeGame(game) && !isCoinGame(game) || !deps.availability) return null;
+  if (!isStakeGame(game) && !isCoinGame(game) && game !== "billiards" || !deps.availability) return null;
   return await deps.availability(game) ? null : fail2("disabled");
 }
 async function giveBack(debits, deps, code, balances) {
@@ -2627,6 +3213,7 @@ function matchWinners(room) {
     const b = st;
     return b.status === "round_over" ? b.lastResult?.winners ?? [] : null;
   }
+  if (room.game === "billiards") return billiardsWinner(st);
   if (room.game === "carta") {
     const c = st;
     if (c.status !== "GAME_OVER") return null;
@@ -2809,6 +3396,7 @@ async function handleRoomRequest(userId, body, deps) {
         if (room.host !== userId) return fail2("not_host");
         if (room.status !== "lobby") return fail2("started");
         if (!room.members.every((m) => m.ready)) return fail2("not_ready");
+        if (room.game === "billiards" && room.members.length < 2) return fail2("need_players");
         {
           const off = await outOfService(room.game, deps);
           if (off) return off;
@@ -2819,6 +3407,15 @@ async function handleRoomRequest(userId, body, deps) {
         break;
       case "rematch": {
         if (!me) return fail2("not_member");
+        if (room.game === "billiards") {
+          const s = room.state;
+          if (room.status !== "playing" || !s || s.phase !== "over") return fail2("not_playing");
+          if (room.members.length < 2) return fail2("need_players");
+          const off = await outOfService(room.game, deps);
+          if (off) return off;
+          next = { ...room, state: rematchRoomBilliards(s, newSeed2(randomInt)), clock: { ...room.clock, lastAt: t } };
+          break;
+        }
         if (room.host !== userId) return fail2("not_host");
         if (!isCoinGame(room.game)) {
           const off = await outOfService(room.game, deps);
@@ -2867,6 +3464,9 @@ async function handleRoomRequest(userId, body, deps) {
           const hostLeft = room.host === userId;
           const host = hostLeft && room.settings.public && members.length ? members[0].userId : room.host;
           next = { ...room, members, host, status: hostLeft && !room.settings.public || members.length === 0 ? "closed" : "lobby" };
+        } else if (room.game === "billiards") {
+          const st = room.state ? forfeitSeat(room.state, me.seat) : null;
+          next = { ...room, members, state: st, status: members.length === 0 ? "closed" : room.status };
         } else if (room.game === "carta") {
           next = { ...room, members, state: room.state ? botSeat(room.state, me.seat) : null, status: members.length === 0 ? "closed" : room.status };
         } else {
@@ -2893,6 +3493,19 @@ async function handleRoomRequest(userId, body, deps) {
           }
           const after2 = await progress(d.room, t, deps, balances);
           next = after2.room;
+          break;
+        }
+        if (room.game === "billiards") {
+          const action2 = parseBilliardsAction(req.action);
+          if (!action2) return fail2("bad_request");
+          const shot = shootBilliards(caught.room.state, me.seat, action2, t, caught.room.clock.lastAt);
+          if (!shot.ok) {
+            if (shot.error === "stale_shot" && action2.no === caught.room.state.shots && caught.room.state.last?.by === (me.seat === "s0" ? 0 : 1)) {
+              return { ok: true, view: viewFor(caught.room, me, t) };
+            }
+            return fail2("rule", shot.error);
+          }
+          next = { ...caught.room, state: shot.state, clock: { ...caught.room.clock, lastAt: shot.restAt } };
           break;
         }
         if (room.game === "carta") {

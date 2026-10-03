@@ -397,6 +397,22 @@
         "s4b": "Golden Fortune abre la Bóveda de monedas y Pirates el bonus de cofres con 3 o más símbolos. En Royal, 3, 4 o 5 blasones dan el MINOR (20×), el MAJOR (100×) o el GRAND (1,000× tu apuesta).",
         "s5t": "Justo",
         "s5b": "Con cuenta, cada giro lo decide el servidor antes de mostrarlo; elegir monedas o cofres solo revela premios ya decididos."
+      },
+      "billiards": {
+        "title": "Billar 8-Ball",
+        "summary": "Lisas o rayadas, y luego la bola 8",
+        "intro": "8-Ball con física real contra la IA o contra un amigo en línea. Mete todas las bolas de tu grupo y después la bola 8.",
+        "facts": "Lisas 1–7 · Rayadas 9–15|4 niveles de IA|1 VS 1 en línea",
+        "s1t": "Rompimiento",
+        "s1b": "Coloca la bola blanca detrás de la línea y rompe el triángulo. Si no entra ninguna bola y menos de cuatro tocan banda, es falta. Una bola 8 en el rompimiento vuelve a su sitio.",
+        "s2t": "Cómo tirar",
+        "s2b": "Arrastra sobre el tapete para apuntar: la guía muestra la bola que tocarás y hacia dónde irá. Baja la barra POWER y suéltala para tirar (o usa TIRAR). El botón de la bola blanca añade efecto.",
+        "s3t": "Lisas y rayadas",
+        "s3b": "La mesa queda abierta hasta que alguien mete una bola: ese grupo es suyo. Sigues tirando mientras metas bolas de tu grupo.",
+        "s4t": "Faltas",
+        "s4b": "Meter la blanca, no tocar ninguna bola, tocar primero una bola rival o que ninguna bola toque banda es falta: tu rival juega con bola en mano en cualquier lugar.",
+        "s5t": "La bola 8",
+        "s5b": "Con tu grupo limpio, canta la tronera y mete la 8 para ganar. Meterla antes, con falta o en otra tronera, pierde la partida."
       }
     },
     "lessons": "{n} lecciones",
@@ -1298,7 +1314,8 @@
     "games": {
       "carta": "Carta",
       "blackjack": "Blackjack",
-      "roulette": "Ruleta"
+      "roulette": "Ruleta",
+      "billiards": "Billar 8-Ball"
     },
     "stakeLabel": "Apuesta por jugador (monedas)",
     "stakeFree": "Gratis",
@@ -1307,7 +1324,8 @@
     "stakeNeedsAccount": "Para jugar con monedas necesitas una cuenta registrada.",
     "stakeRoom": "Partida con monedas: {stake} por jugador",
     "stakeLobbyNote": "Se cobra al empezar. Bote con los jugadores actuales: {pot}. El ganador se lo lleva; con empate se reparte.",
-    "startStaked": "Empezar (apuesta {stake})"
+    "startStaked": "Empezar (apuesta {stake})",
+    "oneVsOne": "Sala de 2 jugadores: 1 VS 1. Comparte el código y espera a tu rival."
   },
   "domino": {
     "roundOf": "Ronda {n} · a {target}",
@@ -1816,7 +1834,8 @@
         "carta": "Carta",
         "crash": "Crash",
         "horse": "Horse Racing",
-        "airhockey": "Air Hockey"
+        "airhockey": "Air Hockey",
+        "billiards": "Billar 8-Ball"
       },
       "titlePeriod": "Por juego",
       "noPlay": "Nadie ha apostado en este periodo."
@@ -2367,6 +2386,10 @@
       "airhockey": {
         "name": "Air Hockey",
         "desc": "Mesa de lujo 1 vs 1 contra la IA."
+      },
+      "billiards": {
+        "name": "Billar 8-Ball",
+        "desc": "8-Ball real contra un bot o contra un amigo."
       }
     },
     "nav": {
@@ -2392,7 +2415,8 @@
       "poker": "Póker",
       "crash": "Crash",
       "horse": "Horse Racing",
-      "airhockey": "Air Hockey"
+      "airhockey": "Air Hockey",
+      "billiards": "Billar 8-Ball"
     }
   },
   "apk": {
@@ -2705,5 +2729,120 @@
       "h": "horas",
       "m": "min"
     }
+  },
+  "billiards": {
+    "name": "Billar 8-Ball",
+    "desc": "8-Ball real contra un bot o contra un amigo.",
+    "title": "Billar 8-Ball",
+    "subtitle": "Física real, reglas oficiales de 8-Ball. Contra el bot o 1 VS 1 en línea.",
+    "vsBot": "1 jugador vs bot",
+    "vsBotHint": "Una partida completa contra la IA. Elige la dificultad.",
+    "difficulty": "Dificultad",
+    "level": {
+      "easy": "Fácil",
+      "normal": "Normal",
+      "hard": "Difícil",
+      "expert": "Experto"
+    },
+    "play": "JUGAR",
+    "vsFriend": "1 VS 1",
+    "vsFriendHint": "Crea una sala y comparte el código, o únete con el código de un amigo. El servidor decide cada tiro.",
+    "createRoom": "Crear sala",
+    "joinRoom": "Unirse con código",
+    "stats": {
+      "title": "Estadísticas",
+      "played": "Partidas",
+      "wins": "Victorias",
+      "losses": "Derrotas",
+      "bestStreak": "Mejor racha",
+      "botWins": "Vs bot",
+      "onlineWins": "1 VS 1",
+      "potted": "Bolas",
+      "fouls": "Faltas",
+      "loading": "Cargando…",
+      "signIn": "Inicia sesión para guardar tus estadísticas."
+    },
+    "menu": "Menú",
+    "power": "Potencia",
+    "tableAria": "Mesa de billar. Arrastra sobre el tapete para apuntar; baja la barra de potencia y suéltala para tirar.",
+    "spin": "Efecto",
+    "spinReset": "Sin efecto",
+    "aimLeft": "Apuntar a la izquierda",
+    "aimRight": "Apuntar a la derecha",
+    "shoot": "TIRAR",
+    "hint": {
+      "place": "Arrastra la bola blanca para colocarla",
+      "call": "Toca una tronera para cantar la bola 8",
+      "aim": "Arrastra para apuntar · baja POWER y suelta"
+    },
+    "status": {
+      "over": "Partida terminada",
+      "botThinking": "{name} está pensando…",
+      "theirTurn": "Turno de {name}",
+      "break": "Rompimiento: coloca la blanca detrás de la línea y tira",
+      "ballInHand": "Bola en mano: coloca la blanca donde quieras",
+      "callPocket": "Bola 8: elige la tronera",
+      "eight": "¡A por la bola 8!",
+      "open": "Mesa abierta: mete cualquier bola menos la 8",
+      "yourTurn": "Tu turno"
+    },
+    "group": {
+      "solids": "Lisas",
+      "stripes": "Rayadas",
+      "none": "Mesa abierta"
+    },
+    "left": "Quedan {n} bolas",
+    "away": "Desconectado",
+    "foul": {
+      "scratch": "Falta: bola blanca embocada",
+      "no_contact": "Falta: no tocó ninguna bola",
+      "wrong_ball": "Falta: tocó primero una bola equivocada",
+      "no_rail": "Falta: ninguna bola tocó banda",
+      "bad_break": "Rompimiento ilegal",
+      "timeout": "Falta: se acabó el tiempo"
+    },
+    "msg": {
+      "ballInHand": "bola en mano para {name}",
+      "assigned": "{name} juega con las {group}",
+      "again": "¡{name} sigue tirando!",
+      "turn": "Turno de {name}"
+    },
+    "end": {
+      "victory": "VICTORIA",
+      "defeat": "DERROTA",
+      "winner": "Ganador: {name}",
+      "again": "JUGAR DE NUEVO",
+      "revenge": "REVANCHA",
+      "back": "VOLVER A BILLAR",
+      "line": "{potted} bolas · {fouls} faltas",
+      "eight": "Bola 8 embocada legalmente.",
+      "eight_early": "{name} metió la bola 8 antes de tiempo.",
+      "eight_foul": "{name} metió la bola 8 con falta.",
+      "eight_wrong_pocket": "{name} metió la bola 8 en otra tronera.",
+      "forfeit": "{name} abandonó la partida."
+    },
+    "leave": {
+      "title": "¿Salir de la partida?",
+      "body": "Perderás el progreso de esta partida.",
+      "bodyOnline": "Si sales ahora, pierdes la partida.",
+      "stay": "Seguir jugando",
+      "go": "Salir",
+      "concede": "Salir y perder"
+    },
+    "opponentAway": "Tu rival se desconectó: puede volver.",
+    "opponentLeft": "Tu rival salió de la sala.",
+    "errors": {
+      "not_your_turn": "No es tu turno.",
+      "stale_shot": "Ese tiro ya se jugó.",
+      "balls_moving": "Espera a que paren las bolas.",
+      "game_over": "La partida terminó.",
+      "bad_shot": "Tiro no válido.",
+      "bad_cue_position": "No puedes colocar la blanca ahí.",
+      "call_pocket": "Elige la tronera de la bola 8.",
+      "no_ball_in_hand": "No tienes bola en mano.",
+      "not_a_player": "No juegas en esta mesa.",
+      "rule": "Acción no permitida."
+    },
+    "waitingOpponent": "Esperando a tu rival: comparte el código para empezar."
   }
 }

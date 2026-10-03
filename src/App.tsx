@@ -53,6 +53,10 @@ const CrashScreen = lazy(() => import('@/games/crash/ui/CrashScreen').then((m) =
 // Horse Racing (race drawing, sounds, art) loads only when opened.
 const HorseScreen = lazy(() => import('@/games/horse/ui/HorseScreen').then((m) => ({ default: m.HorseScreen })));
 const AirHockeyScreen = lazy(() => import('@/games/airhockey/ui/AirHockeyScreen').then((m) => ({ default: m.AirHockeyScreen })));
+// 8-Ball (physics, rules, AI, table) loads only when opened.
+const BilliardsScreen = lazy(() => import('@/games/billiards/ui/BilliardsScreen').then((m) => ({ default: m.BilliardsScreen })));
+const BilliardsPlay = lazy(() => import('@/games/billiards/ui/BilliardsPlay').then((m) => ({ default: m.BilliardsPlay })));
+const BilliardsOnlineRoute = lazy(() => import('@/games/billiards/ui/BilliardsOnlineRoute').then((m) => ({ default: m.BilliardsOnlineRoute })));
 const PremiumSlotScreen = lazy(() => import('@/screens/casino/PremiumSlotScreen').then((m) => ({ default: m.PremiumSlotScreen })));
 
 function ScreenRouter() {
@@ -92,6 +96,9 @@ function ScreenRouter() {
     crash: <CrashScreen />,
     horse: <HorseScreen />,
     airhockey: <AirHockeyScreen />,
+    billiards: <BilliardsScreen />,
+    billiardsPlay: <BilliardsPlay />,
+    billiardsOnline: <BilliardsOnlineRoute />,
   };
 
   return (

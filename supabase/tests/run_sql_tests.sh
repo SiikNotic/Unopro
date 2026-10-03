@@ -69,6 +69,9 @@ psql -q -v ON_ERROR_STOP=1 -d "$DB" -f discord_giveaway_panel_test.sql
 psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20261015000000_home_giveaway_streak_errors.sql
 psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20261015000000_home_giveaway_streak_errors.sql
 psql -q -v ON_ERROR_STOP=1 -d "$DB" -f home_giveaway_streak_test.sql
+psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20261016000000_billiards.sql
+psql -q -v ON_ERROR_STOP=1 -d "$DB" -f ../migrations/20261016000000_billiards.sql
+psql -q -v ON_ERROR_STOP=1 -d "$DB" -f billiards_test.sql
 
 # Two players ask for the same username at the same instant: exactly one gets it.
 for u in 21 22 23 24 25 26; do

@@ -1,14 +1,14 @@
 import type { GameModeId } from '@/game/rules/modes';
 
-export type Screen = 'home' | 'gameModes' | 'settings' | 'tutorial' | 'play' | 'blackjack' | 'roulette' | 'slots' | 'profile' | 'slotLobby' | 'slotMachine' | 'dominoSetup' | 'domino' | 'bingoSetup' | 'bingo' | 'room' | 'account' | 'staff' | 'bank' | 'cartaOnline' | 'blackjackTable' | 'rouletteTable' | 'cartaSetup' | 'blackjackSetup' | 'rouletteSetup' | 'jewels' | 'jewelsPlay' | 'pokerSetup' | 'poker' | 'legal' | 'crash' | 'horse' | 'airhockey';
+export type Screen = 'home' | 'gameModes' | 'settings' | 'tutorial' | 'play' | 'blackjack' | 'roulette' | 'slots' | 'profile' | 'slotLobby' | 'slotMachine' | 'dominoSetup' | 'domino' | 'bingoSetup' | 'bingo' | 'room' | 'account' | 'staff' | 'bank' | 'cartaOnline' | 'blackjackTable' | 'rouletteTable' | 'cartaSetup' | 'blackjackSetup' | 'rouletteSetup' | 'jewels' | 'jewelsPlay' | 'pokerSetup' | 'poker' | 'legal' | 'crash' | 'horse' | 'airhockey' | 'billiards' | 'billiardsPlay' | 'billiardsOnline';
 
-export const SCREENS: Screen[] = ['home', 'gameModes', 'settings', 'tutorial', 'play', 'blackjack', 'roulette', 'slots', 'profile', 'slotLobby', 'slotMachine', 'dominoSetup', 'domino', 'bingoSetup', 'bingo', 'room', 'account', 'staff', 'bank', 'cartaOnline', 'blackjackTable', 'rouletteTable', 'cartaSetup', 'blackjackSetup', 'rouletteSetup', 'jewels', 'jewelsPlay', 'pokerSetup', 'poker', 'legal', 'crash', 'horse', 'airhockey'];
+export const SCREENS: Screen[] = ['home', 'gameModes', 'settings', 'tutorial', 'play', 'blackjack', 'roulette', 'slots', 'profile', 'slotLobby', 'slotMachine', 'dominoSetup', 'domino', 'bingoSetup', 'bingo', 'room', 'account', 'staff', 'bank', 'cartaOnline', 'blackjackTable', 'rouletteTable', 'cartaSetup', 'blackjackSetup', 'rouletteSetup', 'jewels', 'jewelsPlay', 'pokerSetup', 'poker', 'legal', 'crash', 'horse', 'airhockey', 'billiards', 'billiardsPlay', 'billiardsOnline'];
 
 /** Table games with their own setup, room and match screens. */
 export type TableGame = 'domino' | 'bingo';
 
 /** Games with online rooms (the room screen's `game`). */
-export type OnlineGame = TableGame | 'carta' | 'blackjack' | 'roulette';
+export type OnlineGame = TableGame | 'carta' | 'blackjack' | 'roulette' | 'billiards';
 
 export interface ScreenParams {
   mode?: GameModeId;

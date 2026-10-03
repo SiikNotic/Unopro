@@ -1,4 +1,4 @@
-// Supabase Edge Function (Deno) for online rooms (Domino, Bingo, Carta) and coin tables (Blackjack, Roulette): POST { op, ... } → { ok, view } | { ok, code }.
+// Supabase Edge Function (Deno) for online rooms (Domino, Bingo, Carta, 8-Ball) and coin tables (Blackjack, Roulette): POST { op, ... } → { ok, view } | { ok, code }.
 // Built into index.ts by `npm run functions:build` (esbuild bundles the shared engines). Environment,
 // injected by Supabase (never committed): SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY.
 import { handleRoomRequest } from '../../../src/games/online/server/handler.ts';
@@ -55,7 +55,7 @@ const wallet: TableWallet = {
 };
 
 /** Owner's game control (game_availability). If the database can't be read, a new match is refused. */
-async function availability(game: 'domino' | 'bingo' | 'carta' | 'blackjack' | 'roulette'): Promise<boolean> {
+async function availability(game: 'domino' | 'bingo' | 'carta' | 'blackjack' | 'roulette' | 'billiards'): Promise<boolean> {
   const res = await rpc<boolean>('game_enabled', { p_game: game });
   return res.ok && res.data === true;
 }

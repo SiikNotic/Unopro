@@ -397,6 +397,22 @@
         "s4b": "Golden Fortune opens the Coin Vault and Pirates the chest bonus with 3 or more symbols. In Royal, 3, 4 or 5 crests award the MINOR (20×), the MAJOR (100×) or the GRAND (1,000× your bet).",
         "s5t": "Fair",
         "s5b": "With an account, every spin is decided by the server before it's shown; picking coins or chests only reveals prizes already decided."
+      },
+      "billiards": {
+        "title": "8-Ball Pool",
+        "summary": "Solids or stripes, then the 8 ball",
+        "intro": "8-Ball with real physics against the AI or a friend online. Pocket every ball of your group, then the 8 ball.",
+        "facts": "Solids 1–7 · Stripes 9–15|4 AI levels|1 VS 1 online",
+        "s1t": "Break",
+        "s1b": "Place the cue ball behind the line and break the rack. If nothing drops and fewer than four balls reach a cushion, it's a foul. An 8 ball on the break is spotted again.",
+        "s2t": "How to shoot",
+        "s2b": "Drag on the cloth to aim: the guide shows the ball you'll hit and where it goes. Pull the POWER bar down and let go to shoot (or press SHOOT). The cue-ball button adds spin.",
+        "s3t": "Solids and stripes",
+        "s3b": "The table is open until someone pockets a ball: that group is theirs. You keep shooting while you pocket your own balls.",
+        "s4t": "Fouls",
+        "s4b": "Pocketing the cue ball, hitting nothing, hitting an opponent's ball first, or no ball reaching a cushion is a foul: your opponent shoots with ball in hand anywhere.",
+        "s5t": "The 8 ball",
+        "s5b": "With your group cleared, call the pocket and sink the 8 to win. Sinking it early, with a foul or in another pocket loses the game."
       }
     },
     "lessons": "{n} lessons",
@@ -1298,7 +1314,8 @@
     "games": {
       "carta": "Carta",
       "blackjack": "Blackjack",
-      "roulette": "Roulette"
+      "roulette": "Roulette",
+      "billiards": "8-Ball Pool"
     },
     "stakeLabel": "Stake per player (coins)",
     "stakeFree": "Free",
@@ -1307,7 +1324,8 @@
     "stakeNeedsAccount": "You need a registered account to play for coins.",
     "stakeRoom": "Match for coins: {stake} per player",
     "stakeLobbyNote": "Charged when the match starts. Pot with the current players: {pot}. The winner takes it; a tie splits it.",
-    "startStaked": "Start (stake {stake})"
+    "startStaked": "Start (stake {stake})",
+    "oneVsOne": "Two-player room: 1 VS 1. Share the code and wait for your opponent."
   },
   "domino": {
     "roundOf": "Hand {n} · to {target}",
@@ -1816,7 +1834,8 @@
         "carta": "Carta",
         "crash": "Crash",
         "horse": "Horse Racing",
-        "airhockey": "Air Hockey"
+        "airhockey": "Air Hockey",
+        "billiards": "8-Ball Pool"
       },
       "titlePeriod": "By game",
       "noPlay": "Nobody has bet in this period."
@@ -2367,6 +2386,10 @@
       "airhockey": {
         "name": "Air Hockey",
         "desc": "A luxury 1 vs 1 table against the AI."
+      },
+      "billiards": {
+        "name": "8-Ball Pool",
+        "desc": "Real 8-Ball against a bot or a friend."
       }
     },
     "nav": {
@@ -2392,7 +2415,8 @@
       "poker": "Poker",
       "crash": "Crash",
       "horse": "Horse Racing",
-      "airhockey": "Air Hockey"
+      "airhockey": "Air Hockey",
+      "billiards": "8-Ball Pool"
     }
   },
   "apk": {
@@ -2705,5 +2729,120 @@
       "h": "hours",
       "m": "min"
     }
+  },
+  "billiards": {
+    "name": "8-Ball Pool",
+    "desc": "Real 8-Ball against a bot or a friend.",
+    "title": "8-Ball Pool",
+    "subtitle": "Real physics, official 8-Ball rules. Against the bot or 1 VS 1 online.",
+    "vsBot": "1 player vs bot",
+    "vsBotHint": "A full game against the AI. Pick the difficulty.",
+    "difficulty": "Difficulty",
+    "level": {
+      "easy": "Easy",
+      "normal": "Normal",
+      "hard": "Hard",
+      "expert": "Expert"
+    },
+    "play": "PLAY",
+    "vsFriend": "1 VS 1",
+    "vsFriendHint": "Create a room and share the code, or join with a friend's code. The server decides every shot.",
+    "createRoom": "Create room",
+    "joinRoom": "Join with code",
+    "stats": {
+      "title": "Statistics",
+      "played": "Games",
+      "wins": "Wins",
+      "losses": "Losses",
+      "bestStreak": "Best streak",
+      "botWins": "Vs bot",
+      "onlineWins": "1 VS 1",
+      "potted": "Balls",
+      "fouls": "Fouls",
+      "loading": "Loading…",
+      "signIn": "Sign in to keep your statistics."
+    },
+    "menu": "Menu",
+    "power": "Power",
+    "tableAria": "Pool table. Drag on the cloth to aim; pull the power bar down and let go to shoot.",
+    "spin": "Spin",
+    "spinReset": "No spin",
+    "aimLeft": "Aim left",
+    "aimRight": "Aim right",
+    "shoot": "SHOOT",
+    "hint": {
+      "place": "Drag the cue ball to place it",
+      "call": "Tap a pocket to call the 8 ball",
+      "aim": "Drag to aim · pull POWER down and let go"
+    },
+    "status": {
+      "over": "Game over",
+      "botThinking": "{name} is thinking…",
+      "theirTurn": "{name}'s turn",
+      "break": "Break: place the cue ball behind the line and shoot",
+      "ballInHand": "Ball in hand: place the cue ball anywhere",
+      "callPocket": "8 ball: pick the pocket",
+      "eight": "Go for the 8 ball!",
+      "open": "Open table: pocket any ball but the 8",
+      "yourTurn": "Your turn"
+    },
+    "group": {
+      "solids": "Solids",
+      "stripes": "Stripes",
+      "none": "Open table"
+    },
+    "left": "{n} balls left",
+    "away": "Disconnected",
+    "foul": {
+      "scratch": "Foul: cue ball pocketed",
+      "no_contact": "Foul: no ball was hit",
+      "wrong_ball": "Foul: wrong ball hit first",
+      "no_rail": "Foul: no ball reached a cushion",
+      "bad_break": "Illegal break",
+      "timeout": "Foul: time ran out"
+    },
+    "msg": {
+      "ballInHand": "ball in hand for {name}",
+      "assigned": "{name} plays {group}",
+      "again": "{name} shoots again!",
+      "turn": "{name}'s turn"
+    },
+    "end": {
+      "victory": "VICTORY",
+      "defeat": "DEFEAT",
+      "winner": "Winner: {name}",
+      "again": "PLAY AGAIN",
+      "revenge": "REMATCH",
+      "back": "BACK TO POOL",
+      "line": "{potted} balls · {fouls} fouls",
+      "eight": "8 ball pocketed legally.",
+      "eight_early": "{name} pocketed the 8 ball too early.",
+      "eight_foul": "{name} pocketed the 8 ball with a foul.",
+      "eight_wrong_pocket": "{name} pocketed the 8 ball in another pocket.",
+      "forfeit": "{name} left the game."
+    },
+    "leave": {
+      "title": "Leave the game?",
+      "body": "You'll lose this game's progress.",
+      "bodyOnline": "If you leave now, you lose the game.",
+      "stay": "Keep playing",
+      "go": "Leave",
+      "concede": "Leave and lose"
+    },
+    "opponentAway": "Your opponent disconnected: they can come back.",
+    "opponentLeft": "Your opponent left the room.",
+    "errors": {
+      "not_your_turn": "It's not your turn.",
+      "stale_shot": "That shot was already played.",
+      "balls_moving": "Wait for the balls to stop.",
+      "game_over": "The game is over.",
+      "bad_shot": "Invalid shot.",
+      "bad_cue_position": "You can't place the cue ball there.",
+      "call_pocket": "Pick the pocket for the 8 ball.",
+      "no_ball_in_hand": "You don't have ball in hand.",
+      "not_a_player": "You're not playing at this table.",
+      "rule": "Not allowed."
+    },
+    "waitingOpponent": "Waiting for your opponent: share the code to start."
   }
 }

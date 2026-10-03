@@ -21,6 +21,8 @@ import { newSeed as fairSeed } from '@/casino/table/fair';
 import { addBets, advanceRt, canAddBets, createRtTable, hasSlip, markPaid as rtMarkPaid, parseSlip, rtTableView, slipTotal, unpaid as rtUnpaid } from '@/casino/table/rouletteTable';
 import type { RtTable } from '@/casino/table/rouletteTable';
 import { advanceCarta, applyCarta, botSeat, cartaDeadline, cartaView, createCarta, parseCartaAction } from './carta';
+import { AWAY_AFTER, SHOT_LIMIT, advanceBilliards, billiardsView, billiardsWinner, createRoomBilliards, forfeitSeat, parseBilliardsAction, rematchRoomBilliards, shootBilliards } from './billiards';
+import type { BilliardsState } from '@/games/billiards/rules';
 import { applyAction as applyCartaAction } from '@/game/engine';
 import { COIN_GAMES, QUICK_GAMES, SEAT_RANGE, STAKE_GAMES, STAKES } from '../protocol';
 import type { PotView, RoomErrorCode, RoomGame, RoomRequest, RoomResponse, RoomSettings, RoomStatus, RoomView, Stake } from '../protocol';
@@ -78,7 +80,7 @@ export interface RoomRow {
   version: number;
 }
 
-export type RoomState = DominoState | BingoState | GameState | BjTable | RtTable;
+export type RoomState = DominoState | BingoState | GameState | BjTable | RtTable | BilliardsState;
 
 export interface ViewOut {
   userId: string;
@@ -119,7 +121,7 @@ export interface RoomDeps {
   /** Required for the coin tables and staked rooms. */
   wallet?: TableWallet;
   /** Is this game in service (game_enabled)? Checked before any new match. Absent = always. */
-  availability?: (game: 'domino' | 'bingo' | 'carta' | 'blackjack' | 'roulette') => Promise<boolean>;
+  availability?: (game: 'domino' | 'bingo' | 'carta' | 'blackjack' | 'roulette' | 'billiards') => Promise<boolean>;
   /** Deterministic wallet request id for a key (SHA-256 → uuid in production). */
   requestId?: (key: string) => Promise<string>;
 }
@@ -190,6 +192,8 @@ function cleanName(raw: unknown): string | null {
 function cleanSettings(game: RoomGame, raw: unknown): RoomSettings | null {
   const r = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
   if (isCoinGame(game)) return { difficulty: 'normal', public: r.public === true };
+  // 8-Ball rooms: two players, nothing to choose (no bots, not played for coins).
+  if (game === 'billiards') return { difficulty: 'normal' };
   if (!DIFFICULTIES.includes(r.difficulty as never)) return null;
   const difficulty = r.difficulty as RoomSettings['difficulty'];
   // A stake is one of the fixed amounts (anything else is refused, not rounded). Public rooms, found by
@@ -215,7 +219,7 @@ function potView(room: RoomRow): PotView | null {
   return { stake: p.stake, players: p.seats.length, total: p.stake * p.seats.length, settled: p.settled, winners: p.winners, prize: p.prize };
 }
 
-const GAMES: RoomGame[] = ['domino', 'bingo', 'carta', 'blackjack', 'roulette'];
+const GAMES: RoomGame[] = ['domino', 'bingo', 'carta', 'blackjack', 'roulette', 'billiards'];
 
 /** Parses the body into a request, or null. Unknown fields are ignored; wrong types reject. */
 export function parseRequest(raw: unknown): RoomRequest | null {
@@ -285,6 +289,13 @@ export function viewFor(room: RoomRow, member: Member, now: number, events: (Dom
     if (cur.kind !== 'bot') turnDeadline = room.clock.lastAt + TIMING.turnLimit;
   }
   if (carta) turnDeadline = cartaDeadline(room.state as GameState, room.clock.lastAt);
+  let billiards: RoomView['billiards'] = null;
+  if (room.game === 'billiards' && room.state) {
+    const st = room.state as BilliardsState;
+    const away = room.members.filter((m) => m.seenAt !== undefined && now - m.seenAt > AWAY_AFTER).map((m) => m.seat);
+    billiards = billiardsView(st, room.clock.lastAt, away);
+    if (st.phase !== 'over') turnDeadline = room.clock.lastAt + SHOT_LIMIT;
+  }
   return {
     roomId: room.id,
     code: room.code,
@@ -303,6 +314,7 @@ export function viewFor(room: RoomRow, member: Member, now: number, events: (Dom
     carta,
     blackjack,
     roulette,
+    billiards,
     pot: potView(room),
     balance,
     events: room.game === 'domino' || room.game === 'bingo' ? sanitizeEvents(room.game, events, member.seat) : [],
@@ -337,6 +349,10 @@ export function advance(room: RoomRow, now: number): { room: RoomRow; events: (D
   if (room.game === 'roulette') {
     const t = advanceRt(room.state as RtTable, now);
     return { room: t === room.state ? room : { ...room, state: t }, events: [] };
+  }
+  if (room.game === 'billiards') {
+    const b = advanceBilliards(room.state as BilliardsState, room.clock.lastAt, now);
+    return { room: b.state === room.state ? room : { ...room, state: b.state, clock: { ...room.clock, lastAt: b.restAt } }, events: [] };
   }
   const events: (DominoEvent | BingoEvent)[] = [];
   let r = room;
@@ -457,6 +473,7 @@ function newMatch(room: RoomRow, now: number, randomInt: (n: number) => number):
     return m ? { id: seat, name: m.name, kind: 'human' as const } : { id: seat, name: `Bot ${++bot}`, kind: 'bot' as const };
   });
   if (room.game === 'carta') return { ...room, status: 'playing', state: createCarta(seats, seed), clock: { lastAt: now, lastCallAt: 0, closingAt: 0, roundOverAt: 0 } };
+  if (room.game === 'billiards') return { ...room, status: 'playing', state: createRoomBilliards([seats[0].name, seats[1].name], seed), clock: { lastAt: now, lastCallAt: 0, closingAt: 0, roundOverAt: 0 } };
   const state = room.game === 'domino' ? createDomino({ seats, seed, targetScore: room.settings.target ?? 100 }) : createBingo({ seats, seed });
   const clock: Clock = { lastAt: now, lastCallAt: now - (TIMING.pace[room.settings.speed ?? 'normal'] ?? 3800) + TIMING.firstBall, closingAt: 0, roundOverAt: 0 };
   return { ...room, status: 'playing', state, clock };
@@ -506,7 +523,7 @@ const walletError = (code: WalletFailure, detail?: string): RoomResponse =>
 
 /** Refused when the owner has taken the game out of service (only new matches; running ones finish). */
 async function outOfService(game: RoomGame, deps: RoomDeps): Promise<RoomResponse | null> {
-  if ((!isStakeGame(game) && !isCoinGame(game)) || !deps.availability) return null;
+  if ((!isStakeGame(game) && !isCoinGame(game) && game !== 'billiards') || !deps.availability) return null;
   return (await deps.availability(game)) ? null : fail('disabled');
 }
 
@@ -565,6 +582,7 @@ export function matchWinners(room: RoomRow): string[] | null {
     const b = st as BingoState;
     return b.status === 'round_over' ? (b.lastResult?.winners ?? []) : null;
   }
+  if (room.game === 'billiards') return billiardsWinner(st as BilliardsState);
   if (room.game === 'carta') {
     const c = st as GameState;
     if (c.status !== 'GAME_OVER') return null;
@@ -779,6 +797,7 @@ export async function handleRoomRequest(userId: string | null, body: unknown, de
         if (room.host !== userId) return fail('not_host');
         if (room.status !== 'lobby') return fail('started');
         if (!room.members.every((m) => m.ready)) return fail('not_ready');
+        if (room.game === 'billiards' && room.members.length < 2) return fail('need_players');
         {
           const off = await outOfService(room.game, deps);
           if (off) return off;
@@ -789,6 +808,16 @@ export async function handleRoomRequest(userId: string | null, body: unknown, de
         break;
       case 'rematch': {
         if (!me) return fail('not_member');
+        if (room.game === 'billiards') {
+          // Either player may ask for the rematch, once the game is over and both are still there.
+          const s = room.state as BilliardsState | null;
+          if (room.status !== 'playing' || !s || s.phase !== 'over') return fail('not_playing');
+          if (room.members.length < 2) return fail('need_players');
+          const off = await outOfService(room.game, deps);
+          if (off) return off;
+          next = { ...room, state: rematchRoomBilliards(s, newSeed(randomInt)), clock: { ...room.clock, lastAt: t } };
+          break;
+        }
         if (room.host !== userId) return fail('not_host');
         if (!isCoinGame(room.game)) {
           const off = await outOfService(room.game, deps);
@@ -841,6 +870,10 @@ export async function handleRoomRequest(userId: string | null, body: unknown, de
           const hostLeft = room.host === userId;
           const host = hostLeft && room.settings.public && members.length ? members[0].userId : room.host;
           next = { ...room, members, host, status: (hostLeft && !room.settings.public) || members.length === 0 ? 'closed' : 'lobby' };
+        } else if (room.game === 'billiards') {
+          // Leaving a game in progress concedes it; the room closes when nobody is left.
+          const st = room.state ? forfeitSeat(room.state as BilliardsState, me.seat) : null;
+          next = { ...room, members, state: st, status: members.length === 0 ? 'closed' : room.status };
         } else if (room.game === 'carta') {
           next = { ...room, members, state: room.state ? botSeat(room.state as GameState, me.seat) : null, status: members.length === 0 ? 'closed' : room.status };
         } else {
@@ -870,6 +903,20 @@ export async function handleRoomRequest(userId: string | null, body: unknown, de
           }
           const after = await progress(d.room, t, deps, balances);
           next = after.room;
+          break;
+        }
+        if (room.game === 'billiards') {
+          const action = parseBilliardsAction(req.action);
+          if (!action) return fail('bad_request');
+          const shot = shootBilliards(caught.room.state as BilliardsState, me.seat, action, t, caught.room.clock.lastAt);
+          if (!shot.ok) {
+            // A repeat of the shot that was just played (a retry after a lost answer) gets the current view.
+            if (shot.error === 'stale_shot' && action.no === (caught.room.state as BilliardsState).shots && (caught.room.state as BilliardsState).last?.by === (me.seat === 's0' ? 0 : 1)) {
+              return { ok: true, view: viewFor(caught.room, me, t) };
+            }
+            return fail('rule', shot.error);
+          }
+          next = { ...caught.room, state: shot.state, clock: { ...caught.room.clock, lastAt: shot.restAt } };
           break;
         }
         if (room.game === 'carta') {

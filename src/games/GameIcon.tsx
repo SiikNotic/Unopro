@@ -5,6 +5,7 @@ import { SlotSymbolIcon } from '@/components/casino/slotSymbols';
 import { BingoArt, DominoArt } from '@/games/shared/ui/GameArt';
 import { GemMark } from '@/games/jewels/JewelsEntry';
 import { HockeyArt } from '@/games/airhockey/ui/HockeyArt';
+import { BilliardsArt } from '@/games/billiards/ui/BilliardsArt';
 import type { GameId } from './catalog';
 
 const MiniWheel = () => (
@@ -44,6 +45,8 @@ export function GameIcon({ id }: { id: GameId }) {
       );
     case 'airhockey':
       return <HockeyArt size={40} />;
+    case 'billiards':
+      return <BilliardsArt size={36} />;
     case 'blackjack':
       return <CardPair a="A" b="K" />;
     case 'roulette':

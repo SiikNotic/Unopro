@@ -11,10 +11,10 @@ import type { ControlledGame } from '@/games/online/protocol';
 import type { Screen, ScreenParams } from '@/types/navigation';
 
 export type { ControlledGame };
-export const CONTROLLED_GAMES: ControlledGame[] = ['slots', 'domino', 'carta', 'bingo', 'blackjack', 'roulette', 'poker', 'crash', 'horse', 'airhockey'];
+export const CONTROLLED_GAMES: ControlledGame[] = ['slots', 'domino', 'carta', 'bingo', 'blackjack', 'roulette', 'poker', 'crash', 'horse', 'airhockey', 'billiards'];
 
 export type Availability = Record<ControlledGame, boolean>;
-const ALL_ON: Availability = { slots: true, domino: true, carta: true, bingo: true, blackjack: true, roulette: true, poker: true, crash: true, horse: true, airhockey: true };
+const ALL_ON: Availability = { slots: true, domino: true, carta: true, bingo: true, blackjack: true, roulette: true, poker: true, crash: true, horse: true, airhockey: true, billiards: true };
 
 let current: Availability = ALL_ON;
 let loaded = false;
@@ -194,6 +194,12 @@ export function screenGame(screen: Screen, params: Pick<ScreenParams, 'game' | '
     // Air Hockey shows the notice itself, and only between matches: switching it off never ends a match
     // being played (its entry is already taken); the server refuses new ones.
     case 'airhockey':
+      return null;
+    // 8-Ball: the menu shows the notice; a game being played (vs bot or online) is never cut off.
+    case 'billiards':
+      return 'billiards';
+    case 'billiardsPlay':
+    case 'billiardsOnline':
       return null;
     case 'dominoSetup':
       return 'domino';

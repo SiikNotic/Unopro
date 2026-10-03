@@ -19,7 +19,7 @@ import { GameIcon } from '@/games/GameIcon';
 /** How many steps each lesson has (s1…sN in the translations). */
 const STEPS: Record<TopicId, number> = {
   coins: 4, online: 4, cards: 3, turns: 3, specials: 3, uno: 3, strategy: 3, cartaModes: 4, domino: 5, bingo: 5, jewels: 5,
-  crash: 4, horse: 4, airhockey: 4, blackjack: 4, roulette: 4, poker: 4, slots: 3, premiumSlots: 5,
+  crash: 4, horse: 4, airhockey: 4, billiards: 5, blackjack: 4, roulette: 4, poker: 4, slots: 3, premiumSlots: 5,
 };
 
 /** Carta's lessons get their own icons (the game has several); the rest use the game's picture. */

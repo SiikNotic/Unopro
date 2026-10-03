@@ -12,7 +12,7 @@ import type { GameInfo } from '@/games/catalog';
 import { GameIcon } from '@/games/GameIcon';
 
 /** Every multiplayer game opens its setup (GameSetupScreen); the slot machines are single-player. */
-const SETUP: Record<OnlineGame, Screen> = { carta: 'cartaSetup', domino: 'dominoSetup', bingo: 'bingoSetup', blackjack: 'blackjackSetup', roulette: 'rouletteSetup' };
+const SETUP: Record<OnlineGame, Screen> = { carta: 'cartaSetup', domino: 'dominoSetup', bingo: 'bingoSetup', blackjack: 'blackjackSetup', roulette: 'rouletteSetup', billiards: 'billiards' };
 
 const ONLINE_ICON: Record<'carta' | 'blackjack' | 'roulette', React.ReactNode> = {
   carta: <Users className="w-5 h-5 text-[var(--cz-gold)]" aria-hidden />,

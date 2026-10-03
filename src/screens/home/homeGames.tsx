@@ -28,6 +28,7 @@ import { HockeyCardArt } from '@/games/airhockey/ui/HockeyArt';
 import heroPortrait from './art/hero-portrait.webp';
 import { GAMES } from '@/games/catalog';
 import type { GameCategory, GameId } from '@/games/catalog';
+import { BilliardsArt } from '@/games/billiards/ui/BilliardsArt';
 import heroLandscape from './art/hero-landscape.webp';
 import promoCoins from './art/promo-coins.webp';
 import extraOnline from './art/extra-online.webp';
@@ -118,6 +119,11 @@ const HOME_LOOK: Record<HomeGameId, Omit<HomeGame, 'id' | 'screen' | 'category'>
     accent: '#e8c46a',
     art: (s) => <HockeyCardArt size={s} />,
   },
+  billiards: {
+    bg: 'radial-gradient(120% 90% at 50% 10%, #17784a 0%, #0a3a24 50%, #2a1608 100%)',
+    accent: '#e8c46a',
+    art: (s) => <BilliardsArt size={s * 1.1} />,
+  },
   jewels: {
     image: cardJewels,
     bg: 'radial-gradient(120% 90% at 50% 10%, #2f5fb8 0%, #152a66 55%, #070d24 100%)',
@@ -135,10 +141,10 @@ const HOME_LOOK: Record<HomeGameId, Omit<HomeGame, 'id' | 'screen' | 'category'>
 /** Every game of the catalog with Home's look (the catalog decides which games exist and where they open). */
 export const HOME_GAMES = Object.fromEntries(GAMES.map((g) => [g.id, { ...HOME_LOOK[g.id], id: g.id, screen: g.screen, category: g.category }])) as Record<HomeGameId, HomeGame>;
 
-export const POPULAR: HomeGameId[] = ['carta', 'domino', 'bingo', 'poker'];
+export const POPULAR: HomeGameId[] = ['carta', 'domino', 'billiards', 'bingo'];
 export const CASINO: HomeGameId[] = ['airhockey', 'crash', 'horse', 'roulette', 'blackjack', 'slots', 'jewels'];
 /** "Recommended for you": a static, configurable pick (there is no play history to learn from yet). */
-export const RECOMMENDED: HomeGameId[] = ['airhockey', 'horse', 'crash', 'jewels', 'slots', 'poker', 'roulette', 'bingo'];
+export const RECOMMENDED: HomeGameId[] = ['billiards', 'airhockey', 'horse', 'crash', 'jewels', 'slots', 'poker', 'roulette', 'bingo'];
 export const CATEGORIES: HomeCategory[] = ['all', 'cards', 'table', 'slots', 'instant', 'puzzle'];
 export const HERO_ART = { crown, coin, portrait: heroPortrait, landscape: heroLandscape };
 export const PROMO_IMAGE = promoCoins;

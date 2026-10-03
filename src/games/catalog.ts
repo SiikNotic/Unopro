@@ -4,7 +4,7 @@
 import type { Screen } from '@/types/navigation';
 import type { ControlledGame } from '@/games/online/protocol';
 
-export type GameId = 'carta' | 'domino' | 'bingo' | 'jewels' | 'crash' | 'horse' | 'airhockey' | 'blackjack' | 'roulette' | 'poker' | 'slots';
+export type GameId = 'carta' | 'domino' | 'bingo' | 'jewels' | 'crash' | 'horse' | 'airhockey' | 'billiards' | 'blackjack' | 'roulette' | 'poker' | 'slots';
 
 /** Where a game is listed on the Play screen. */
 export type GameSection = 'table' | 'puzzle' | 'casino';
@@ -29,6 +29,7 @@ export type TopicId =
   | 'crash'
   | 'horse'
   | 'airhockey'
+  | 'billiards'
   | 'blackjack'
   | 'roulette'
   | 'poker'
@@ -57,6 +58,7 @@ export const GAMES: readonly GameInfo[] = [
   { id: 'carta', screen: 'cartaSetup', section: 'table', category: 'cards', controlled: 'carta', nameKey: 'hub.carta.name', descKey: 'hub.carta.desc', online: 'carta', tutorials: ['cards', 'turns', 'specials', 'uno', 'strategy', 'cartaModes'] },
   { id: 'domino', screen: 'dominoSetup', section: 'table', category: 'table', controlled: 'domino', nameKey: 'hub.domino.name', descKey: 'hub.domino.desc', tutorials: ['domino'] },
   { id: 'bingo', screen: 'bingoSetup', section: 'table', category: 'table', controlled: 'bingo', nameKey: 'hub.bingo.name', descKey: 'hub.bingo.desc', tutorials: ['bingo'] },
+  { id: 'billiards', screen: 'billiards', section: 'table', category: 'table', controlled: 'billiards', nameKey: 'billiards.name', descKey: 'billiards.desc', tutorials: ['billiards'] },
   { id: 'jewels', screen: 'jewels', section: 'puzzle', category: 'puzzle', controlled: null, nameKey: 'jewels.entry', descKey: 'jewels.entryHint', tutorials: ['jewels'] },
   { id: 'crash', screen: 'crash', section: 'casino', category: 'instant', controlled: 'crash', nameKey: 'casino.crash.name', descKey: 'casino.crash.description', tutorials: ['crash'] },
   { id: 'horse', screen: 'horse', section: 'casino', category: 'instant', controlled: 'horse', nameKey: 'casino.horse.name', descKey: 'casino.horse.description', tutorials: ['horse'] },
