@@ -383,9 +383,9 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         if (isNativeApp()) await (await import('@capacitor/browser')).Browser.open({ url });
         else window.location.assign(url);
       },
-      async signOut() {
+      async signOut(everywhere = false) {
         const s = readSession();
-        if (s && api) await api.signOut(s.access_token);
+        if (s && api) await api.signOut(s.access_token, everywhere);
         saveSession(null);
         setProfile(null);
         setBan(null);

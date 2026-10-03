@@ -276,8 +276,9 @@ export function createAuthApi(
       await call('/logout?scope=others', { method: 'POST', token }).catch(() => undefined);
     },
 
-    async signOut(token: string): Promise<void> {
-      await call('/logout?scope=local', { method: 'POST', token }).catch(() => undefined);
+    /** Ends this session, or with `everywhere` every session of the account on every device. */
+    async signOut(token: string, everywhere = false): Promise<void> {
+      await call(`/logout?scope=${everywhere ? 'global' : 'local'}`, { method: 'POST', token }).catch(() => undefined);
     },
   };
 }

@@ -4,21 +4,25 @@ import react from '@vitejs/plugin-react';
 import { fileURLToPath, URL } from 'node:url';
 
 // Content Security Policy for the published build only (the dev server needs inline scripts for HMR).
-// Scripts may only come from this site plus Cloudflare Turnstile and Google Fonts.
-// Turnstile needs script/frame/connect access to challenges.cloudflare.com.
+// Scripts may only come from this site plus Cloudflare Turnstile; fonts are self-hosted. Avatars from the
+// Google / Discord sign-in are the only remote images. Nothing may be framed except the Turnstile widget,
+// and no plugin, base-URL change, form post or plain-HTTP request is allowed.
 const cspFor = (apiOrigins: string[]) => [
   "default-src 'self'",
   "script-src 'self' https://challenges.cloudflare.com",
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "font-src 'self' https://fonts.gstatic.com",
+  "style-src 'self' 'unsafe-inline'",
+  "font-src 'self' data:",
   "img-src 'self' data: https://lh3.googleusercontent.com https://cdn.discordapp.com",
-  "media-src 'self'",
+  "media-src 'self' data: blob:",
   // Supabase + Cloudflare Turnstile verification/challenge traffic.
   ["connect-src 'self' https://challenges.cloudflare.com", ...apiOrigins].join(' '),
   "frame-src 'self' https://challenges.cloudflare.com",
+  "worker-src 'self'",
+  "manifest-src 'self'",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'none'",
+  'upgrade-insecure-requests',
 ].join('; ');
 
 const originOf = (u: string | undefined) => {

@@ -134,3 +134,17 @@ describe('updatePassword', () => {
     expect(calls.map((c) => `${c.method} ${c.url.replace('https://p.supabase.co/auth/v1', '')}`)).toEqual(['PUT /user', 'POST /logout?scope=others']);
   });
 });
+
+describe('signOut', () => {
+  it('ends this session, or every session with everywhere', async () => {
+    const urls: string[] = [];
+    const fetchImpl = (async (url: string) => {
+      urls.push(url.replace('https://p.supabase.co/auth/v1', ''));
+      return new Response('{}', { status: 200 });
+    }) as unknown as typeof fetch;
+    const api = createAuthApi({ authUrl: 'https://p.supabase.co/auth/v1', apiKey: 'k' }, fetchImpl);
+    await api.signOut('tok');
+    await api.signOut('tok', true);
+    expect(urls).toEqual(['/logout?scope=local', '/logout?scope=global']);
+  });
+});

@@ -1597,7 +1597,8 @@
     "coinsVirtual": "Virtual coins with no real money value.",
     "usernamePlaceholder": "Type your new name…",
     "staffHint": "Administration and tools",
-    "editProfile": "Edit your username"
+    "editProfile": "Edit your username",
+    "signOutEverywhere": "Sign out on all devices"
   },
   "staff": {
     "title": "Staff dashboard",

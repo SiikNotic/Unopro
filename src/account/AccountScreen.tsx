@@ -434,6 +434,18 @@ function AccountPanel() {
         >
           <LogOut className="w-4 h-4" aria-hidden /> {t('account.signOut')}
         </button>
+        <button
+          type="button"
+          className="lx-btn lx-btn-ghost"
+          disabled={busy}
+          onClick={async () => {
+            setBusy(true);
+            await account.signOut(true);
+            setBusy(false);
+          }}
+        >
+          <LogOut className="w-4 h-4" aria-hidden /> {t('account.signOutEverywhere')}
+        </button>
         <p className="lx-fine">{t('account.signOutNote')}</p>
       </div>
       <DeleteAccount />

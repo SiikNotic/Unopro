@@ -46,3 +46,29 @@ jobs:
           fi
           [ "$code" = "200" ] || { jq 'del(.security_captcha_secret)' /tmp/out.json 2>/dev/null || true; exit 1; }
           jq '{security_captcha_enabled, security_captcha_provider}' /tmp/out.json
+
+  hardening:
+    # Server-side password and session rules, applied one by one (a setting the plan doesn't allow is reported
+    # and skipped; the others still apply). Matches the app: passwords of 8+ characters (PASSWORD_MIN).
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden Supabase Auth
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then echo "SUPABASE_ACCESS_TOKEN is missing: nothing changed."; exit 0; fi
+          apply() {
+            code=$(curl -s -o /tmp/out.json -w '%{http_code}' -X PATCH "https://api.supabase.com/v1/projects/$PROJECT_REF/config/auth" \
+              -H "Authorization: Bearer $TOKEN" -H 'content-type: application/json' -d "$2")
+            if [ "$code" = "200" ]; then echo "OK   $1"; else echo "::warning::$1 not applied (HTTP $code): $(jq -r '.message // .error // empty' /tmp/out.json 2>/dev/null | head -c 200)"; fi
+          }
+          # Passwords: at least 8 characters, checked by Supabase too (not only by the app).
+          apply "password_min_length=8" '{"password_min_length": 8}'
+          # Refresh tokens: rotated on every use; a reused old token (stolen) revokes the session family.
+          apply "refresh_token_rotation" '{"refresh_token_rotation_enabled": true, "security_refresh_token_reuse_interval": 10}'
+          # Reject passwords found in known breaches (HaveIBeenPwned). Needs a paid plan; skipped otherwise.
+          apply "password_hibp_enabled" '{"password_hibp_enabled": true}'
+          # Report the resulting state (no secrets in this selection).
+          curl -s "https://api.supabase.com/v1/projects/$PROJECT_REF/config/auth" -H "Authorization: Bearer $TOKEN" \
+            | jq '{password_min_length, password_hibp_enabled, refresh_token_rotation_enabled, security_refresh_token_reuse_interval, jwt_exp, security_captcha_enabled, mfa_totp_enroll_enabled}'

@@ -56,6 +56,10 @@ Deno.serve(async (req) => {
     'access-control-allow-origin': ALLOWED.has(origin) ? origin : 'https://siiknotic.github.io',
     'access-control-allow-headers': 'authorization, apikey, content-type, x-client-info',
     'access-control-allow-methods': 'GET, POST, OPTIONS',
+    // Responses are JSON for the app only: no sniffing, no caching, no referrer.
+    'x-content-type-options': 'nosniff',
+    'cache-control': 'no-store',
+    'referrer-policy': 'no-referrer',
     vary: 'origin',
   };
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });

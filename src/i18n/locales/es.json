@@ -1597,7 +1597,8 @@
     "coinsVirtual": "Monedas virtuales sin valor monetario real.",
     "usernamePlaceholder": "Escribe tu nuevo nombre…",
     "staffHint": "Administración y herramientas",
-    "editProfile": "Editar tu nombre de usuario"
+    "editProfile": "Editar tu nombre de usuario",
+    "signOutEverywhere": "Cerrar sesión en todos los dispositivos"
   },
   "staff": {
     "title": "Panel del equipo",

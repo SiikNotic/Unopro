@@ -60,7 +60,8 @@ export interface AccountContextValue {
   signInWith: (provider: OAuthProvider) => Promise<void>;
   /** Links an OAuth identity to the currently signed-in account. */
   linkIdentity: (provider: OAuthProvider) => Promise<void>;
-  signOut: () => Promise<void>;
+  /** `everywhere`: end every session of the account on every device. */
+  signOut: (everywhere?: boolean) => Promise<void>;
   /** Deletes the signed-in account and its data on the server (the owner can't). */
   deleteAccount: () => Promise<{ ok: boolean; code?: string }>;
   resendConfirmation: (email: string) => Promise<void>;
