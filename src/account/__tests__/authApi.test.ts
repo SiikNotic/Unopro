@@ -121,3 +121,16 @@ describe('inside the Android app', () => {
     expect(isNativeApp()).toBe(false);
   });
 });
+
+describe('updatePassword', () => {
+  it('sets the new password and then ends the other sessions of the account', async () => {
+    const calls: { url: string; method?: string }[] = [];
+    const fetchImpl = (async (url: string, init?: RequestInit) => {
+      calls.push({ url, method: init?.method });
+      return new Response('{}', { status: 200 });
+    }) as unknown as typeof fetch;
+    const api = createAuthApi({ authUrl: 'https://p.supabase.co/auth/v1', apiKey: 'k' }, fetchImpl);
+    await api.updatePassword('tok', 'n3w-Passw0rd!');
+    expect(calls.map((c) => `${c.method} ${c.url.replace('https://p.supabase.co/auth/v1', '')}`)).toEqual(['PUT /user', 'POST /logout?scope=others']);
+  });
+});

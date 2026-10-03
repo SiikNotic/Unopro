@@ -270,8 +270,10 @@ export function createAuthApi(
       await call(`/recover?redirect_to=${encodeURIComponent(`${appReturnUrl()}?reset=1`)}`, { method: 'POST', body: JSON.stringify({ email, code_challenge: challenge, code_challenge_method: 's256', ...(await human()) }) });
     },
 
+    /** Sets a new password, then ends every other session of the account (this device stays signed in). */
     async updatePassword(token: string, password: string): Promise<void> {
       await call('/user', { method: 'PUT', token, body: JSON.stringify({ password }) });
+      await call('/logout?scope=others', { method: 'POST', token }).catch(() => undefined);
     },
 
     async signOut(token: string): Promise<void> {
