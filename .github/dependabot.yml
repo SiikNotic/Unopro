@@ -17,6 +17,9 @@ updates:
       # TypeScript 7 is not supported by typescript-eslint yet (it accepts up to 6.0).
       - dependency-name: typescript
         versions: ['>=7']
+      # Node's types follow the Node version the app and CI run on (22).
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
   - package-ecosystem: github-actions
     directory: /
     schedule:
