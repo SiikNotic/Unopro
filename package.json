@@ -16,7 +16,7 @@
     "legal:build": "esbuild scripts/legal-pages.ts --bundle --platform=node --format=esm --tsconfig=tsconfig.app.json --outfile=node_modules/.cache/legal-pages.mjs --log-level=warning && node node_modules/.cache/legal-pages.mjs"
   },
   "dependencies": {
-    "@capacitor-community/admob": "^8.1.0",
+    "@capacitor-community/admob": "^8.2.1",
     "@capacitor/android": "^8.5.2",
     "@capacitor/app": "^8.1.1",
     "@capacitor/browser": "^8.0.4",
