@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig, loadEnv } from 'vite';
 import type { Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
@@ -70,5 +71,7 @@ export default defineConfig(({ mode }) => {
     optimizeDeps: {
       exclude: ['lucide-react'],
     },
+    // The full-game simulations (thousands of hands and rounds) take several seconds on CI runners.
+    test: { testTimeout: 30_000 },
   };
 });
