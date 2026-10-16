@@ -26,7 +26,7 @@ export function useViewport(): Viewport {
   return viewport;
 }
 
-export function useElementWidth<T extends HTMLElement>(ref: React.RefObject<T>): number {
+export function useElementWidth<T extends HTMLElement>(ref: React.RefObject<T | null>): number {
   const [width, setWidth] = useState(0);
   useEffect(() => {
     const el = ref.current;

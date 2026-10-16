@@ -1,3 +1,4 @@
+import type { JSX } from 'react';
 import type { SlotSymbol } from '@/casino/slots';
 
 // Original "Gold Rush" slot art, drawn on a 48×48 grid. Gradients are defined inline so every

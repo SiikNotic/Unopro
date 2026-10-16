@@ -356,7 +356,7 @@ export function BlackjackScreen() {
   const tableBet = inPlay || settledVisible ? table.hands.reduce((s, h) => s + h.bet, 0) : bet;
 
   // One line in the middle of the table that says what happened.
-  let message = '';
+  let message: string;
   let tone = '';
   if (settledVisible) {
     if (!split) {

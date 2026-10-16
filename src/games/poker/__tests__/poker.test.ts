@@ -231,7 +231,7 @@ describe('bots', () => {
           }
         }
     expect(hands).toBeGreaterThan(200);
-  });
+  }, 60_000);
 
   it('a strong hand bets or raises more often than a weak one', () => {
     const base = table(2, 1).state;

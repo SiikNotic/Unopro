@@ -1319,6 +1319,7 @@ var CasinoStoreError = class extends Error {
     super(code);
     this.code = code;
   }
+  code;
 };
 var STATUS = {
   unauthorized: 401,

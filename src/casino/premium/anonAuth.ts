@@ -52,7 +52,7 @@ export function createAnonAuth(opts: AnonAuthOptions): () => Promise<string | nu
   async function obtain(): Promise<string | null> {
     const saved = storage.get<unknown>(KEY);
     if (isSession(saved) && saved.expires_at - 60 > now()) return saved.access_token;
-    let next: Session | null = null;
+    let next: Session | null;
     try {
       if (isSession(saved)) next = await request('/token?grant_type=refresh_token', { refresh_token: saved.refresh_token });
       // Anonymous sign-in only when there is no account yet: a failed refresh must not silently swap

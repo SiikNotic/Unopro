@@ -2344,6 +2344,7 @@ var Simulation = class {
       onEvent?.({ type: "cue", speed });
     } else this.done = true;
   }
+  onEvent;
   bodies;
   firstContact = null;
   potted = [];
@@ -2656,7 +2657,7 @@ function judge(s, before, input, r, calledPocket) {
   let phase = s.phase;
   let players = [{ ...s.players[0] }, { ...s.players[1] }];
   let assigned = null;
-  let again = false;
+  let again;
   if (s.phase === "break") {
     if (cueDown) foul = "scratch";
     else if (r.firstContact === null) foul = "no_contact";
@@ -2760,6 +2761,7 @@ function createRoomBilliards(names, seed) {
 }
 function billiardsView(s, restAt, away) {
   const { seed: _seed, ...state } = s;
+  void _seed;
   return { state, away, restAt };
 }
 var num = (v) => typeof v === "number" && Number.isFinite(v) ? v : void 0;
@@ -2838,6 +2840,7 @@ var RoomStoreError = class extends Error {
     super(code);
     this.code = code;
   }
+  code;
 };
 var TIMING = {
   /** A human who doesn't move in this long has a sensible move played for them. */
@@ -3731,7 +3734,7 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return Response.json({ ok: false, code: "bad_request" }, { status: 405, headers: cors });
   const text = await req.text();
   if (text.length > 8192) return Response.json({ ok: false, code: "bad_request" }, { status: 413, headers: cors });
-  let body = null;
+  let body;
   try {
     body = JSON.parse(text);
   } catch {

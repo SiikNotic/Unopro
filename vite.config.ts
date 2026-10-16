@@ -59,6 +59,9 @@ export default defineConfig(({ mode }) => {
     // The app keeps navigation in memory (no URL routes), so a page refresh always lands on index.html.
     base: './',
     plugins: [react(), securityHeaders(csp)],
+    // The browsers Vite 5 built for. Vite 7+ defaults to newer ones (Chrome 107+), which would leave out
+    // older Android WebViews that still run the APK (minSdk 24).
+    build: { target: ['es2020', 'edge88', 'firefox78', 'chrome87', 'safari14'] },
     resolve: {
       alias: {
         '@': fileURLToPath(new URL('./src', import.meta.url)),

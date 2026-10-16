@@ -38,7 +38,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - uses: actions/setup-java@v5
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: 21
@@ -109,7 +109,7 @@ jobs:
           if [ -f android/app/build/outputs/apk/direct/release/app-direct-release.apk ]; then cp android/app/build/outputs/apk/direct/release/app-direct-release.apk carta.apk
           else cp android/app/build/outputs/apk/direct/debug/app-direct-debug.apk carta.apk; fi
           sha256sum carta.apk
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         with:
           name: carta-apk
           path: carta.apk
@@ -154,7 +154,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - uses: actions/setup-java@v5
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: 21
@@ -237,7 +237,7 @@ jobs:
           } | tee summary.txt
           case "$ADMOB" in *3940256099942544*) echo "::warning::The bundle uses Google's sample AdMob App ID (test ads). Set the ADMOB_APP_ID repository variable before publishing.";; esac
           echo "## Google Play bundle" >> "$GITHUB_STEP_SUMMARY"; echo '```' >> "$GITHUB_STEP_SUMMARY"; cat summary.txt >> "$GITHUB_STEP_SUMMARY"; echo '```' >> "$GITHUB_STEP_SUMMARY"
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         with:
           name: carta-play-aab
           path: carta-play-${{ steps.v.outputs.name }}.aab

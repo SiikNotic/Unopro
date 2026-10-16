@@ -10,6 +10,13 @@ updates:
     groups:
       dev-tooling:
         dependency-type: development
+    ignore:
+      # Tailwind 4 needs Chrome 111+ / Safari 16.4+: older Android WebViews (the APK) would break. Stay on 3.
+      - dependency-name: tailwindcss
+        update-types: ['version-update:semver-major']
+      # TypeScript 7 is not supported by typescript-eslint yet (it accepts up to 6.0).
+      - dependency-name: typescript
+        versions: ['>=7']
   - package-ecosystem: github-actions
     directory: /
     schedule:

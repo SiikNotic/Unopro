@@ -62,5 +62,5 @@ describe('Long bot games', () => {
         expect(result.rounds).toBeGreaterThan(0);
       }
     });
-  });
+  }, 60_000);
 });

@@ -23,7 +23,7 @@ async function rpc(name: string, args: Record<string, unknown>): Promise<DbResul
     return { ok: false, error: { status: 0, code: 'network', message: 'network' } };
   }
   const text = await res.text();
-  let body: unknown = null;
+  let body: unknown;
   try {
     body = text ? JSON.parse(text) : null;
   } catch {

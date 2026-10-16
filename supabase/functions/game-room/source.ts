@@ -102,7 +102,7 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') return Response.json({ ok: false, code: 'bad_request' }, { status: 405, headers: cors });
   const text = await req.text();
   if (text.length > 8192) return Response.json({ ok: false, code: 'bad_request' }, { status: 413, headers: cors });
-  let body: unknown = null;
+  let body: unknown;
   try {
     body = JSON.parse(text);
   } catch {

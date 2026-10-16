@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
     vary: "origin"
   };
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
-  let body = null;
+  let body;
   const text = await req.text();
   if (text.length > 1024) return Response.json({ ok: false, code: "bad_request" }, { status: 413, headers: cors });
   try {

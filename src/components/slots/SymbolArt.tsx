@@ -27,7 +27,7 @@ export const SymbolArt = memo(function SymbolArt({ def, style, kind, src }: Symb
   }
   const vars = { '--c1': def.c1, '--c2': def.c2, '--ink': def.ink ?? 'transparent' } as React.CSSProperties;
   let body: React.ReactNode;
-  let shape = 'art';
+  let shape: string;
   if (def.bars) {
     shape = 'bars';
     body = Array.from({ length: def.bars }, (_, i) => (

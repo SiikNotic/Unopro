@@ -60,6 +60,9 @@ var HttpError = class extends Error {
     this.code = code;
     this.extra = extra;
   }
+  status;
+  code;
+  extra;
 };
 function parseBody(text) {
   if (!text.trim()) return {};
@@ -186,7 +189,7 @@ var HARD_STATUSES = /* @__PURE__ */ new Set([401, 403, 405, 413]);
 async function handleGiveawayRequest(req, deps) {
   const out = await handle(req, deps);
   if (out.status < 400 || out.status >= 500 || HARD_STATUSES.has(out.status)) return out;
-  let soft = false;
+  let soft;
   try {
     const body = parseBody(req.body);
     soft = body.alwaysOk === true || body.alwaysOk === "true";
@@ -214,6 +217,8 @@ async function handle(req, deps) {
   const current = async () => giveawayView(await call("discord_current_giveaway", {}));
   const outcome = (op, row, extra = {}) => {
     const { user_id: _userId, balance: _balance, ...r } = row ?? {};
+    void _userId;
+    void _balance;
     const reason = typeof r.reason === "string" ? r.reason : null;
     const body = { ...r, ...extra, ...reason ? { reason, message: message(reason) } : r.ok === true ? { message: message(`${op}_ok`) } : {} };
     return r.ok === true ? ok(op, body) : fail(op, reason === "giveaway_not_found" ? 404 : 409, reason ?? "invalid_request", body);
@@ -374,7 +379,7 @@ async function rpc(name, args) {
     return { ok: false, error: { status: 0, code: "network", message: "network" } };
   }
   const text = await res.text();
-  let body = null;
+  let body;
   try {
     body = text ? JSON.parse(text) : null;
   } catch {

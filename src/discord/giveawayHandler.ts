@@ -278,7 +278,7 @@ const HARD_STATUSES = new Set([401, 403, 405, 413]);
 export async function handleGiveawayRequest(req: GiveawayRequest, deps: GiveawayDeps): Promise<GiveawayResponse> {
   const out = await handle(req, deps);
   if (out.status < 400 || out.status >= 500 || HARD_STATUSES.has(out.status)) return out;
-  let soft = false;
+  let soft: boolean;
   try {
     const body = parseBody(req.body);
     soft = body.alwaysOk === true || body.alwaysOk === 'true';

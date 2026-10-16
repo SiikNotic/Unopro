@@ -148,7 +148,6 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       } catch (e) {
         if (asAuthError(e).code === 'network') {
           // Offline: keep the session, show the account without coins until the server answers.
-          u = null;
           if (seq === loadSeq.current) {
             setStatus('user');
             setCoinsError(true);

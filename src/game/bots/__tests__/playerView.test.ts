@@ -35,7 +35,7 @@ describe('PlayerView', () => {
   });
 
   it('masks the id of a card another player just drew (ids reveal the card)', () => {
-    let s: GameState = state;
+    let s: GameState;
     for (let seed = 1; seed < 300; seed++) {
       s = createGame({ players, seed });
       const current = s.players[s.currentPlayerIndex].id;

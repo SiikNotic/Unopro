@@ -180,10 +180,10 @@ export const ReelSet = forwardRef<ReelSetHandle, ReelSetProps>(function ReelSet(
   return (
     <div className="ps-reels" style={{ height: cellHeight * 3 }}>
       {Array.from({ length: REELS }, (_, r) => (
-        <div key={r} ref={(el) => (reels.current[r] = el)} className="ps-reel">
-          <div ref={(el) => (strips.current[r] = el)} className="ps-strip">
+        <div key={r} ref={(el) => { reels.current[r] = el; }} className="ps-reel">
+          <div ref={(el) => { strips.current[r] = el; }} className="ps-strip">
             {Array.from({ length: CELLS }, (_, j) => (
-              <div key={j} ref={(el) => (cells.current[r][j] = el)} className="ps-cell" style={{ height: cellHeight }}>
+              <div key={j} ref={(el) => { cells.current[r][j] = el; }} className="ps-cell" style={{ height: cellHeight }}>
                 {order.map((sym) => (
                   <SymbolArt key={sym} def={look.symbols[sym]} style={look.style} kind={math.symbols[sym].kind} src={art3d(math.id, sym)} />
                 ))}

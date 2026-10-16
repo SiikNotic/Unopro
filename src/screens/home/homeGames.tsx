@@ -1,4 +1,3 @@
-/* eslint-disable react-refresh/only-export-components -- a data module (game list and art), not a component file */
 // The games shown on the home screen: where each opens, its category and its card art. The art is drawn
 // from the project's own pieces (lobby SVG art, playing cards, slot and Olympus artwork); to use painted
 // card art instead, set `image` (see docs/home.md).

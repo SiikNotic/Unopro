@@ -227,7 +227,7 @@ export function judge(s: BilliardsState, before: BallState[], input: ShotInput, 
   let phase: Phase = s.phase;
   let players: [BilliardsPlayer, BilliardsPlayer] = [{ ...s.players[0] }, { ...s.players[1] }];
   let assigned: Group | null = null;
-  let again = false;
+  let again: boolean;
 
   if (s.phase === 'break') {
     if (cueDown) foul = 'scratch';
