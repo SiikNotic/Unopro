@@ -145,6 +145,8 @@ jobs:
     # self-update, no REQUEST_INSTALL_PACKAGES). Only kept as a run artifact — nothing is sent to Google.
     # Signed with the same key as the APK (Play's upload key); it has the same version as the APK of this run,
     # so every new bundle has a higher versionCode, as Google Play requires.
+    # Dependabot's runs get no secrets, so there is no key to sign with: skip instead of failing its PRs.
+    if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7

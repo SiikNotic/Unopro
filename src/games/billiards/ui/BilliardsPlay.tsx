@@ -31,19 +31,22 @@ export function BilliardsPlay() {
   const [profileName] = useProfileName();
   const level = loadLevel();
   const myName = (account.status === 'user' ? account.profile?.username : null) || profileName || t('games.you');
+  // `match` numbers the games of this visit, so the end-of-game effect (stats, sounds) runs once per game.
   const newGame = useCallback(
-    () =>
+    (match = 1) =>
       createBilliards(
         [
           { id: 'me', name: myName.slice(0, 16), kind: 'human' },
           { id: 'bot', name: `BOT · ${t(`billiards.level.${level}`)}`, kind: 'bot' },
         ],
         newMatchSeed(),
+        0,
+        match,
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
-  const [state, setState] = useState<BilliardsState>(newGame);
+  const [state, setState] = useState<BilliardsState>(() => newGame());
   const [pending, setPending] = useState<Pending | null>(null);
   const [thinking, setThinking] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -100,7 +103,7 @@ export function BilliardsPlay() {
   const restart = (rematch: boolean) => {
     setPending(null);
     setToast(null);
-    setState(rematch ? rematchBilliards(state, newMatchSeed()) : newGame());
+    setState(rematch ? rematchBilliards(state, newMatchSeed()) : newGame(state.match + 1));
   };
   const exit = () => navigate('billiards', {}, { replace: true });
 

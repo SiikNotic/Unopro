@@ -24,6 +24,8 @@ import cardCrash from './art/card-crash.webp';
 const cardHorse = (import.meta.glob('./art/card-horse-racing.webp', { eager: true, import: 'default' }) as Record<string, string>)['./art/card-horse-racing.webp'];
 // Same for Air Hockey: a painted card is used when ./art/card-air-hockey.webp exists; until then it draws HockeyArt.
 const cardAirHockey = (import.meta.glob('./art/card-air-hockey.webp', { eager: true, import: 'default' }) as Record<string, string>)['./art/card-air-hockey.webp'];
+// And Billiards: ./art/card-billiards.webp when it exists; until then it draws BilliardsArt.
+const cardBilliards = (import.meta.glob('./art/card-billiards.webp', { eager: true, import: 'default' }) as Record<string, string>)['./art/card-billiards.webp'];
 import { HockeyCardArt } from '@/games/airhockey/ui/HockeyArt';
 import heroPortrait from './art/hero-portrait.webp';
 import { GAMES } from '@/games/catalog';
@@ -120,6 +122,7 @@ const HOME_LOOK: Record<HomeGameId, Omit<HomeGame, 'id' | 'screen' | 'category'>
     art: (s) => <HockeyCardArt size={s} />,
   },
   billiards: {
+    image: cardBilliards,
     bg: 'radial-gradient(120% 90% at 50% 10%, #17784a 0%, #0a3a24 50%, #2a1608 100%)',
     accent: '#e8c46a',
     art: (s) => <BilliardsArt size={s * 1.1} />,
