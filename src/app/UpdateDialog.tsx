@@ -8,12 +8,19 @@ import { DISTRIBUTION } from './distribution';
 import release from '../../app-release.json';
 import { AppUpdater, isNewer, parseManifest } from './updates';
 import type { UpdateManifest } from './updates';
-import { itemsFor, notesOfVersion } from './changelog';
+import { isNewerVersion, itemsFor, latestVersion, notesOfVersion } from './changelog';
+import { parseWebVersion, runningEntry } from './webUpdate';
+import type { WebVersion } from './webUpdate';
 import type { ChangeIcon, ReleaseNotes } from './changelog';
 import './updates.css';
 
 const SEEN_KEY = 'carta.app.seenVersion';
 const CHECK_EVERY_MS = 6 * 60 * 60 * 1000;
+/** Web and Google Play: the newest changelog version whose news this player has seen. */
+const NEWS_KEY = 'carta.app.seenNews';
+/** Set once the player has opened the app before (the first-run notice): new players get no "what's new". */
+const RETURNING_KEY = 'legal.noticeSeen';
+const WEB_CHECK_EVERY_MS = 10 * 60 * 1000;
 
 const ICONS: Record<ChangeIcon, LucideIcon> = {
   new: Sparkles,
@@ -68,9 +75,10 @@ function Header({ icon: Icon, id, version }: { icon: LucideIcon; id: string; ver
 type Phase = { kind: 'offer' } | { kind: 'downloading'; percent: number } | { kind: 'installing' } | { kind: 'error'; reason: 'permission' | 'checksum' | 'failed' };
 
 /**
- * Android app only: offers a new version in a dialog (version + what THAT version brings, from its update.json)
- * and installs it from the app; after an update, shows once what the installed version brought (its entry in
- * the bundled changelog.json). Older versions' news are never shown.
+ * New versions everywhere. The direct Android app offers a new version (version + what THAT version brings,
+ * from its update.json) and installs it. The web offers to reload when a newer build is published. After an
+ * update, every build (web, APK, Google Play) shows once what the installed version brought (its entry in the
+ * bundled changelog.json). Older versions' news are never shown.
  */
 export function UpdateDialog() {
   const { t } = useI18n();
@@ -78,6 +86,49 @@ export function UpdateDialog() {
   const [phase, setPhase] = useState<Phase>({ kind: 'offer' });
   const [whatsNew, setWhatsNew] = useState<string | null>(null);
   const dismissed = useRef<number>(0);
+  const [webOffer, setWebOffer] = useState<WebVersion | null>(null);
+  const webDismissed = useRef<string | null>(null);
+
+  // Web and Google Play: after an update, what the newest version brought, once (the direct APK does this
+  // below, from the installed version).
+  useEffect(() => {
+    if (isNativeApp() && DISTRIBUTION !== 'play') return;
+    const latest = latestVersion();
+    if (!latest) return;
+    const seen = storage.get<string>(NEWS_KEY);
+    const returning = storage.get<boolean>(RETURNING_KEY) === true;
+    if (returning && (!seen || isNewerVersion(latest, seen))) setWhatsNew(latest);
+    storage.set(NEWS_KEY, latest);
+  }, []);
+
+  // Web: a page opened before a new build was published offers to reload (checked every few minutes and
+  // whenever the player comes back to the tab).
+  useEffect(() => {
+    if (isNativeApp()) return;
+    const mine = runningEntry();
+    if (!mine) return;
+    let last = 0;
+    let cancelled = false;
+    const check = async () => {
+      if (Date.now() - last < 60_000) return;
+      last = Date.now();
+      try {
+        const res = await fetch(new URL('version.json', document.baseURI), { cache: 'no-store' });
+        const v = res.ok ? parseWebVersion(await res.json()) : null;
+        if (!cancelled && v && v.entry !== mine && v.entry !== webDismissed.current) setWebOffer(v);
+      } catch {
+        // Offline: try again later.
+      }
+    };
+    const onVisible = () => document.visibilityState === 'visible' && void check();
+    const id = window.setInterval(() => void check(), WEB_CHECK_EVERY_MS);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, []);
 
   useEffect(() => {
     // Only the direct APK updates itself; the Google Play build is updated by Google Play.
@@ -156,6 +207,41 @@ export function UpdateDialog() {
             )}
           </div>
           <p className="up-hint">{t('update.hint')}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (webOffer) {
+    return (
+      <div className="up-backdrop" role="dialog" aria-modal="true" aria-labelledby="up-web-title">
+        <div className="up-card">
+          <Header icon={RefreshCw} id="up-web-title" version={webOffer.version} />
+          <ChangeList notes={webOffer.notes} />
+          <div className="up-actions">
+            <button
+              type="button"
+              className="cz-btn cz-btn-primary w-full"
+              onClick={() => {
+                // Its news were just shown here: don't show them again after the reload.
+                if (webOffer.version) storage.set(NEWS_KEY, webOffer.version);
+                window.location.reload();
+              }}
+            >
+              <RefreshCw className="w-5 h-5" /> {t('update.now')}
+            </button>
+            <button
+              type="button"
+              className="cz-btn cz-btn-secondary w-full"
+              onClick={() => {
+                webDismissed.current = webOffer.entry;
+                setWebOffer(null);
+              }}
+            >
+              {t('update.later')}
+            </button>
+          </div>
+          <p className="up-hint">{t('update.webHint')}</p>
         </div>
       </div>
     );

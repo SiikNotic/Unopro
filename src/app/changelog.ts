@@ -49,3 +49,18 @@ export function itemsFor(notes: ReleaseNotes, language: string): ChangeItem[] {
     .slice(0, MAX_ITEMS)
     .map((text, i) => ({ icon: toIcon(notes.icons?.[i]), text }));
 }
+
+const codeOf = (version: string) => {
+  const m = /^(\d{1,2})\.(\d{1,2})\.(\d{1,2})$/.exec(version);
+  return m ? Number(m[1]) * 10000 + Number(m[2]) * 100 + Number(m[3]) : -1;
+};
+
+/** True when version `a` is newer than `b` ("1.3.1" > "1.2.93"); malformed versions are never newer. */
+export const isNewerVersion = (a: string, b: string) => codeOf(a) > codeOf(b);
+
+/** The newest version with an entry in the changelog (what this build brings), or null. */
+export function latestVersion(source: { versions?: Record<string, unknown> } = changelog): string | null {
+  let best: string | null = null;
+  for (const v of Object.keys(source.versions ?? {})) if (codeOf(v) >= 0 && (best === null || codeOf(v) > codeOf(best))) best = v;
+  return best;
+}

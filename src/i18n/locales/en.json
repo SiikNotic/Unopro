@@ -2147,7 +2147,8 @@
       "checksum": "The download doesn't match the published version, so it wasn't installed. Try again.",
       "failed": "The update couldn't be downloaded. Check your connection and try again."
     },
-    "noNotes": "Performance improvements and fixes."
+    "noNotes": "Performance improvements and fixes.",
+    "webHint": "The page will reload. Your coins and account stay the same."
   },
   "jewels": {
     "tagline": "The jewels of the gods await you at the summit.",

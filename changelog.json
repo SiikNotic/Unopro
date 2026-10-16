@@ -188,6 +188,18 @@
         "es": "Volver desde la sala del billar te lleva al billar, no al dominó.",
         "en": "Going back from a pool room takes you to pool, not dominoes."
       }
+    ],
+    "1.3.2": [
+      {
+        "icon": "update",
+        "es": "La web y la versión de Google Play ahora te avisan de cada actualización y sus novedades.",
+        "en": "The web and the Google Play version now tell you about every update and what it brings."
+      },
+      {
+        "icon": "fix",
+        "es": "Billar online: crear sala y unirte con código ya abren salas de billar.",
+        "en": "Online pool: creating a room and joining with a code now open pool rooms."
+      }
     ]
   }
 }

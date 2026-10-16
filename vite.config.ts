@@ -3,6 +3,7 @@ import { defineConfig, loadEnv } from 'vite';
 import type { Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { fileURLToPath, URL } from 'node:url';
+import { readFileSync } from 'node:fs';
 
 // Content Security Policy for the published build only (the dev server needs inline scripts for HMR).
 // Scripts may only come from this site plus Cloudflare Turnstile; fonts are self-hosted. Avatars from the
@@ -34,6 +35,27 @@ const originOf = (u: string | undefined) => {
   }
 };
 
+/**
+ * Writes version.json next to index.html: the main script of this build (its name changes only when the app
+ * does) and the news of the newest changelog entry. Open web pages read it to offer the new version.
+ */
+function versionFile(): Plugin {
+  return {
+    name: 'carta-version-file',
+    apply: 'build',
+    generateBundle(_, bundle) {
+      const entry = Object.values(bundle).find((c) => c.type === 'chunk' && c.isEntry)?.fileName;
+      if (!entry) return;
+      const versions = (JSON.parse(readFileSync(new URL('./changelog.json', import.meta.url), 'utf8')) as { versions?: Record<string, { icon?: string; es?: string; en?: string }[]> }).versions ?? {};
+      const code = (v: string) => (/^\d{1,2}\.\d{1,2}\.\d{1,2}$/.test(v) ? v.split('.').reduce((n, x) => n * 100 + Number(x), 0) : -1);
+      const version = Object.keys(versions).filter((v) => code(v) >= 0).sort((a, b) => code(b) - code(a))[0] ?? '';
+      const items = (versions[version] ?? []).slice(0, 5);
+      const notes = { es: items.map((i) => i.es ?? i.en ?? ''), en: items.map((i) => i.en ?? i.es ?? ''), icons: items.map((i) => i.icon ?? 'new') };
+      this.emitFile({ type: 'asset', fileName: 'version.json', source: JSON.stringify({ entry, version, notes }) + '\n' });
+    },
+  };
+}
+
 function securityHeaders(csp: string): Plugin {
   return {
     name: 'carta-security-meta',
@@ -59,7 +81,7 @@ export default defineConfig(({ mode }) => {
     // Relative asset paths so the build works from any sub-path (e.g. GitHub Pages at /<repo>/).
     // The app keeps navigation in memory (no URL routes), so a page refresh always lands on index.html.
     base: './',
-    plugins: [react(), securityHeaders(csp)],
+    plugins: [react(), securityHeaders(csp), versionFile()],
     // The browsers Vite 5 built for. Vite 7+ defaults to newer ones (Chrome 107+), which would leave out
     // older Android WebViews that still run the APK (minSdk 24).
     build: { target: ['es2020', 'edge88', 'firefox78', 'chrome87', 'safari14'] },
