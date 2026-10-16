@@ -10,6 +10,10 @@ export type TableGame = 'domino' | 'bingo';
 /** Games with online rooms (the room screen's `game`). */
 export type OnlineGame = TableGame | 'carta' | 'blackjack' | 'roulette' | 'billiards';
 
+/** Every OnlineGame, for checking params read back from history (the record makes a missing game a type error). */
+const ONLINE_GAME_SET: Record<OnlineGame, true> = { domino: true, bingo: true, carta: true, blackjack: true, roulette: true, billiards: true };
+export const isOnlineGame = (x: unknown): x is OnlineGame => typeof x === 'string' && Object.prototype.hasOwnProperty.call(ONLINE_GAME_SET, x);
+
 export interface ScreenParams {
   mode?: GameModeId;
   /** Open tutorial lesson. */

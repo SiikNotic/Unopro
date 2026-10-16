@@ -176,6 +176,18 @@
         "es": "Mesa premium con guía de tiro, potencia y efecto.",
         "en": "Premium table with aiming guide, power and spin."
       }
+    ],
+    "1.2.94": [
+      {
+        "icon": "fix",
+        "es": "Billar online: crear sala y unirte con código ya abren salas de billar.",
+        "en": "Online pool: creating a room and joining with a code now open pool rooms."
+      },
+      {
+        "icon": "fix",
+        "es": "Volver desde la sala del billar te lleva al billar, no al dominó.",
+        "en": "Going back from a pool room takes you to pool, not dominoes."
+      }
     ]
   }
 }

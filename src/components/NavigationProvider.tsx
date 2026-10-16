@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { Screen, ScreenParams } from '@/types/navigation';
-import { SCREENS } from '@/types/navigation';
+import { SCREENS, isOnlineGame } from '@/types/navigation';
 import { GAME_MODES } from '@/game/rules/modes';
 import { isMachineId } from '@/casino/premium/engine';
 import { ROOM_CODE_RE } from '@/games/shared/multiplayer/roomCode';
@@ -41,7 +41,7 @@ function cleanParams(raw: unknown): ScreenParams {
   if (p.mode && GAME_MODES.some((m) => m.id === p.mode && m.enabled)) out.mode = p.mode;
   if (typeof p.topic === 'string' && /^[a-z]{2,16}$/.test(p.topic)) out.topic = p.topic;
   if (isMachineId(p.machine)) out.machine = p.machine;
-  if (p.game === 'domino' || p.game === 'bingo' || p.game === 'carta' || p.game === 'blackjack' || p.game === 'roulette') out.game = p.game;
+  if (isOnlineGame(p.game)) out.game = p.game;
   if (p.join === true) out.join = true;
   if (p.online === true) out.online = true;
   if (Number.isInteger(p.level) && (p.level as number) >= 1 && (p.level as number) <= 999) out.level = p.level;
